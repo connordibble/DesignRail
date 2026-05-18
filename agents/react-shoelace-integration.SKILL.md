@@ -10,6 +10,7 @@ Integrate Shoelace components in React cleanly, accessibly, and with design-toke
 
 ## Rules
 
+- Follow `DESIGN.md` for DesignRail-specific composition, density, color, and interaction expectations.
 - Register Shoelace components explicitly.
 - Handle Web Component events intentionally and with typed boundaries.
 - Use CSS custom properties and design tokens for styling.

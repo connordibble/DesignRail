@@ -34,6 +34,7 @@ In this lightweight scaffold, scripts skip gracefully when the matching TypeScri
 DesignRail uses layered instructions:
 
 - `AGENTS.md` defines product direction, public-safety rules, mock-mode defaults, GraphQL contracts, human-in-the-loop AI rules, and verification expectations.
+- `DESIGN.md` defines the product UI direction for the React review experience.
 - `agents/SKILL.md` defines the end-to-end DesignRail workflow.
 - Focused skill files in `agents/` guide product principles, design intake, schemas, mapping, review UI, GraphQL, instrumentation, compliance, Shoelace integration, AI boundaries, docs, and readiness.
 - Optional installed third-party skills live in `.agents/skills/` and support frontend quality checks without replacing DesignRail rules.

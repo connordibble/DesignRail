@@ -10,6 +10,7 @@ Build a practical internal UI where developers review, edit, accept, reject, and
 
 ## Rules
 
+- Read `DESIGN.md` before changing review UI structure, styling, or interaction patterns.
 - Show source intent, recommended mapping, compliance findings, confidence, and rationale together.
 - Support accept, reject, edit, and export-ready states.
 - Persist decisions through GraphQL.

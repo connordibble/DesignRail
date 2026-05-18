@@ -2,6 +2,8 @@
 
 Follow the repo-wide rules in `AGENTS.md`.
 
+Read `DESIGN.md` before changing the React review UI or visual styling.
+
 Use the relevant skill file before changing design-system workflow code:
 
 - End-to-end workflow: `agents/SKILL.md`
@@ -19,3 +21,5 @@ Use the relevant skill file before changing design-system workflow code:
 - Production readiness: `agents/production-readiness.SKILL.md`
 
 Keep examples public-safe and generic. Run the appropriate package scripts before finishing.
+
+Installed third-party skills in `.agents/skills/` are optional references for React performance, view transitions, and UI audits. They do not override `AGENTS.md` or `agents/*.SKILL.md`.

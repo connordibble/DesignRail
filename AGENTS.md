@@ -53,6 +53,7 @@ The review UI is the product. Pipeline scripts, importers, mapping logic, GraphQ
 
 ## Review UI standards
 
+- Read `DESIGN.md` before implementing or reviewing UI work.
 - Build for repeated internal use: scannable, efficient, accessible, and low-friction.
 - The UI must support accept, reject, edit, compare, compliance review, and export flows.
 - Show loading, empty, error, disabled, and optimistic/pending states where relevant.
