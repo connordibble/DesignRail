@@ -5,6 +5,10 @@ export type MappingResult = {
   status: 'skeleton';
 };
 
-export function mapComponent(): MappingResult {
+export type MapComponentInput = {
+  intent?: unknown;
+};
+
+export function mapComponent(_input: MapComponentInput = {}): MappingResult {
   return { tool: TOOL_NAME, status: 'skeleton' };
 }

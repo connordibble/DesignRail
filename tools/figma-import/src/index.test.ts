@@ -4,7 +4,7 @@ import { importFigmaFixture, TOOL_NAME } from './index.js';
 
 describe('@designrail/figma-import', () => {
   it('returns a skeleton import result', () => {
-    const result = importFigmaFixture('examples/figma-input.button.json');
+    const result = importFigmaFixture({ inputPath: 'examples/figma-input.button.json' });
     expect(result).toEqual({
       tool: TOOL_NAME,
       inputPath: 'examples/figma-input.button.json',

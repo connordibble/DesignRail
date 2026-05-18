@@ -6,6 +6,11 @@ export type ComplianceResult = {
   findings: ReadonlyArray<never>;
 };
 
-export function reviewCompliance(): ComplianceResult {
+export type ReviewComplianceInput = {
+  intent?: unknown;
+  mapping?: unknown;
+};
+
+export function reviewCompliance(_input: ReviewComplianceInput = {}): ComplianceResult {
   return { tool: TOOL_NAME, status: 'skeleton', findings: [] };
 }

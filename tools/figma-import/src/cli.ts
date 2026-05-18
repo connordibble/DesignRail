@@ -7,5 +7,5 @@ if (!inputPath) {
   process.exit(2);
 }
 
-const result = importFigmaFixture(inputPath);
+const result = importFigmaFixture({ inputPath });
 console.log(JSON.stringify(result, null, 2));

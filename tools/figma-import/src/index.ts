@@ -6,6 +6,10 @@ export type ImportResult = {
   status: 'skeleton';
 };
 
-export function importFigmaFixture(inputPath: string): ImportResult {
+export type ImportFigmaFixtureInput = {
+  inputPath: string;
+};
+
+export function importFigmaFixture({ inputPath }: ImportFigmaFixtureInput): ImportResult {
   return { tool: TOOL_NAME, inputPath, status: 'skeleton' };
 }
