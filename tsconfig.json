@@ -6,6 +6,7 @@
     { "path": "./packages/design-tokens" },
     { "path": "./tools/figma-import" },
     { "path": "./tools/component-mapper" },
-    { "path": "./tools/compliance-agent" }
+    { "path": "./tools/compliance-agent" },
+    { "path": "./apps/web" }
   ]
 }

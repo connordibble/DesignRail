@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "composite": false,
+    "types": ["vite/client"]
+  },
+  "include": ["src", "vite.config.ts", "vitest.config.ts", "tailwind.config.ts"],
+  "references": [{ "path": "../../packages/shared" }, { "path": "../../packages/design-tokens" }]
+}
