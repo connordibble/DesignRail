@@ -11,7 +11,7 @@
   "scripts": {
     "check": "bash hooks/quality-gate.sh",
     "typecheck": "bash -c 'pnpm exec tsc -b && pnpm --filter @designrail/docs typecheck'",
-    "lint": "bash -c 'if [ -x node_modules/.bin/eslint ]; then eslint .; else bash -n hooks/*.sh; echo \"ESLint not installed; shell hooks linted.\"; fi'",
+    "lint": "bash -c 'if [ -x node_modules/.bin/eslint ]; then eslint . --max-warnings=0; else bash -n hooks/*.sh; echo \"ESLint not installed; shell hooks linted.\"; fi'",
     "format:check": "bash -c 'if [ -x node_modules/.bin/prettier ]; then prettier . --check; else echo \"Prettier not installed; format check skipped.\"; fi'",
     "format": "bash -c 'if [ -x node_modules/.bin/prettier ]; then prettier . --write; else echo \"Prettier not installed; format skipped.\"; fi'",
     "test": "bash -c 'if [ -x node_modules/.bin/vitest ]; then vitest run --passWithNoTests; else echo \"Vitest not installed; tests skipped.\"; fi'",
