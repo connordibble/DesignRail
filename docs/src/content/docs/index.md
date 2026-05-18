@@ -14,7 +14,7 @@ The first vertical slice is **Button**, end to end: fixture → normalized inten
 ## Architecture
 
 - **apps/web** — React + Vite review UI
-- **apps/api** — Fastify + Apollo GraphQL server, SQLite via Drizzle
+- **apps/api** — Fastify + Apollo GraphQL server; SQLite via Drizzle lands in Checkpoint 1
 - **packages/shared** — domain types and Zod schemas
 - **packages/schema** — Shoelace component schemas (props, slots, variants, parts)
 - **packages/design-tokens** — design tokens that map to Shoelace CSS custom properties

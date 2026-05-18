@@ -21,7 +21,7 @@ If we tried to style Shoelace internals with Tailwind (via `::part` selectors an
 ## Decision
 
 - **Tailwind styles only app chrome** — the React UI's layout, navigation, panels, dashboards, and any non-Shoelace primitives.
-- **Shoelace components are themed through CSS custom properties**, derived from [`@designrail/design-tokens`](https://github.com/) (`packages/design-tokens`).
+- **Shoelace components are themed through CSS custom properties**, derived from `@designrail/design-tokens` (`packages/design-tokens`).
 - Token definitions live as JSON in `tokens.json` and are projected to CSS custom properties on `:root` (or a theme wrapper) in `apps/web`. The names map onto Shoelace's `--sl-*` variables where one exists.
 - App chrome may consume the same tokens, either through CSS variables or through Tailwind's `theme.extend` block. Either way, the **token JSON is the single source of truth**.
 

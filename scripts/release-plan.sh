@@ -78,5 +78,5 @@ fi
 echo "Bump: $bump"
 echo "Next version: $next_version"
 echo
-echo "Release-signaling commits:"
+echo "Conventional commits:"
 printf '%s\n' "$commits" | grep -E '^[a-z]+(\([^)]+\))?!?: ' || true
