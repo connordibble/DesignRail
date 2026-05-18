@@ -85,6 +85,13 @@ Run or update the relevant deterministic checks:
 
 Use `pnpm check` or `hooks/pre-agent-finish.sh` for the full gate when practical.
 
+## Versioning
+
+- Use Conventional Commits for meaningful changes.
+- `feat` implies minor, `fix` and `perf` imply patch, and `!` or `BREAKING CHANGE:` implies major.
+- Keep commits focused so release intent remains understandable.
+- Run `pnpm release:plan` before tagging a release.
+
 Summarize:
 - what changed
 - how it was verified

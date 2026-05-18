@@ -16,6 +16,7 @@ pnpm db:check
 pnpm compliance:review
 pnpm mock-mode:check
 pnpm secrets:check
+pnpm release:plan
 pnpm check
 ```
 
@@ -35,9 +36,21 @@ DesignRail uses layered instructions:
 - `AGENTS.md` defines product direction, public-safety rules, mock-mode defaults, GraphQL contracts, human-in-the-loop AI rules, and verification expectations.
 - `agents/SKILL.md` defines the end-to-end DesignRail workflow.
 - Focused skill files in `agents/` guide product principles, design intake, schemas, mapping, review UI, GraphQL, instrumentation, compliance, Shoelace integration, AI boundaries, docs, and readiness.
+- Optional installed third-party skills live in `.agents/skills/` and support frontend quality checks without replacing DesignRail rules.
 - Hooks in `hooks/` run repeatable local checks for quality, secrets, and mock-mode safety.
 
 Instructions guide the agent. Deterministic checks enforce quality.
+
+## Versioning
+
+DesignRail uses Conventional Commits to keep release intent explicit:
+
+- `feat(...)` signals a minor version.
+- `fix(...)` and `perf(...)` signal a patch version.
+- `!` or `BREAKING CHANGE:` signals a major version.
+- `docs`, `test`, `refactor`, `chore`, `ci`, `build`, and `style` do not signal a release unless marked breaking.
+
+Run `pnpm release:plan` to inspect the next SemVer bump from commits since the last tag. Install `hooks/commit-msg.sh` as `.git/hooks/commit-msg` to enforce commit messages locally.
 
 ## Mock-Mode Default
 

@@ -16,6 +16,9 @@ DesignRail uses layered instructions so agent behavior stays consistent while de
 4. Hooks and scripts  
    Repeatable local gates for type safety, linting, tests, GraphQL, mock mode, secrets, and compliance.
 
+5. Optional third-party skills  
+   Installed skills in `.agents/skills/` can support React performance, view transitions, and UI reviews. They do not override DesignRail rules.
+
 ## When to use each skill
 
 - Any repo task: start with `AGENTS.md`.
@@ -34,3 +37,10 @@ DesignRail uses layered instructions so agent behavior stays consistent while de
 - Release, CI, governance, or production gap analysis: use `agents/production-readiness.SKILL.md`.
 
 Prefer the smallest relevant skill set. If a task crosses layers, read the end-to-end skill first, then the focused skill files needed for the implementation.
+
+## Third-party skill guidance
+
+- Use `.agents/skills/vercel-react-best-practices` when implementing or reviewing React performance-sensitive UI.
+- Use `.agents/skills/vercel-react-view-transitions` only after core review flows are stable and motion has a clear product purpose.
+- Use `.agents/skills/web-design-guidelines` for optional UI audits, not deterministic gates.
+- Keep project-specific rules in `agents/` to avoid instruction drift.

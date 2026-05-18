@@ -7,6 +7,7 @@ These scripts provide local quality gates for DesignRail's agent-assisted workfl
 - `quality-gate.sh`: full local package check sequence.
 - `pre-agent-finish.sh`: final gate before an agent hands work back.
 - `pre-commit.sh`: focused local commit gate.
+- `commit-msg.sh`: validates Conventional Commit messages for SemVer release signals.
 - `no-secrets.sh`: scans tracked text for common secrets and private tokens.
 - `mock-mode-check.sh`: guards the mock-mode-first default path.
 
@@ -23,6 +24,14 @@ Install the commit hook locally:
 ```sh
 cp hooks/pre-commit.sh .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
+cp hooks/commit-msg.sh .git/hooks/commit-msg
+chmod +x .git/hooks/commit-msg
+```
+
+Plan the next semantic version from commit history:
+
+```sh
+pnpm release:plan
 ```
 
 Instructions guide the agent. Deterministic checks enforce quality.
