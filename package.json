@@ -10,7 +10,7 @@
   },
   "scripts": {
     "check": "bash hooks/quality-gate.sh",
-    "typecheck": "bash -c 'if [ -f tsconfig.json ]; then pnpm exec tsc -b; else echo \"No tsconfig.json found; typecheck skipped.\"; fi'",
+    "typecheck": "bash -c 'pnpm exec tsc -b && pnpm --filter @designrail/docs typecheck'",
     "lint": "bash -c 'if [ -x node_modules/.bin/eslint ]; then eslint .; else bash -n hooks/*.sh; echo \"ESLint not installed; shell hooks linted.\"; fi'",
     "format:check": "bash -c 'if [ -x node_modules/.bin/prettier ]; then prettier . --check; else echo \"Prettier not installed; format check skipped.\"; fi'",
     "format": "bash -c 'if [ -x node_modules/.bin/prettier ]; then prettier . --write; else echo \"Prettier not installed; format skipped.\"; fi'",
