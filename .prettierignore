@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+coverage
+.astro
+.vite
+.turbo
+playwright-report
+test-results
+pnpm-lock.yaml
+*.tsbuildinfo
+apps/web/src/gql
+apps/api/src/generated
+packages/shared/src/generated
+
+# Vendored third-party skill files (managed via skills-lock.json)
+.agents/

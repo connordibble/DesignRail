@@ -1,63 +1,63 @@
 ---
 version: alpha
 name: DesignRail UI Direction
-description: "A precise internal review interface for design-to-engineering handoff. The visual language is inspired by disciplined product tools, but is DesignRail-specific: graphite surfaces, crisp typography, sparse blue-violet accent, strong semantic status colors, dense review panels, and code-first affordances. The interface should feel like a serious platform senior engineers would use daily, not a marketing page or decorative demo."
+description: 'A precise internal review interface for design-to-engineering handoff. The visual language is inspired by disciplined product tools, but is DesignRail-specific: graphite surfaces, crisp typography, sparse blue-violet accent, strong semantic status colors, dense review panels, and code-first affordances. The interface should feel like a serious platform senior engineers would use daily, not a marketing page or decorative demo.'
 
 colors:
-  accent: "#6f7dfb"
-  accent-hover: "#8490ff"
-  accent-soft: "#20264f"
-  canvas: "#08090b"
-  shell: "#0d0f12"
-  panel: "#12151a"
-  panel-raised: "#171b22"
-  panel-hover: "#1c212a"
-  border: "#252b35"
-  border-strong: "#343c49"
-  text: "#eef2f7"
-  text-muted: "#a8b0bd"
-  text-subtle: "#737c8b"
-  code-bg: "#0b0e13"
-  code-border: "#222936"
-  success: "#2fb56f"
-  warning: "#d7a53f"
-  danger: "#e15d5d"
-  info: "#63a4ff"
-  edited: "#b68cff"
-  light-canvas: "#f7f8fb"
-  light-panel: "#ffffff"
-  light-border: "#dfe4ec"
-  light-text: "#151922"
+  accent: '#6f7dfb'
+  accent-hover: '#8490ff'
+  accent-soft: '#20264f'
+  canvas: '#08090b'
+  shell: '#0d0f12'
+  panel: '#12151a'
+  panel-raised: '#171b22'
+  panel-hover: '#1c212a'
+  border: '#252b35'
+  border-strong: '#343c49'
+  text: '#eef2f7'
+  text-muted: '#a8b0bd'
+  text-subtle: '#737c8b'
+  code-bg: '#0b0e13'
+  code-border: '#222936'
+  success: '#2fb56f'
+  warning: '#d7a53f'
+  danger: '#e15d5d'
+  info: '#63a4ff'
+  edited: '#b68cff'
+  light-canvas: '#f7f8fb'
+  light-panel: '#ffffff'
+  light-border: '#dfe4ec'
+  light-text: '#151922'
 
 typography:
   ui:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    letterSpacing: "0"
+    fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+    letterSpacing: '0'
   mono:
-    fontFamily: "JetBrains Mono, Geist Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
-    letterSpacing: "0"
+    fontFamily: 'JetBrains Mono, Geist Mono, ui-monospace, SFMono-Regular, Menlo, monospace'
+    letterSpacing: '0'
   sizes:
-    page-title: "24px"
-    section-title: "15px"
-    body: "14px"
-    body-small: "13px"
-    caption: "12px"
-    code: "12.5px"
+    page-title: '24px'
+    section-title: '15px'
+    body: '14px'
+    body-small: '13px'
+    caption: '12px'
+    code: '12.5px'
 
 radii:
-  xs: "4px"
-  sm: "6px"
-  md: "8px"
-  lg: "10px"
-  xl: "12px"
+  xs: '4px'
+  sm: '6px'
+  md: '8px'
+  lg: '10px'
+  xl: '12px'
 
 spacing:
-  xxs: "4px"
-  xs: "8px"
-  sm: "12px"
-  md: "16px"
-  lg: "24px"
-  xl: "32px"
+  xxs: '4px'
+  xs: '8px'
+  sm: '12px'
+  md: '16px'
+  lg: '24px'
+  xl: '32px'
 ---
 
 # DesignRail Design Direction
@@ -171,13 +171,13 @@ Use light surfaces only for code-export previews or documentation examples when 
 
 ### Surface Hierarchy
 
-| Level | Token | Use |
-|---|---|---|
-| 0 | `canvas` | App background |
-| 1 | `shell` | Sidebar, top utility area |
-| 2 | `panel` | Main panes and tables |
-| 3 | `panel-raised` | Active panel, editor, preview |
-| 4 | `panel-hover` | Hovered rows, selected list item |
+| Level | Token          | Use                              |
+| ----- | -------------- | -------------------------------- |
+| 0     | `canvas`       | App background                   |
+| 1     | `shell`        | Sidebar, top utility area        |
+| 2     | `panel`        | Main panes and tables            |
+| 3     | `panel-raised` | Active panel, editor, preview    |
+| 4     | `panel-hover`  | Hovered rows, selected list item |
 
 Borders, not heavy shadows, create depth. Use `border` for default separation and `border-strong` for active/selected states.
 
@@ -185,14 +185,14 @@ Borders, not heavy shadows, create depth. Use `border` for default separation an
 
 Use a system sans or Inter-compatible stack. Do not depend on proprietary fonts. Letter spacing is `0`.
 
-| Role | Size | Weight | Use |
-|---|---:|---:|---|
-| Page title | 24px | 600 | Current workflow or selected example |
-| Section title | 15px | 600 | Panel headings |
-| Body | 14px | 400 | Main UI text |
-| Body small | 13px | 400 | Secondary labels and helper text |
-| Caption | 12px | 500 | Metadata, status labels, table headers |
-| Code | 12.5px | 400 | HTML, React, IDs, token names |
+| Role          |   Size | Weight | Use                                    |
+| ------------- | -----: | -----: | -------------------------------------- |
+| Page title    |   24px |    600 | Current workflow or selected example   |
+| Section title |   15px |    600 | Panel headings                         |
+| Body          |   14px |    400 | Main UI text                           |
+| Body small    |   13px |    400 | Secondary labels and helper text       |
+| Caption       |   12px |    500 | Metadata, status labels, table headers |
+| Code          | 12.5px |    400 | HTML, React, IDs, token names          |
 
 Use mono only where it carries meaning: component IDs, token paths, GraphQL fields, generated code, and event names.
 

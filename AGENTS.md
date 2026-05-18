@@ -94,6 +94,7 @@ Use `pnpm check` or `hooks/pre-agent-finish.sh` for the full gate when practical
 - Run `pnpm release:plan` before tagging a release.
 
 Summarize:
+
 - what changed
 - how it was verified
 - what remains
