@@ -1,0 +1,7 @@
+{
+  "$schema": "https://designrail.local/figma-input.schema.json",
+  "version": "0.1.0",
+  "component": "button",
+  "status": "stub",
+  "note": "Phase 1 Checkpoint 0 stub. Fleshed out with realistic variants and states in Checkpoint 2."
+}
