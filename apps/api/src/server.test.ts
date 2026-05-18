@@ -6,7 +6,7 @@ describe('DesignRail API', () => {
   let app: Awaited<ReturnType<typeof buildServer>>;
 
   beforeAll(async () => {
-    app = await buildServer();
+    app = await buildServer({ logger: false });
   });
 
   afterAll(async () => {

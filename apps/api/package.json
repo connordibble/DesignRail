@@ -9,10 +9,11 @@
     "start": "tsx src/server.ts",
     "build": "tsc -b",
     "typecheck": "tsc -b",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "graphql:check": "tsx src/graphql-check.ts"
   },
   "dependencies": {
-    "@apollo/server": "^4.11.3",
+    "@apollo/server": "^5.0.0",
     "@as-integrations/fastify": "^3.1.0",
     "@designrail/shared": "workspace:*",
     "fastify": "^5.2.1",

@@ -15,7 +15,7 @@
     "format:check": "bash -c 'if [ -x node_modules/.bin/prettier ]; then prettier . --check; else echo \"Prettier not installed; format check skipped.\"; fi'",
     "format": "bash -c 'if [ -x node_modules/.bin/prettier ]; then prettier . --write; else echo \"Prettier not installed; format skipped.\"; fi'",
     "test": "bash -c 'if [ -x node_modules/.bin/vitest ]; then vitest run --passWithNoTests; else echo \"Vitest not installed; tests skipped.\"; fi'",
-    "graphql:check": "bash -c 'if [ -x node_modules/.bin/graphql-codegen ] && [ -f codegen.ts ]; then graphql-codegen --config codegen.ts; elif [ -f schema.graphql ] || [ -f graphql/schema.graphql ] || [ -f apps/api/schema.graphql ]; then echo \"GraphQL schema found; add a configured checker.\" >&2; exit 1; else echo \"No GraphQL schema found; graphql check skipped.\"; fi'",
+    "graphql:check": "pnpm --filter @designrail/api graphql:check",
     "db:check": "bash -c 'if [ -f prisma/schema.prisma ] && [ -x node_modules/.bin/prisma ]; then prisma validate; elif [ -d supabase/migrations ] || [ -d migrations ]; then echo \"Database migrations found; add a configured db checker.\" >&2; exit 1; else echo \"No database schema or migrations found; db check skipped.\"; fi'",
     "design:import": "bash -c 'if [ -f tools/figma-import/src/cli.ts ]; then tsx tools/figma-import/src/cli.ts examples/figma-input.button.json; else echo \"Design import tool not present; skipped.\"; fi'",
     "design:map": "bash -c 'if [ -f tools/component-mapper/src/cli.ts ]; then tsx tools/component-mapper/src/cli.ts; else echo \"Component mapper not present; skipped.\"; fi'",

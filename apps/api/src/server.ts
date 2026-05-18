@@ -1,11 +1,11 @@
 import { ApolloServer } from '@apollo/server';
 import fastifyApollo, { fastifyApolloDrainPlugin } from '@as-integrations/fastify';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 
 import { resolvers, typeDefs } from './schema.js';
 
-export async function buildServer(): Promise<FastifyInstance> {
-  const app = Fastify({ logger: true });
+export async function buildServer(options: FastifyServerOptions = {}): Promise<FastifyInstance> {
+  const app = Fastify({ logger: true, ...options });
 
   const apollo = new ApolloServer({
     typeDefs,
