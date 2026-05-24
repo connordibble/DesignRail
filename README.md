@@ -2,9 +2,25 @@
 
 [![check](https://github.com/connordibble/DesignRail/actions/workflows/check.yml/badge.svg)](https://github.com/connordibble/DesignRail/actions/workflows/check.yml)
 
-DesignRail is a full-stack internal tooling platform for design-to-engineering handoff. It ingests mock or optional real Figma input, normalizes it into component intent, maps it to Shoelace Web Components, runs compliance review, and presents everything in a React human-review UI.
+DesignRail is a design-system handoff control plane for AI-assisted implementation. It ingests mock or optional real Figma input, normalizes it into component intent, maps that intent to Shoelace Web Components, runs compliance review, and records human review decisions before anything is treated as export-ready.
 
-The review UI is the product. Developers accept, reject, or edit mappings before exporting HTML or React examples, and review decisions are persisted and instrumented through a GraphQL API.
+DesignRail does not try to replace coding agents, IDEs, or Figma Dev Mode. It sits between design intent and implementation as the governed review layer: designers and developers can inspect mapping recommendations, see compliance findings, accept, reject, or edit decisions, and export implementation-ready HTML, React examples, or agent-ready briefs. Review decisions are persisted and instrumented through a GraphQL API so mapping quality can be audited over time.
+
+## What DesignRail Is For
+
+- Normalize Figma-style design data into reviewable component intent.
+- Map design intent to a component-library schema, with Shoelace as the first target.
+- Make accessibility, token usage, variant coverage, React readiness, documentation readiness, and design-system alignment visible before implementation.
+- Preserve human decisions so accepted, rejected, and edited mappings are auditable.
+- Export clean implementation examples and structured context that can be used in CLI, IDE, or agent-assisted coding workflows.
+- Measure where design-to-engineering handoff succeeds or repeatedly needs correction.
+
+## What DesignRail Is Not
+
+- A one-click design-to-code generator.
+- A replacement for engineers reviewing implementation details.
+- A replacement for Figma, Dev Mode, or coding agents.
+- A place for proprietary design files, private employer references, or real credentials in the default path.
 
 ## Quick start
 
@@ -60,7 +76,7 @@ pnpm design:import
 pnpm design:map
 ```
 
-In this lightweight scaffold, scripts skip gracefully when the matching TypeScript tool is not present yet. Once implementation packages are added, the same script names become the deterministic gate for that code.
+The default workflow is credential-free and deterministic. Optional Figma API/MCP or AI-service integrations should be explicit additions, not requirements for local development.
 
 ## Agent-Assisted Development Model
 
