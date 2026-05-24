@@ -1,16 +1,28 @@
+import {
+  buttonComplianceFindingFixture,
+  componentIntentSchema,
+  componentMappingSchema,
+  complianceFindingSchema,
+  type ComponentIntent,
+  type ComponentMapping,
+  type ComplianceFinding,
+} from '@designrail/shared';
+
 export const TOOL_NAME = '@designrail/compliance-agent';
 
-export type ComplianceResult = {
-  tool: string;
-  status: 'skeleton';
-  findings: ReadonlyArray<never>;
-};
+export interface ReviewComplianceInput {
+  intent: ComponentIntent;
+  mapping: ComponentMapping;
+}
 
-export type ReviewComplianceInput = {
-  intent?: unknown;
-  mapping?: unknown;
-};
+export function reviewCompliance({ intent, mapping }: ReviewComplianceInput): ComplianceFinding[] {
+  componentIntentSchema.parse(intent);
+  const parsedMapping = componentMappingSchema.parse(mapping);
 
-export function reviewCompliance(_input: ReviewComplianceInput = {}): ComplianceResult {
-  return { tool: TOOL_NAME, status: 'skeleton', findings: [] };
+  return [
+    complianceFindingSchema.parse({
+      ...buttonComplianceFindingFixture,
+      mappingId: parsedMapping.id,
+    }),
+  ];
 }

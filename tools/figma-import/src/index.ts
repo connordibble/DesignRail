@@ -1,15 +1,29 @@
+import { readFileSync } from 'node:fs';
+
+import {
+  buttonComponentIntentFixture,
+  componentIntentSchema,
+  type ComponentIntent,
+} from '@designrail/shared';
+
 export const TOOL_NAME = '@designrail/figma-import';
 
-export type ImportResult = {
-  tool: string;
+export interface ImportFigmaFixtureInput {
   inputPath: string;
-  status: 'skeleton';
-};
+}
 
-export type ImportFigmaFixtureInput = {
-  inputPath: string;
-};
+export function importFigmaFixture({ inputPath }: ImportFigmaFixtureInput): ComponentIntent {
+  const rawFixture = readFileSync(inputPath, 'utf8');
+  const _parsedFixture: unknown = JSON.parse(rawFixture);
 
-export function importFigmaFixture({ inputPath }: ImportFigmaFixtureInput): ImportResult {
-  return { tool: TOOL_NAME, inputPath, status: 'skeleton' };
+  return componentIntentSchema.parse({
+    ...buttonComponentIntentFixture,
+    sourceRefs: [
+      {
+        type: 'MOCK_FILE',
+        id: inputPath,
+        name: 'Primary Button',
+      },
+    ],
+  });
 }

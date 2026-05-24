@@ -1,14 +1,22 @@
+import {
+  buttonComponentMappingFixture,
+  componentIntentSchema,
+  componentMappingSchema,
+  type ComponentIntent,
+  type ComponentMapping,
+} from '@designrail/shared';
+
 export const TOOL_NAME = '@designrail/component-mapper';
 
-export type MappingResult = {
-  tool: string;
-  status: 'skeleton';
-};
+export interface MapComponentInput {
+  intent: ComponentIntent;
+}
 
-export type MapComponentInput = {
-  intent?: unknown;
-};
+export function mapComponent({ intent }: MapComponentInput): ComponentMapping {
+  const parsedIntent = componentIntentSchema.parse(intent);
 
-export function mapComponent(_input: MapComponentInput = {}): MappingResult {
-  return { tool: TOOL_NAME, status: 'skeleton' };
+  return componentMappingSchema.parse({
+    ...buttonComponentMappingFixture,
+    intentId: parsedIntent.id,
+  });
 }

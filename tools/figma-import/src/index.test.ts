@@ -1,14 +1,40 @@
+import { componentIntentSchema } from '@designrail/shared';
 import { describe, expect, it } from 'vitest';
 
-import { importFigmaFixture, TOOL_NAME } from './index.js';
+import { createFigmaImportCliResponse } from './cli.js';
+
+import { importFigmaFixture } from './index.js';
 
 describe('@designrail/figma-import', () => {
-  it('returns a skeleton import result', () => {
+  it('returns a valid skeletal component intent', () => {
     const result = importFigmaFixture({ inputPath: 'examples/figma-input.button.json' });
-    expect(result).toEqual({
-      tool: TOOL_NAME,
-      inputPath: 'examples/figma-input.button.json',
-      status: 'skeleton',
+
+    expect(componentIntentSchema.parse(result)).toMatchObject({
+      componentType: 'Button',
+      source: 'MOCK',
     });
+  });
+
+  it('returns JSON-safe CLI output for a fixture path', () => {
+    const response = createFigmaImportCliResponse(['examples/figma-input.button.json']);
+
+    expect(response.exitCode).toBe(0);
+    expect(() => JSON.stringify(response.stdout)).not.toThrow();
+    expect(componentIntentSchema.parse(response.stdout)).toMatchObject({
+      componentType: 'Button',
+    });
+  });
+
+  it('returns a JSON-safe usage error when input is missing', () => {
+    const response = createFigmaImportCliResponse([]);
+
+    expect(response).toEqual({
+      exitCode: 2,
+      stderr: {
+        error: 'USAGE',
+        message: 'Usage: figma-import <path-to-fixture.json>',
+      },
+    });
+    expect(() => JSON.stringify(response.stderr)).not.toThrow();
   });
 });
