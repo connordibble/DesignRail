@@ -14,13 +14,23 @@ The first vertical slice is **Button**, end to end: fixture → normalized inten
 ## Architecture
 
 - **apps/web** — React + Vite review UI
-- **apps/api** — Fastify + Apollo GraphQL server; SQLite via Drizzle lands in Checkpoint 1
+- **apps/api** — Fastify + Apollo GraphQL server with SQLite persistence through Drizzle
 - **packages/shared** — domain types and Zod schemas
 - **packages/schema** — Shoelace component schemas (props, slots, variants, parts)
 - **packages/design-tokens** — design tokens that map to Shoelace CSS custom properties
 - **tools/figma-import**, **tools/component-mapper**, **tools/compliance-agent** — typed pipeline libraries, CLI is a thin wrapper
 
 GraphQL is the single contract between UI and persistence. AI proposes; humans review; deterministic checks enforce quality.
+
+## Current contract
+
+Checkpoint 1 defines the typed local contract:
+
+- Shared Zod schemas for examples, component intent, mappings, compliance findings, review decisions, exports, instrumentation events, and dashboard metrics.
+- GraphQL queries for examples, intent, mappings, compliance, review decisions, and dashboard metrics.
+- GraphQL mutations for saving review decisions and exporting accepted or edited mappings.
+- API-owned SQLite tables for the same seven core entities.
+- JSON-only CLI output from the import, mapping, and compliance tools.
 
 ## Architecture decisions
 

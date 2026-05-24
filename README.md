@@ -40,7 +40,7 @@ apps/
   web/                React + Vite + Tailwind review UI
   api/                Fastify + Apollo GraphQL server
 packages/
-  shared/             Cross-cutting domain types and Zod schemas (filled in C1)
+  shared/             Cross-cutting domain types and Zod schemas
   schema/             Shoelace component schemas (props, slots, variants, parts)
   design-tokens/      Design tokens → Shoelace CSS custom properties
 tools/
@@ -77,6 +77,12 @@ pnpm design:map
 ```
 
 The default workflow is credential-free and deterministic. Optional Figma API/MCP or AI-service integrations should be explicit additions, not requirements for local development.
+
+## Phase 1 Contract
+
+Checkpoint 1 defines the local review contract: shared Zod schemas, a GraphQL API, API-owned SQLite persistence through Drizzle, JSON-only tool outputs, and persisted review decisions. The default database is local-only at `apps/api/.data/designrail.sqlite`.
+
+The review UI should use GraphQL for examples, component intent, mappings, compliance findings, review decisions, exports, instrumentation, and dashboard metrics. Tools and resolvers should exchange structured data, not markdown or stdout-shaped strings.
 
 ## Agent-Assisted Development Model
 
