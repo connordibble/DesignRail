@@ -10,17 +10,23 @@
     "build": "tsc -b",
     "typecheck": "tsc -b",
     "test": "vitest run --passWithNoTests",
-    "graphql:check": "tsx src/graphql-check.ts"
+    "graphql:check": "tsx src/graphql-check.ts",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "db:check": "drizzle-kit check --config drizzle.config.ts"
   },
   "dependencies": {
     "@apollo/server": "^5.0.0",
     "@as-integrations/fastify": "^3.1.0",
     "@designrail/shared": "workspace:*",
+    "better-sqlite3": "12.10.0",
+    "drizzle-orm": "0.45.2",
     "fastify": "^5.2.1",
     "graphql": "^16.10.0",
     "graphql-tag": "^2.12.6"
   },
   "devDependencies": {
-    "@types/node": "^20.17.10"
+    "@types/better-sqlite3": "7.6.13",
+    "@types/node": "^20.17.10",
+    "drizzle-kit": "0.31.10"
   }
 }

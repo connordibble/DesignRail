@@ -16,7 +16,7 @@
     "format": "bash -c 'if [ -x node_modules/.bin/prettier ]; then prettier . --write; else echo \"Prettier not installed; format skipped.\"; fi'",
     "test": "bash -c 'if [ -x node_modules/.bin/vitest ]; then vitest run --passWithNoTests; else echo \"Vitest not installed; tests skipped.\"; fi'",
     "graphql:check": "pnpm --filter @designrail/api graphql:check",
-    "db:check": "bash -c 'if [ -f prisma/schema.prisma ] && [ -x node_modules/.bin/prisma ]; then prisma validate; elif [ -d supabase/migrations ] || [ -d migrations ]; then echo \"Database migrations found; add a configured db checker.\" >&2; exit 1; else echo \"No database schema or migrations found; db check skipped.\"; fi'",
+    "db:check": "pnpm --filter @designrail/api db:check",
     "design:import": "bash -c 'if [ -f tools/figma-import/src/cli.ts ]; then tsx tools/figma-import/src/cli.ts examples/figma-input.button.json; else echo \"Design import tool not present; skipped.\"; fi'",
     "design:map": "bash -c 'if [ -f tools/component-mapper/src/cli.ts ]; then tsx tools/component-mapper/src/cli.ts; else echo \"Component mapper not present; skipped.\"; fi'",
     "compliance:review": "bash -c 'if [ -f tools/compliance-agent/src/cli.ts ]; then tsx tools/compliance-agent/src/cli.ts; else echo \"Compliance review tool not present; skipped.\"; fi'",
@@ -31,6 +31,9 @@
     "build": "pnpm -r build"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ],
     "overrides": {
       "@types/node": "^20.17.10"
     }

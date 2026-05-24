@@ -29,6 +29,7 @@ out/
 # Vite / frontend caches
 .vite/
 vite.config.*.timestamp-*
+*.timestamp-*
 
 # TypeScript
 *.tsbuildinfo
@@ -50,6 +51,7 @@ docs/.astro/
 docs/dist/
 
 # SQLite / local databases
+apps/api/.data/
 *.sqlite
 *.sqlite3
 *.db
