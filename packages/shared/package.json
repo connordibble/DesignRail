@@ -12,5 +12,8 @@
     "typecheck": "tsc -b",
     "test": "vitest run --passWithNoTests",
     "build": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
   }
 }
