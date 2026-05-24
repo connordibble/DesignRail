@@ -17,24 +17,46 @@ if (schemaErrors.length > 0) {
 const app = await buildServer({ logger: false });
 
 try {
-  const response = await app.inject({
-    method: 'POST',
-    url: '/graphql',
-    headers: { 'content-type': 'application/json' },
-    payload: { query: '{ __typename }' },
-  });
+  const smokeQueries = [
+    `query ExamplesSmoke {
+      examples {
+        id
+        name
+        componentType
+        status
+      }
+    }`,
+    `query DashboardMetricsSmoke {
+      dashboardMetrics {
+        acceptedMappings
+        rejectedMappings
+        editedMappings
+        pendingMappings
+        exportsCreated
+      }
+    }`,
+  ];
 
-  if (response.statusCode !== 200) {
-    console.error(`GraphQL smoke query failed with HTTP ${response.statusCode}:`);
-    console.error(response.body);
-    process.exit(1);
-  }
+  for (const query of smokeQueries) {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/graphql',
+      headers: { 'content-type': 'application/json' },
+      payload: { query },
+    });
 
-  const body = response.json() as { errors?: unknown };
-  if (body.errors) {
-    console.error('GraphQL smoke query returned errors:');
-    console.error(JSON.stringify(body.errors, null, 2));
-    process.exit(1);
+    if (response.statusCode !== 200) {
+      console.error(`GraphQL smoke query failed with HTTP ${response.statusCode}:`);
+      console.error(response.body);
+      process.exit(1);
+    }
+
+    const body = response.json() as { errors?: unknown };
+    if (body.errors) {
+      console.error('GraphQL smoke query returned errors:');
+      console.error(JSON.stringify(body.errors, null, 2));
+      process.exit(1);
+    }
   }
 } finally {
   await app.close();

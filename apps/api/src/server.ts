@@ -2,19 +2,49 @@ import { ApolloServer } from '@apollo/server';
 import fastifyApollo, { fastifyApolloDrainPlugin } from '@as-integrations/fastify';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 
-import { resolvers, typeDefs } from './schema.js';
+import {
+  closeDatabaseClient,
+  createDatabaseClient,
+  migrateDatabase,
+  type DatabaseClient,
+} from './db/index.js';
+import { seedDesignRailData } from './repositories/index.js';
+import { createResolvers, typeDefs } from './schema.js';
 
-export async function buildServer(options: FastifyServerOptions = {}): Promise<FastifyInstance> {
-  const app = Fastify({ logger: true, ...options });
+export interface BuildServerOptions extends FastifyServerOptions {
+  databaseClient?: DatabaseClient;
+  runMigrations?: boolean;
+  seedData?: boolean;
+}
+
+export async function buildServer(options: BuildServerOptions = {}): Promise<FastifyInstance> {
+  const { databaseClient, runMigrations = true, seedData = true, ...fastifyOptions } = options;
+  const app = Fastify({ logger: true, ...fastifyOptions });
+  const client = databaseClient ?? createDatabaseClient();
+  const shouldOwnDatabaseClient = databaseClient === undefined;
+
+  if (runMigrations) {
+    migrateDatabase(client);
+  }
+
+  if (seedData) {
+    seedDesignRailData(client);
+  }
 
   const apollo = new ApolloServer({
     typeDefs,
-    resolvers,
+    resolvers: createResolvers(client),
     plugins: [fastifyApolloDrainPlugin(app)],
   });
 
   await apollo.start();
   await app.register(fastifyApollo(apollo));
+
+  if (shouldOwnDatabaseClient) {
+    app.addHook('onClose', () => {
+      closeDatabaseClient(client);
+    });
+  }
 
   return app;
 }
