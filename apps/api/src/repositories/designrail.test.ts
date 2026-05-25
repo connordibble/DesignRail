@@ -136,7 +136,7 @@ describe('DesignRail repositories', () => {
       ok: true,
       exportResult: {
         id: 'export.test.allowed',
-        content: '<sl-button>Save changes</sl-button>',
+        content: '<sl-button variant="primary">Save changes</sl-button>',
       },
     });
     expect(getDashboardMetrics(client).exportsCreated).toBe(1);

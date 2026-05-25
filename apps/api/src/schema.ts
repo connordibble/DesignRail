@@ -1,4 +1,4 @@
-import type { Metadata } from '@designrail/shared';
+import type { ExportFormat, MappingEdit, ReviewDecisionStatus } from '@designrail/shared';
 import {
   GraphQLError,
   GraphQLScalarType,
@@ -175,11 +175,28 @@ export const typeDefs = gql`
     commonComplianceWarnings: [DashboardWarning!]!
   }
 
+  input TokenReferenceInput {
+    name: String!
+    value: String
+    target: String
+  }
+
+  input MappingEditInput {
+    targetComponent: String
+    mappedProps: JSON
+    mappedEvents: JSON
+    mappedSlots: JSON
+    mappedTokens: [TokenReferenceInput!]
+    confidence: MappingConfidence
+    rationale: String
+    fallbackNotes: String
+  }
+
   input SaveReviewDecisionInput {
     mappingId: ID!
     status: ReviewDecisionStatus!
     reviewerLabel: String!
-    editedMapping: JSON
+    editedMapping: MappingEditInput
     notes: String
   }
 
@@ -189,11 +206,11 @@ export const typeDefs = gql`
   }
 
   type Query {
-    examples: [Example!]!
+    examples(limit: Int = 50): [Example!]!
     componentIntent(exampleId: ID!): ComponentIntent
     mapping(exampleId: ID!): ComponentMapping
-    compliance(mappingId: ID!): [ComplianceFinding!]!
-    reviewDecisions: [ReviewDecision!]!
+    compliance(mappingId: ID!, limit: Int = 50): [ComplianceFinding!]!
+    reviewDecisions(limit: Int = 100): [ReviewDecision!]!
     dashboardMetrics: DashboardMetrics!
   }
 
@@ -209,14 +226,19 @@ interface ExampleIdArgs {
 
 interface MappingIdArgs {
   mappingId: string;
+  limit?: number;
+}
+
+interface LimitArgs {
+  limit?: number;
 }
 
 interface SaveReviewDecisionArgs {
   input: {
     mappingId: string;
-    status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EDITED';
+    status: ReviewDecisionStatus;
     reviewerLabel: string;
-    editedMapping?: Metadata;
+    editedMapping?: MappingEdit;
     notes?: string;
   };
 }
@@ -224,7 +246,7 @@ interface SaveReviewDecisionArgs {
 interface ExportMappingArgs {
   input: {
     mappingId: string;
-    format: 'HTML' | 'REACT' | 'AGENT_BRIEF';
+    format: ExportFormat;
   };
 }
 
@@ -267,14 +289,14 @@ export function createResolvers(client: DatabaseClient) {
   return {
     JSON: jsonScalar,
     Query: {
-      examples: () => listExamples(client),
+      examples: (_parent: unknown, args: LimitArgs) => listExamples(client, args),
       componentIntent: (_parent: unknown, args: ExampleIdArgs) =>
         getComponentIntentByExampleId(client, args.exampleId),
       mapping: (_parent: unknown, args: ExampleIdArgs) =>
         getMappingByExampleId(client, args.exampleId),
       compliance: (_parent: unknown, args: MappingIdArgs) =>
-        listComplianceFindingsByMappingId(client, args.mappingId),
-      reviewDecisions: () => listReviewDecisions(client),
+        listComplianceFindingsByMappingId(client, args.mappingId, args),
+      reviewDecisions: (_parent: unknown, args: LimitArgs) => listReviewDecisions(client, args),
       dashboardMetrics: () => getDashboardMetrics(client),
     },
     Mutation: {

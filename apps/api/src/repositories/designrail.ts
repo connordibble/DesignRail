@@ -12,6 +12,7 @@ import {
   exampleSchema,
   exportResultSchema,
   instrumentationEventSchema,
+  mappingEditSchema,
   reviewDecisionSchema,
   type ComponentIntent,
   type ComponentMapping,
@@ -22,11 +23,12 @@ import {
   type ExportResult,
   type InstrumentationEntityType,
   type InstrumentationEvent,
+  type MappingEdit,
   type Metadata,
   type ReviewDecision,
   type ReviewDecisionStatus,
 } from '@designrail/shared';
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq, inArray } from 'drizzle-orm';
 
 import {
   componentIntents,
@@ -39,12 +41,21 @@ import {
   type DatabaseClient,
 } from '../db/index.js';
 
+import { renderExportContent } from './export-renderer.js';
+
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
+export interface PaginationInput {
+  limit?: number;
+}
+
 export interface SaveReviewDecisionInput {
   id?: string;
   mappingId: string;
   status: ReviewDecisionStatus;
   reviewerLabel: string;
-  editedMapping?: Metadata;
+  editedMapping?: MappingEdit;
   notes?: string;
   createdAt?: string;
 }
@@ -82,6 +93,18 @@ function nowIso(): string {
 
 function createId(prefix: string): string {
   return `${prefix}.${randomUUID()}`;
+}
+
+function normalizeLimit(limit: number | undefined, fallback = DEFAULT_LIST_LIMIT): number {
+  if (limit === undefined) {
+    return fallback;
+  }
+
+  if (!Number.isInteger(limit) || limit < 1) {
+    return fallback;
+  }
+
+  return Math.min(limit, MAX_LIST_LIMIT);
 }
 
 function parseJsonText(value: string): unknown {
@@ -251,10 +274,11 @@ export function seedDesignRailData(client: DatabaseClient): void {
   insertComplianceFinding(client, buttonComplianceFindingFixture);
 }
 
-export function listExamples(client: DatabaseClient): Example[] {
+export function listExamples(client: DatabaseClient, input: PaginationInput = {}): Example[] {
   return client.db
     .select()
     .from(examples)
+    .limit(normalizeLimit(input.limit))
     .all()
     .map((row) => exampleSchema.parse(row));
 }
@@ -286,7 +310,14 @@ export function getMappingByExampleId(
     .select()
     .from(componentMappings)
     .where(eq(componentMappings.intentId, intent.id))
+    .orderBy(desc(componentMappings.createdAt))
     .get();
+
+  return row === undefined ? null : toComponentMapping(row);
+}
+
+function getMappingById(client: DatabaseClient, id: string): ComponentMapping | null {
+  const row = client.db.select().from(componentMappings).where(eq(componentMappings.id, id)).get();
 
   return row === undefined ? null : toComponentMapping(row);
 }
@@ -294,17 +325,28 @@ export function getMappingByExampleId(
 export function listComplianceFindingsByMappingId(
   client: DatabaseClient,
   mappingId: string,
+  input: PaginationInput = {},
 ): ComplianceFinding[] {
   return client.db
     .select()
     .from(complianceFindings)
     .where(eq(complianceFindings.mappingId, mappingId))
+    .limit(normalizeLimit(input.limit))
     .all()
     .map(toComplianceFinding);
 }
 
-export function listReviewDecisions(client: DatabaseClient): ReviewDecision[] {
-  return client.db.select().from(reviewDecisions).all().map(toReviewDecision);
+export function listReviewDecisions(
+  client: DatabaseClient,
+  input: PaginationInput = {},
+): ReviewDecision[] {
+  return client.db
+    .select()
+    .from(reviewDecisions)
+    .orderBy(desc(reviewDecisions.createdAt))
+    .limit(normalizeLimit(input.limit, 100))
+    .all()
+    .map(toReviewDecision);
 }
 
 export function saveReviewDecision(
@@ -375,6 +417,7 @@ export function createExport(
     .from(reviewDecisions)
     .where(eq(reviewDecisions.mappingId, input.mappingId))
     .orderBy(desc(reviewDecisions.createdAt))
+    .limit(1)
     .get();
 
   const latestDecision = decision === undefined ? null : toReviewDecision(decision);
@@ -387,13 +430,9 @@ export function createExport(
     };
   }
 
-  const mapping = client.db
-    .select()
-    .from(componentMappings)
-    .where(eq(componentMappings.id, input.mappingId))
-    .get();
+  const mapping = getMappingById(client, input.mappingId);
 
-  if (mapping === undefined) {
+  if (mapping === null) {
     return {
       ok: false,
       code: 'MAPPING_NOT_EXPORTABLE',
@@ -401,12 +440,28 @@ export function createExport(
     };
   }
 
-  const parsedMapping = toComponentMapping(mapping);
+  const effectiveMapping =
+    latestDecision.status === 'EDITED' && latestDecision.editedMapping !== undefined
+      ? applyMappingEdit(mapping, latestDecision.editedMapping)
+      : mapping;
+
+  let content: string;
+
+  try {
+    content = renderExportContent(effectiveMapping, input.format);
+  } catch (error) {
+    return {
+      ok: false,
+      code: 'MAPPING_NOT_EXPORTABLE',
+      message: error instanceof Error ? error.message : 'Mapping cannot be exported.',
+    };
+  }
+
   const exportResult = exportResultSchema.parse({
     id: input.id ?? createId('export'),
     mappingId: input.mappingId,
     format: input.format,
-    content: buildExportContent(parsedMapping, input.format),
+    content,
     createdAt: input.createdAt ?? nowIso(),
   });
 
@@ -419,48 +474,87 @@ export function createExport(
 }
 
 export function getDashboardMetrics(client: DatabaseClient): DashboardMetrics {
-  const decisions = listReviewDecisions(client);
-  const exportRows = client.db.select().from(exports).all();
+  const latestStatuses = getLatestDecisionStatuses(client);
+  const exportCount = client.db.select({ total: count() }).from(exports).get()?.total ?? 0;
   const warnings = client.db
-    .select()
+    .select({
+      message: complianceFindings.message,
+      total: count(),
+    })
     .from(complianceFindings)
-    .all()
-    .map(toComplianceFinding)
-    .filter((finding) => finding.severity === 'WARNING' || finding.severity === 'BLOCKER');
-
-  const warningCounts = new Map<string, number>();
-
-  for (const warning of warnings) {
-    warningCounts.set(warning.message, (warningCounts.get(warning.message) ?? 0) + 1);
-  }
+    .where(inArray(complianceFindings.severity, ['WARNING', 'BLOCKER']))
+    .groupBy(complianceFindings.message)
+    .all();
 
   return dashboardMetricsSchema.parse({
-    acceptedMappings: decisions.filter((decision) => decision.status === 'ACCEPTED').length,
-    rejectedMappings: decisions.filter((decision) => decision.status === 'REJECTED').length,
-    editedMappings: decisions.filter((decision) => decision.status === 'EDITED').length,
-    pendingMappings: decisions.filter((decision) => decision.status === 'PENDING').length,
-    exportsCreated: exportRows.length,
-    commonComplianceWarnings: Array.from(warningCounts.entries())
-      .map(([message, count]) => ({ message, count }))
-      .sort((left, right) => right.count - left.count || left.message.localeCompare(right.message)),
+    acceptedMappings: latestStatuses.get('ACCEPTED') ?? 0,
+    rejectedMappings: latestStatuses.get('REJECTED') ?? 0,
+    editedMappings: latestStatuses.get('EDITED') ?? 0,
+    pendingMappings: latestStatuses.get('PENDING') ?? 0,
+    exportsCreated: exportCount,
+    commonComplianceWarnings: warnings
+      .map((warning) => ({ message: warning.message, count: warning.total }))
+      .sort((left, right) => right.count - left.count || left.message.localeCompare(right.message))
+      .slice(0, 10),
   });
 }
 
-function buildExportContent(mapping: ComponentMapping, format: ExportFormat): string {
-  const defaultSlot =
-    typeof mapping.mappedSlots['default'] === 'string' ? mapping.mappedSlots['default'] : 'Content';
+function applyMappingEdit(mapping: ComponentMapping, edit: MappingEdit): ComponentMapping {
+  const parsedEdit = mappingEditSchema.parse(edit);
+  const base = {
+    ...mapping,
+    targetComponent: parsedEdit.targetComponent ?? mapping.targetComponent,
+    mappedProps: parsedEdit.mappedProps ?? mapping.mappedProps,
+    mappedEvents: parsedEdit.mappedEvents ?? mapping.mappedEvents,
+    mappedSlots: parsedEdit.mappedSlots ?? mapping.mappedSlots,
+    mappedTokens: parsedEdit.mappedTokens ?? mapping.mappedTokens,
+    confidence: parsedEdit.confidence ?? mapping.confidence,
+    rationale: parsedEdit.rationale ?? mapping.rationale,
+  };
 
-  if (format === 'HTML') {
-    return `<${mapping.targetComponent}>${defaultSlot}</${mapping.targetComponent}>`;
+  return componentMappingSchema.parse(
+    parsedEdit.fallbackNotes === undefined
+      ? base
+      : { ...base, fallbackNotes: parsedEdit.fallbackNotes },
+  );
+}
+
+function getLatestDecisionStatuses(client: DatabaseClient): Map<ReviewDecisionStatus, number> {
+  const latestByMappingId = new Map<
+    string,
+    { status: ReviewDecisionStatus; createdAt: string; id: string }
+  >();
+  const rows = client.db
+    .select({
+      id: reviewDecisions.id,
+      mappingId: reviewDecisions.mappingId,
+      status: reviewDecisions.status,
+      createdAt: reviewDecisions.createdAt,
+    })
+    .from(reviewDecisions)
+    .all();
+
+  for (const row of rows) {
+    const current = latestByMappingId.get(row.mappingId);
+    const isNewer =
+      current === undefined ||
+      row.createdAt > current.createdAt ||
+      (row.createdAt === current.createdAt && row.id > current.id);
+
+    if (isNewer) {
+      latestByMappingId.set(row.mappingId, {
+        id: row.id,
+        status: row.status as ReviewDecisionStatus,
+        createdAt: row.createdAt,
+      });
+    }
   }
 
-  if (format === 'REACT') {
-    return `<SlButton>${defaultSlot}</SlButton>`;
+  const counts = new Map<ReviewDecisionStatus, number>();
+
+  for (const decision of latestByMappingId.values()) {
+    counts.set(decision.status, (counts.get(decision.status) ?? 0) + 1);
   }
 
-  return [
-    `Mapping: ${mapping.id}`,
-    `Target: ${mapping.targetLibrary} ${mapping.targetComponent}`,
-    `Rationale: ${mapping.rationale}`,
-  ].join('\n');
+  return counts;
 }
