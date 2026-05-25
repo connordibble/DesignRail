@@ -2,15 +2,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import {
-  buttonComponentMappingFixture,
-  buttonExampleFixture,
-  FIXTURE_TIMESTAMP,
-} from '@designrail/shared';
+import { buttonComponentMappingFixture, buttonExampleFixture } from '@designrail/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { closeDatabaseClient, createDatabaseClient, type DatabaseClient } from './db/index.js';
-import { buildServer } from './server.js';
+import { buildServer, resolveServerHost } from './server.js';
 
 interface GraphQlResponse<TData> {
   data?: TData;
@@ -27,7 +23,11 @@ describe('DesignRail GraphQL API', () => {
     client = createDatabaseClient({
       sqlitePath: join(tempDir, 'designrail.sqlite'),
     });
-    app = await buildServer({ logger: false, databaseClient: client });
+    app = await buildServer({
+      logger: false,
+      databaseClient: client,
+      queryGuards: { maxAliases: 1 },
+    });
   });
 
   afterEach(async () => {
@@ -185,7 +185,9 @@ describe('DesignRail GraphQL API', () => {
           status: 'EDITED',
           reviewerLabel: 'GraphQL test',
           editedMapping: {
-            reviewedAt: FIXTURE_TIMESTAMP,
+            mappedProps: {
+              variant: 'secondary',
+            },
           },
         },
       },
@@ -216,5 +218,38 @@ describe('DesignRail GraphQL API', () => {
       editedMappings: 1,
       pendingMappings: 0,
     });
+  });
+
+  it('blocks overly broad GraphQL queries before resolver execution', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/graphql',
+      headers: { 'content-type': 'application/json' },
+      payload: {
+        query: `
+          query TooManyAliases {
+            a: dashboardMetrics { acceptedMappings }
+            b: dashboardMetrics { acceptedMappings }
+          }
+        `,
+      },
+    });
+
+    const body = response.json() as GraphQlResponse<unknown>;
+
+    expect(body.errors?.[0]?.message).toContain('max aliases');
+  });
+});
+
+describe('DesignRail API host binding', () => {
+  it('binds to localhost by default', () => {
+    expect(resolveServerHost({})).toBe('127.0.0.1');
+  });
+
+  it('requires explicit opt-in for non-local hosts', () => {
+    expect(() => resolveServerHost({ HOST: '0.0.0.0' })).toThrow('DESIGNRAIL_ALLOW_NETWORK=true');
+    expect(resolveServerHost({ HOST: '0.0.0.0', DESIGNRAIL_ALLOW_NETWORK: 'true' })).toBe(
+      '0.0.0.0',
+    );
   });
 });

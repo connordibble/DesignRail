@@ -1,5 +1,10 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { buildASTSchema, validateSchema } from 'graphql';
 
+import { closeDatabaseClient, createDatabaseClient } from './db/index.js';
 import { typeDefs } from './schema.js';
 import { buildServer } from './server.js';
 
@@ -14,7 +19,9 @@ if (schemaErrors.length > 0) {
   process.exit(1);
 }
 
-const app = await buildServer({ logger: false });
+const tempDir = mkdtempSync(join(tmpdir(), 'designrail-graphql-check-'));
+const client = createDatabaseClient({ sqlitePath: join(tempDir, 'designrail.sqlite') });
+const app = await buildServer({ databaseClient: client, logger: false });
 
 try {
   const smokeQueries = [
@@ -60,6 +67,8 @@ try {
   }
 } finally {
   await app.close();
+  closeDatabaseClient(client);
+  rmSync(tempDir, { recursive: true, force: true });
 }
 
 console.log('GraphQL schema and server smoke check passed.');
