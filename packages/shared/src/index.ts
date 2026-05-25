@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const PACKAGE_NAME = '@designrail/shared';
+export const DESIGNRAIL_CONTRACT_VERSION = 'c1';
 
 export type JsonValue =
   | string
@@ -24,6 +25,7 @@ export const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
 export const metadataSchema = z.record(z.string(), jsonValueSchema);
 
 export const isoDateTimeSchema = z.string().datetime();
+export const contractVersionSchema = z.literal(DESIGNRAIL_CONTRACT_VERSION);
 
 export const componentSourceSchema = z.enum(['MOCK', 'FIGMA']);
 export const exampleStatusSchema = z.enum(['READY', 'DISABLED']);
@@ -107,6 +109,17 @@ export const componentMappingSchema = z.object({
   createdAt: isoDateTimeSchema,
 });
 
+export const mappingEditSchema = z.object({
+  targetComponent: z.string().min(1).optional(),
+  mappedProps: metadataSchema.optional(),
+  mappedEvents: metadataSchema.optional(),
+  mappedSlots: metadataSchema.optional(),
+  mappedTokens: z.array(tokenReferenceSchema).optional(),
+  confidence: mappingConfidenceSchema.optional(),
+  rationale: z.string().min(1).optional(),
+  fallbackNotes: z.string().min(1).optional(),
+});
+
 export const complianceFindingSchema = z.object({
   id: z.string().min(1),
   mappingId: z.string().min(1),
@@ -119,15 +132,33 @@ export const complianceFindingSchema = z.object({
   createdAt: isoDateTimeSchema,
 });
 
-export const reviewDecisionSchema = z.object({
-  id: z.string().min(1),
-  mappingId: z.string().min(1),
-  status: reviewDecisionStatusSchema,
-  reviewerLabel: z.string().min(1),
-  editedMapping: metadataSchema.optional(),
-  notes: z.string().min(1).optional(),
-  createdAt: isoDateTimeSchema,
-});
+export const reviewDecisionSchema = z
+  .object({
+    id: z.string().min(1),
+    mappingId: z.string().min(1),
+    status: reviewDecisionStatusSchema,
+    reviewerLabel: z.string().min(1),
+    editedMapping: mappingEditSchema.optional(),
+    notes: z.string().min(1).optional(),
+    createdAt: isoDateTimeSchema,
+  })
+  .superRefine((decision, context) => {
+    if (decision.status === 'EDITED' && decision.editedMapping === undefined) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Edited review decisions require editedMapping.',
+        path: ['editedMapping'],
+      });
+    }
+
+    if (decision.status !== 'EDITED' && decision.editedMapping !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Only EDITED review decisions may include editedMapping.',
+        path: ['editedMapping'],
+      });
+    }
+  });
 
 export const exportResultSchema = z.object({
   id: z.string().min(1),
@@ -160,7 +191,21 @@ export const dashboardMetricsSchema = z.object({
   commonComplianceWarnings: z.array(dashboardWarningSchema),
 });
 
+export const toolModeSchema = z.enum(['MOCK']);
+
+export function toolResultSchema<TOutput extends z.ZodType>(outputSchema: TOutput) {
+  return z.object({
+    toolName: z.string().min(1),
+    toolVersion: z.string().min(1),
+    contractVersion: contractVersionSchema.default(DESIGNRAIL_CONTRACT_VERSION),
+    mode: toolModeSchema,
+    output: outputSchema,
+    warnings: z.array(z.string()).default([]),
+  });
+}
+
 export type Metadata = z.infer<typeof metadataSchema>;
+export type ContractVersion = z.infer<typeof contractVersionSchema>;
 export type ComponentSource = z.infer<typeof componentSourceSchema>;
 export type ExampleStatus = z.infer<typeof exampleStatusSchema>;
 export type TargetLibrary = z.infer<typeof targetLibrarySchema>;
@@ -176,12 +221,74 @@ export type AccessibilityMetadata = z.infer<typeof accessibilityMetadataSchema>;
 export type Example = z.infer<typeof exampleSchema>;
 export type ComponentIntent = z.infer<typeof componentIntentSchema>;
 export type ComponentMapping = z.infer<typeof componentMappingSchema>;
+export type MappingEdit = z.infer<typeof mappingEditSchema>;
 export type ComplianceFinding = z.infer<typeof complianceFindingSchema>;
 export type ReviewDecision = z.infer<typeof reviewDecisionSchema>;
 export type ExportResult = z.infer<typeof exportResultSchema>;
 export type InstrumentationEvent = z.infer<typeof instrumentationEventSchema>;
 export type DashboardWarning = z.infer<typeof dashboardWarningSchema>;
 export type DashboardMetrics = z.infer<typeof dashboardMetricsSchema>;
+export type ToolMode = z.infer<typeof toolModeSchema>;
+export type ToolResult<TOutput> = {
+  toolName: string;
+  toolVersion: string;
+  contractVersion: ContractVersion;
+  mode: ToolMode;
+  output: TOutput;
+  warnings: string[];
+};
+
+export interface CreateToolResultInput<TOutput> {
+  toolName: string;
+  toolVersion: string;
+  output: TOutput;
+  warnings?: string[];
+}
+
+export interface CliError {
+  error: string;
+  message: string;
+}
+
+export interface CliResponse<TOutput> {
+  exitCode: number;
+  stdout?: TOutput;
+  stderr?: CliError;
+}
+
+export interface CliIo {
+  stdout: (message: string) => void;
+  stderr: (message: string) => void;
+}
+
+export function createToolResult<TOutput>({
+  toolName,
+  toolVersion,
+  output,
+  warnings = [],
+}: CreateToolResultInput<TOutput>): ToolResult<TOutput> {
+  return {
+    toolName,
+    toolVersion,
+    contractVersion: DESIGNRAIL_CONTRACT_VERSION,
+    mode: 'MOCK',
+    output,
+    warnings,
+  };
+}
+
+export function writeJsonCliResponse<TOutput>(
+  response: CliResponse<TOutput>,
+  io: CliIo = { stdout: console.log, stderr: console.error },
+): void {
+  if (response.stdout !== undefined) {
+    io.stdout(JSON.stringify(response.stdout, null, 2));
+  }
+
+  if (response.stderr !== undefined) {
+    io.stderr(JSON.stringify(response.stderr, null, 2));
+  }
+}
 
 export const FIXTURE_TIMESTAMP = '2026-01-01T00:00:00.000Z';
 
@@ -285,7 +392,7 @@ export const htmlExportFixture: ExportResult = {
   id: 'export.button.primary.html',
   mappingId: buttonComponentMappingFixture.id,
   format: 'HTML',
-  content: '<sl-button variant="primary">Save changes</sl-button>',
+  content: '<sl-button variant="primary" size="medium">Save changes</sl-button>',
   createdAt: FIXTURE_TIMESTAMP,
 };
 

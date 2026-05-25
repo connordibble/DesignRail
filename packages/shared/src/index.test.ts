@@ -7,16 +7,19 @@ import {
   buttonExampleFixture,
   componentIntentSchema,
   componentMappingSchema,
+  createToolResult,
   complianceFindingSchema,
   exampleSchema,
   exportResultSchema,
   htmlExportFixture,
   instrumentationEventSchema,
   jsonValueSchema,
+  mappingEditSchema,
   PACKAGE_NAME,
   pendingReviewDecisionFixture,
   reviewDecisionSchema,
   reviewSavedEventFixture,
+  toolResultSchema,
 } from './index.js';
 
 describe('@designrail/shared contracts', () => {
@@ -71,6 +74,32 @@ describe('@designrail/shared contracts', () => {
       }),
     ).toThrow();
     expect(() => exportResultSchema.parse({ ...htmlExportFixture, format: 'MARKDOWN' })).toThrow();
+    expect(() =>
+      reviewDecisionSchema.parse({
+        ...pendingReviewDecisionFixture,
+        editedMapping: {
+          mappedSlots: {
+            default: undefined,
+          },
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      reviewDecisionSchema.parse({
+        ...pendingReviewDecisionFixture,
+        status: 'EDITED',
+      }),
+    ).toThrow();
+    expect(() =>
+      reviewDecisionSchema.parse({
+        ...pendingReviewDecisionFixture,
+        editedMapping: {
+          mappedSlots: {
+            default: 'Confirm',
+          },
+        },
+      }),
+    ).toThrow();
   });
 
   it('requires source references for normalized component intent', () => {
@@ -80,5 +109,46 @@ describe('@designrail/shared contracts', () => {
         sourceRefs: [],
       }),
     ).toThrow();
+  });
+
+  it('parses typed mapping edits and tool result envelopes', () => {
+    expect(
+      mappingEditSchema.parse({
+        mappedSlots: {
+          default: 'Confirm',
+        },
+      }),
+    ).toEqual({
+      mappedSlots: {
+        default: 'Confirm',
+      },
+    });
+
+    expect(
+      toolResultSchema(componentIntentSchema).parse({
+        toolName: '@designrail/figma-import',
+        toolVersion: '0.1.0',
+        mode: 'MOCK',
+        output: buttonComponentIntentFixture,
+      }),
+    ).toMatchObject({
+      contractVersion: 'c1',
+      warnings: [],
+      output: {
+        componentType: 'Button',
+      },
+    });
+
+    expect(
+      createToolResult({
+        toolName: '@designrail/figma-import',
+        toolVersion: '0.1.0',
+        output: buttonComponentIntentFixture,
+      }),
+    ).toMatchObject({
+      contractVersion: 'c1',
+      mode: 'MOCK',
+      warnings: [],
+    });
   });
 });
