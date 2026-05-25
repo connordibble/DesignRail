@@ -8,6 +8,13 @@
       "when": 1779654918267,
       "tag": "0000_graceful_karma",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1779723911760,
+      "tag": "0001_add_c1_lookup_indexes",
+      "breakpoints": true
     }
   ]
 }
