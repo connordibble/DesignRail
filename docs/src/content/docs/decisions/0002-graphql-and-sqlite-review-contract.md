@@ -19,6 +19,8 @@ The MVP also needs to stay easy to run in public: mock fixtures by default, no a
 - SQLite is the default local persistence layer.
 - Drizzle schema ownership lives in `apps/api`.
 - Review decisions and instrumentation events are persisted through the API.
+- The API binds to localhost by default and requires explicit opt-in before listening on a non-local host.
+- Core lookup paths are indexed as soon as the tables land.
 - Structured fields are stored as JSON text in C1.
 - Mock mode remains the default path for development, tests, docs, and demos.
 

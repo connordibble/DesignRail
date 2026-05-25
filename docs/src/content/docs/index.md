@@ -30,7 +30,7 @@ Checkpoint 1 defines the typed local contract:
 - GraphQL queries for examples, intent, mappings, compliance, review decisions, and dashboard metrics.
 - GraphQL mutations for saving review decisions and exporting accepted or edited mappings.
 - API-owned SQLite tables for the same seven core entities.
-- JSON-only CLI output from the import, mapping, and compliance tools.
+- JSON tool-result envelopes from the import, mapping, and compliance tools.
 
 ## Architecture decisions
 

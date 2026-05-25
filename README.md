@@ -47,7 +47,7 @@ tools/
   figma-import/       Mock Figma fixture → normalized ComponentIntent
   component-mapper/   Intent → deterministic Shoelace mapping
   compliance-agent/   Mapping + intent → structured compliance findings
-examples/             Mock Figma fixtures (Button, Card, Input, Badge, Dialog, Spinner)
+examples/             Mock Figma fixtures (Button now; Card/Input/Badge/Dialog/Spinner planned)
 docs/                 Astro + Starlight documentation site with ADRs
 agents/               DesignRail-specific skill files
 hooks/                Repeatable local quality, secrets, and mock-mode checks
@@ -80,9 +80,9 @@ The default workflow is credential-free and deterministic. Optional Figma API/MC
 
 ## Phase 1 Contract
 
-Checkpoint 1 defines the local review contract: shared Zod schemas, a GraphQL API, API-owned SQLite persistence through Drizzle, JSON-only tool outputs, and persisted review decisions. The default database is local-only at `apps/api/.data/designrail.sqlite`.
+Checkpoint 1 defines the local review contract: shared Zod schemas, a GraphQL API, API-owned SQLite persistence through Drizzle, JSON tool-result envelopes, and persisted review decisions. The default database is local-only at `apps/api/.data/designrail.sqlite`. The API binds to localhost by default; set `HOST` and `DESIGNRAIL_ALLOW_NETWORK=true` only when intentionally exposing it beyond the local machine.
 
-The review UI should use GraphQL for examples, component intent, mappings, compliance findings, review decisions, exports, instrumentation, and dashboard metrics. Tools and resolvers should exchange structured data, not markdown or stdout-shaped strings.
+The review UI should use GraphQL for examples, component intent, mappings, compliance findings, review decisions, exports, and dashboard metrics. Review/export mutations record instrumentation events internally. Tools and resolvers should exchange structured data, not markdown or stdout-shaped strings.
 
 ## Agent-Assisted Development Model
 
