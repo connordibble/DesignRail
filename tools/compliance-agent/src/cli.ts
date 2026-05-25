@@ -7,21 +7,18 @@ import {
   buttonComponentMappingFixture,
   componentIntentSchema,
   componentMappingSchema,
+  createToolResult,
+  type CliResponse,
   type ComplianceFinding,
+  type ToolResult,
+  writeJsonCliResponse,
 } from '@designrail/shared';
 
-import { reviewCompliance } from './index.js';
+import { reviewCompliance, TOOL_NAME, TOOL_VERSION } from './index.js';
 
-export interface CliResponse<TOutput> {
-  exitCode: number;
-  stdout?: TOutput;
-  stderr?: {
-    error: string;
-    message: string;
-  };
-}
-
-export function createComplianceAgentCliResponse(argv: string[]): CliResponse<ComplianceFinding[]> {
+export function createComplianceAgentCliResponse(
+  argv: string[],
+): CliResponse<ToolResult<ComplianceFinding[]>> {
   const [intentPath, mappingPath, extraArg] = argv;
 
   if (extraArg !== undefined || (intentPath === undefined) !== (mappingPath === undefined)) {
@@ -38,15 +35,19 @@ export function createComplianceAgentCliResponse(argv: string[]): CliResponse<Co
     const intent =
       intentPath === undefined
         ? buttonComponentIntentFixture
-        : componentIntentSchema.parse(JSON.parse(readFileSync(intentPath, 'utf8')) as unknown);
+        : componentIntentSchema.parse(readToolInput(readFileSync(intentPath, 'utf8')));
     const mapping =
       mappingPath === undefined
         ? buttonComponentMappingFixture
-        : componentMappingSchema.parse(JSON.parse(readFileSync(mappingPath, 'utf8')) as unknown);
+        : componentMappingSchema.parse(readToolInput(readFileSync(mappingPath, 'utf8')));
 
     return {
       exitCode: 0,
-      stdout: reviewCompliance({ intent, mapping }),
+      stdout: createToolResult({
+        toolName: TOOL_NAME,
+        toolVersion: TOOL_VERSION,
+        output: reviewCompliance({ intent, mapping }),
+      }),
     };
   } catch (error) {
     return {
@@ -59,14 +60,14 @@ export function createComplianceAgentCliResponse(argv: string[]): CliResponse<Co
   }
 }
 
-function writeCliResponse<TOutput>(response: CliResponse<TOutput>): void {
-  if (response.stdout !== undefined) {
-    console.log(JSON.stringify(response.stdout, null, 2));
+function readToolInput(rawInput: string): unknown {
+  const parsed = JSON.parse(rawInput) as unknown;
+
+  if (parsed !== null && typeof parsed === 'object' && 'output' in parsed) {
+    return (parsed as { output: unknown }).output;
   }
 
-  if (response.stderr !== undefined) {
-    console.error(JSON.stringify(response.stderr, null, 2));
-  }
+  return parsed;
 }
 
 const isMain =
@@ -74,6 +75,6 @@ const isMain =
 
 if (isMain) {
   const response = createComplianceAgentCliResponse(process.argv.slice(2));
-  writeCliResponse(response);
+  writeJsonCliResponse(response);
   process.exitCode = response.exitCode;
 }

@@ -2,6 +2,7 @@ import {
   buttonComponentIntentFixture,
   buttonComponentMappingFixture,
   complianceFindingSchema,
+  toolResultSchema,
 } from '@designrail/shared';
 import { describe, expect, it } from 'vitest';
 
@@ -24,9 +25,17 @@ describe('@designrail/compliance-agent', () => {
 
     expect(response.exitCode).toBe(0);
     expect(() => JSON.stringify(response.stdout)).not.toThrow();
-    expect(response.stdout?.map((finding) => complianceFindingSchema.parse(finding))).toHaveLength(
-      1,
-    );
+    expect(toolResultSchema(complianceFindingSchema.array()).parse(response.stdout)).toMatchObject({
+      toolName: '@designrail/compliance-agent',
+      output: [
+        {
+          category: 'REACT_READINESS',
+        },
+      ],
+    });
+    expect(
+      response.stdout?.output.map((finding) => complianceFindingSchema.parse(finding)),
+    ).toHaveLength(1);
   });
 
   it('returns a JSON-safe usage error for partial input', () => {

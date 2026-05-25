@@ -1,4 +1,4 @@
-import { componentIntentSchema } from '@designrail/shared';
+import { componentIntentSchema, toolResultSchema } from '@designrail/shared';
 import { describe, expect, it } from 'vitest';
 
 import { createFigmaImportCliResponse } from './cli.js';
@@ -20,7 +20,13 @@ describe('@designrail/figma-import', () => {
 
     expect(response.exitCode).toBe(0);
     expect(() => JSON.stringify(response.stdout)).not.toThrow();
-    expect(componentIntentSchema.parse(response.stdout)).toMatchObject({
+    expect(toolResultSchema(componentIntentSchema).parse(response.stdout)).toMatchObject({
+      toolName: '@designrail/figma-import',
+      output: {
+        componentType: 'Button',
+      },
+    });
+    expect(componentIntentSchema.parse(response.stdout?.output)).toMatchObject({
       componentType: 'Button',
     });
   });

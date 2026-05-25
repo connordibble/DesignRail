@@ -1,20 +1,19 @@
 #!/usr/bin/env -S tsx
 import { pathToFileURL } from 'node:url';
 
-import type { ComponentIntent } from '@designrail/shared';
+import {
+  createToolResult,
+  type CliResponse,
+  type ComponentIntent,
+  type ToolResult,
+  writeJsonCliResponse,
+} from '@designrail/shared';
 
-import { importFigmaFixture } from './index.js';
+import { importFigmaFixture, TOOL_NAME, TOOL_VERSION } from './index.js';
 
-export interface CliResponse<TOutput> {
-  exitCode: number;
-  stdout?: TOutput;
-  stderr?: {
-    error: string;
-    message: string;
-  };
-}
-
-export function createFigmaImportCliResponse(argv: string[]): CliResponse<ComponentIntent> {
+export function createFigmaImportCliResponse(
+  argv: string[],
+): CliResponse<ToolResult<ComponentIntent>> {
   const [inputPath] = argv;
 
   if (!inputPath) {
@@ -30,7 +29,11 @@ export function createFigmaImportCliResponse(argv: string[]): CliResponse<Compon
   try {
     return {
       exitCode: 0,
-      stdout: importFigmaFixture({ inputPath }),
+      stdout: createToolResult({
+        toolName: TOOL_NAME,
+        toolVersion: TOOL_VERSION,
+        output: importFigmaFixture({ inputPath }),
+      }),
     };
   } catch (error) {
     return {
@@ -43,21 +46,11 @@ export function createFigmaImportCliResponse(argv: string[]): CliResponse<Compon
   }
 }
 
-function writeCliResponse<TOutput>(response: CliResponse<TOutput>): void {
-  if (response.stdout !== undefined) {
-    console.log(JSON.stringify(response.stdout, null, 2));
-  }
-
-  if (response.stderr !== undefined) {
-    console.error(JSON.stringify(response.stderr, null, 2));
-  }
-}
-
 const isMain =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
   const response = createFigmaImportCliResponse(process.argv.slice(2));
-  writeCliResponse(response);
+  writeJsonCliResponse(response);
   process.exitCode = response.exitCode;
 }

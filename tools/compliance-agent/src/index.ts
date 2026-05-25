@@ -9,6 +9,7 @@ import {
 } from '@designrail/shared';
 
 export const TOOL_NAME = '@designrail/compliance-agent';
+export const TOOL_VERSION = '0.1.0';
 
 export interface ReviewComplianceInput {
   intent: ComponentIntent;

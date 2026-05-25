@@ -5,21 +5,18 @@ import { pathToFileURL } from 'node:url';
 import {
   buttonComponentIntentFixture,
   componentIntentSchema,
+  createToolResult,
+  type CliResponse,
   type ComponentMapping,
+  type ToolResult,
+  writeJsonCliResponse,
 } from '@designrail/shared';
 
-import { mapComponent } from './index.js';
+import { mapComponent, TOOL_NAME, TOOL_VERSION } from './index.js';
 
-export interface CliResponse<TOutput> {
-  exitCode: number;
-  stdout?: TOutput;
-  stderr?: {
-    error: string;
-    message: string;
-  };
-}
-
-export function createComponentMapperCliResponse(argv: string[]): CliResponse<ComponentMapping> {
+export function createComponentMapperCliResponse(
+  argv: string[],
+): CliResponse<ToolResult<ComponentMapping>> {
   const [intentPath, extraArg] = argv;
 
   if (extraArg !== undefined) {
@@ -36,11 +33,15 @@ export function createComponentMapperCliResponse(argv: string[]): CliResponse<Co
     const intent =
       intentPath === undefined
         ? buttonComponentIntentFixture
-        : componentIntentSchema.parse(JSON.parse(readFileSync(intentPath, 'utf8')) as unknown);
+        : componentIntentSchema.parse(readToolInput(readFileSync(intentPath, 'utf8')));
 
     return {
       exitCode: 0,
-      stdout: mapComponent({ intent }),
+      stdout: createToolResult({
+        toolName: TOOL_NAME,
+        toolVersion: TOOL_VERSION,
+        output: mapComponent({ intent }),
+      }),
     };
   } catch (error) {
     return {
@@ -53,14 +54,14 @@ export function createComponentMapperCliResponse(argv: string[]): CliResponse<Co
   }
 }
 
-function writeCliResponse<TOutput>(response: CliResponse<TOutput>): void {
-  if (response.stdout !== undefined) {
-    console.log(JSON.stringify(response.stdout, null, 2));
+function readToolInput(rawInput: string): unknown {
+  const parsed = JSON.parse(rawInput) as unknown;
+
+  if (parsed !== null && typeof parsed === 'object' && 'output' in parsed) {
+    return (parsed as { output: unknown }).output;
   }
 
-  if (response.stderr !== undefined) {
-    console.error(JSON.stringify(response.stderr, null, 2));
-  }
+  return parsed;
 }
 
 const isMain =
@@ -68,6 +69,6 @@ const isMain =
 
 if (isMain) {
   const response = createComponentMapperCliResponse(process.argv.slice(2));
-  writeCliResponse(response);
+  writeJsonCliResponse(response);
   process.exitCode = response.exitCode;
 }

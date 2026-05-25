@@ -1,4 +1,8 @@
-import { buttonComponentIntentFixture, componentMappingSchema } from '@designrail/shared';
+import {
+  buttonComponentIntentFixture,
+  componentMappingSchema,
+  toolResultSchema,
+} from '@designrail/shared';
 import { describe, expect, it } from 'vitest';
 
 import { createComponentMapperCliResponse } from './cli.js';
@@ -21,7 +25,13 @@ describe('@designrail/component-mapper', () => {
 
     expect(response.exitCode).toBe(0);
     expect(() => JSON.stringify(response.stdout)).not.toThrow();
-    expect(componentMappingSchema.parse(response.stdout)).toMatchObject({
+    expect(toolResultSchema(componentMappingSchema).parse(response.stdout)).toMatchObject({
+      toolName: '@designrail/component-mapper',
+      output: {
+        targetComponent: 'sl-button',
+      },
+    });
+    expect(componentMappingSchema.parse(response.stdout?.output)).toMatchObject({
       targetComponent: 'sl-button',
     });
   });
