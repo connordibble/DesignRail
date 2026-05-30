@@ -30,6 +30,18 @@ describe('export renderer', () => {
     expect(content).toBe(
       '<sl-button variant="primary&quot; autofocus onclick=&quot;alert(1)">&lt;script&gt;alert(1)&lt;/script&gt;</sl-button>',
     );
+
+    expect(
+      renderExportContent(
+        {
+          ...buttonComponentMappingFixture,
+          mappedSlots: {
+            default: 'Save & continue',
+          },
+        },
+        'REACT',
+      ),
+    ).toBe('<SlButton variant="primary" size="medium">Save &amp; continue</SlButton>');
   });
 
   it('omits props outside the C1 Button export allowlist', () => {

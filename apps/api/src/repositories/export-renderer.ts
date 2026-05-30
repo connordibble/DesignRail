@@ -130,6 +130,7 @@ function escapeHtml(value: string): string {
 
 function escapeJsxText(value: string): string {
   return value
+    .replaceAll('&', '&amp;')
     .replaceAll('{', '&#123;')
     .replaceAll('}', '&#125;')
     .replaceAll('<', '&lt;')

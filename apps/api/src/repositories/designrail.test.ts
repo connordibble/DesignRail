@@ -237,6 +237,40 @@ describe('DesignRail repositories', () => {
     ]);
   });
 
+  it('exports the effective edited mapping values', () => {
+    saveReviewDecision(client, {
+      id: 'decision.test.edited-output',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'EDITED',
+      reviewerLabel: 'Repository test',
+      editedMapping: {
+        mappedProps: {
+          variant: 'warning',
+          size: 'large',
+          disabled: true,
+        },
+        mappedSlots: {
+          default: 'Publish changes',
+        },
+      },
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+
+    const outcome = createExport(client, {
+      id: 'export.test.edited-output',
+      mappingId: buttonComponentMappingFixture.id,
+      format: 'HTML',
+      createdAt: '2026-01-01T00:00:02.000Z',
+    });
+
+    expect(outcome).toMatchObject({
+      ok: true,
+      exportResult: {
+        content: '<sl-button variant="warning" size="large" disabled>Publish changes</sl-button>',
+      },
+    });
+  });
+
   it('records instrumentation events', () => {
     const event = recordInstrumentationEvent(client, {
       id: 'event.test.review-saved',

@@ -1,21 +1,32 @@
-import { useQuery } from '@apollo/client/react';
+import { useMutation, useQuery } from '@apollo/client/react';
 import {
   createEmptyDashboardMetrics,
   type DashboardMetrics,
+  type ExportFormat,
   type JsonValue,
+  type MappingConfidence,
+  type MappingEdit,
   type ReviewDecisionStatus,
 } from '@designrail/shared';
 import type { KeyboardEvent, ReactElement, ReactNode } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
+  EXPORT_MAPPING_MUTATION,
   REVIEW_WORKSPACE_QUERY,
+  SAVE_REVIEW_DECISION_MUTATION,
+  type ComponentMappingResult,
   type ComplianceFindingResult,
+  type ExportMappingMutation,
+  type ExportMappingMutationVariables,
   type ExportResult,
   type ReviewDecisionResult,
   type ReviewWorkspace,
   type ReviewWorkspaceQuery,
   type ReviewWorkspaceQueryVariables,
+  type SaveReviewDecisionInput,
+  type SaveReviewDecisionMutation,
+  type SaveReviewDecisionMutationVariables,
 } from '../graphql/operations.js';
 
 const TABS = ['Dashboard', 'Review', 'Exports', 'Schema'] as const;
@@ -23,6 +34,17 @@ const TABS = ['Dashboard', 'Review', 'Exports', 'Schema'] as const;
 type WorkspaceTab = (typeof TABS)[number];
 type Tone = 'success' | 'warning' | 'danger' | 'info' | 'edited' | 'neutral';
 
+interface ButtonEditDraft {
+  confidence: MappingConfidence;
+  disabled: boolean;
+  label: string;
+  notes: string;
+  rationale: string;
+  size: string;
+  variant: string;
+}
+
+const LOCAL_REVIEWER_LABEL = 'Local reviewer';
 const EMPTY_METRICS = createEmptyDashboardMetrics();
 
 const STATUS_TONES: Record<ReviewDecisionStatus, Tone> = {
@@ -62,9 +84,22 @@ const TAB_KEYBOARD_TARGETS: Record<WorkspaceTab, { previous: WorkspaceTab; next:
   Schema: { previous: 'Exports', next: 'Dashboard' },
 };
 
-// TODO: derive these from ReviewDecisionStatus and ExportFormat when mutation wiring lands.
-const REVIEW_ACTION_PLACEHOLDERS = ['Accept', 'Edit', 'Reject'] as const;
-const EXPORT_FORMAT_PLACEHOLDERS = ['HTML', 'React', 'Brief'] as const;
+const BUTTON_VARIANT_OPTIONS = [
+  'default',
+  'primary',
+  'success',
+  'neutral',
+  'warning',
+  'danger',
+  'text',
+] as const;
+const BUTTON_SIZE_OPTIONS = ['small', 'medium', 'large'] as const;
+const MAPPING_CONFIDENCE_OPTIONS: MappingConfidence[] = ['HIGH', 'MEDIUM', 'LOW'];
+const EXPORT_FORMAT_OPTIONS: Array<{ format: ExportFormat; label: string }> = [
+  { format: 'HTML', label: 'HTML' },
+  { format: 'REACT', label: 'React' },
+  { format: 'AGENT_BRIEF', label: 'Agent Brief' },
+];
 
 export interface ReviewWorkspaceShellProps {
   exampleId: string;
@@ -220,6 +255,7 @@ export function ReviewWorkspaceShell({ exampleId }: ReviewWorkspaceShellProps): 
 
 interface WorkspaceTabPanelProps {
   activeTab: WorkspaceTab;
+  exampleId: string;
   metrics: DashboardMetrics;
   workspace: ReviewWorkspace;
 }
@@ -253,11 +289,19 @@ function renderWorkspaceBody({
     return <EmptyWorkspace exampleId={exampleId} />;
   }
 
-  return <WorkspaceTabPanel activeTab={activeTab} metrics={metrics} workspace={workspace} />;
+  return (
+    <WorkspaceTabPanel
+      activeTab={activeTab}
+      exampleId={exampleId}
+      metrics={metrics}
+      workspace={workspace}
+    />
+  );
 }
 
 function WorkspaceTabPanel({
   activeTab,
+  exampleId,
   metrics,
   workspace,
 }: WorkspaceTabPanelProps): ReactElement {
@@ -265,9 +309,16 @@ function WorkspaceTabPanel({
     case 'Dashboard':
       return <DashboardPanel metrics={metrics} workspace={workspace} />;
     case 'Review':
-      return <ReviewPanel workspace={workspace} />;
+      return <ReviewPanel exampleId={exampleId} workspace={workspace} />;
     case 'Exports':
-      return <ExportsPanel exports={workspace.exports} latestDecision={workspace.latestDecision} />;
+      return (
+        <ExportsPanel
+          exampleId={exampleId}
+          exports={workspace.exports}
+          latestDecision={workspace.latestDecision}
+          mapping={workspace.mapping}
+        />
+      );
     case 'Schema':
       return <SchemaPanel workspace={workspace} />;
   }
@@ -337,10 +388,48 @@ function DashboardPanel({
   );
 }
 
-function ReviewPanel({ workspace }: WorkspacePanelProps): ReactElement {
+interface ReviewPanelProps extends WorkspacePanelProps {
+  exampleId: string;
+}
+
+function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
   const intent = workspace.intent;
   const mapping = workspace.mapping;
   const decisionStatus = getDecisionStatus(workspace.latestDecision);
+  const [draft, setDraft] = useState<ButtonEditDraft>(() =>
+    createButtonEditDraft(mapping, workspace.latestDecision),
+  );
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+  const [saveReviewDecision, saveDecisionState] = useMutation<
+    SaveReviewDecisionMutation,
+    SaveReviewDecisionMutationVariables
+  >(SAVE_REVIEW_DECISION_MUTATION);
+  const isSavingDecision = saveDecisionState.loading;
+
+  useEffect(() => {
+    setDraft(createButtonEditDraft(mapping, workspace.latestDecision));
+    setSaveErrorMessage(null);
+  }, [mapping, workspace.latestDecision]);
+
+  async function persistDecision(status: ReviewDecisionStatus): Promise<void> {
+    if (mapping === null || isSavingDecision) {
+      return;
+    }
+
+    const input = createSaveDecisionInput(mapping.id, status, draft);
+
+    setSaveErrorMessage(null);
+
+    try {
+      await saveReviewDecision({
+        variables: { input },
+        refetchQueries: [{ query: REVIEW_WORKSPACE_QUERY, variables: { exampleId } }],
+        awaitRefetchQueries: true,
+      });
+    } catch (error) {
+      setSaveErrorMessage(getErrorMessage(error));
+    }
+  }
 
   return (
     <div className="grid gap-dr-md xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_22rem]">
@@ -398,18 +487,25 @@ function ReviewPanel({ workspace }: WorkspacePanelProps): ReactElement {
               <span className="text-dr-small text-dr-muted">Current status</span>
               <StatusBadge label={decisionStatus} tone={STATUS_TONES[decisionStatus]} />
             </div>
-            <div className="grid grid-cols-3 gap-dr-xs">
-              {REVIEW_ACTION_PLACEHOLDERS.map((action) => (
-                <button
-                  className="rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-xs py-dr-xs text-dr-caption font-semibold text-dr-muted focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled
-                  key={action}
-                  type="button"
-                >
-                  {action}
-                </button>
-              ))}
-            </div>
+
+            {mapping === null ? (
+              <EmptyLine text="No mapping is available for a review decision." />
+            ) : (
+              <ButtonEditForm
+                draft={draft}
+                disabled={isSavingDecision}
+                onChange={setDraft}
+                onSaveAccept={() => persistDecision('ACCEPTED')}
+                onSaveEdit={() => persistDecision('EDITED')}
+                onSaveReject={() => persistDecision('REJECTED')}
+              />
+            )}
+
+            {isSavingDecision ? <EmptyLine text="Saving review decision." /> : null}
+            {saveErrorMessage !== null ? (
+              <InlineAlert message={saveErrorMessage} title="Decision failed" />
+            ) : null}
+
             {workspace.latestDecision === null ? (
               <EmptyLine text="Awaiting human review." />
             ) : (
@@ -426,6 +522,122 @@ function ReviewPanel({ workspace }: WorkspacePanelProps): ReactElement {
 
         <CompliancePanel findings={workspace.complianceFindings} />
       </aside>
+    </div>
+  );
+}
+
+interface ButtonEditFormProps {
+  disabled: boolean;
+  draft: ButtonEditDraft;
+  onChange: (draft: ButtonEditDraft) => void;
+  onSaveAccept: () => void;
+  onSaveEdit: () => void;
+  onSaveReject: () => void;
+}
+
+function ButtonEditForm({
+  disabled,
+  draft,
+  onChange,
+  onSaveAccept,
+  onSaveEdit,
+  onSaveReject,
+}: ButtonEditFormProps): ReactElement {
+  const canSaveEdit = draft.label.trim().length > 0 && draft.rationale.trim().length > 0;
+
+  function updateDraft<TKey extends keyof ButtonEditDraft>(
+    key: TKey,
+    value: ButtonEditDraft[TKey],
+  ): void {
+    onChange({ ...draft, [key]: value });
+  }
+
+  return (
+    <div className="grid gap-dr-sm">
+      <div className="grid gap-dr-xs">
+        <TextField
+          disabled={disabled}
+          id="button-edit-label"
+          label="Label"
+          onChange={(value) => updateDraft('label', value)}
+          value={draft.label}
+        />
+        <SelectField
+          disabled={disabled}
+          id="button-edit-variant"
+          label="Variant"
+          onChange={(value) => updateDraft('variant', value)}
+          options={BUTTON_VARIANT_OPTIONS}
+          value={draft.variant}
+        />
+        <SelectField
+          disabled={disabled}
+          id="button-edit-size"
+          label="Size"
+          onChange={(value) => updateDraft('size', value)}
+          options={BUTTON_SIZE_OPTIONS}
+          value={draft.size}
+        />
+        <label className="flex items-center justify-between gap-dr-sm rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs text-dr-small text-dr-muted">
+          Disabled
+          <input
+            checked={draft.disabled}
+            className="size-4 accent-dr-accent focus-visible:outline focus-visible:outline-2"
+            disabled={disabled}
+            onChange={(event) => updateDraft('disabled', event.currentTarget.checked)}
+            type="checkbox"
+          />
+        </label>
+        <SelectField
+          disabled={disabled}
+          id="button-edit-confidence"
+          label="Confidence"
+          onChange={(value) => updateDraft('confidence', value as MappingConfidence)}
+          options={MAPPING_CONFIDENCE_OPTIONS}
+          value={draft.confidence}
+        />
+        <TextareaField
+          disabled={disabled}
+          id="button-edit-rationale"
+          label="Rationale"
+          onChange={(value) => updateDraft('rationale', value)}
+          value={draft.rationale}
+        />
+        <TextareaField
+          disabled={disabled}
+          id="button-edit-notes"
+          label="Notes"
+          onChange={(value) => updateDraft('notes', value)}
+          value={draft.notes}
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-dr-xs">
+        <button
+          className="rounded-dr-sm border border-dr-success bg-dr-panel-raised px-dr-xs py-dr-xs text-dr-caption font-semibold text-dr-success focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={disabled}
+          onClick={onSaveAccept}
+          type="button"
+        >
+          Accept
+        </button>
+        <button
+          className="rounded-dr-sm border border-dr-edited bg-dr-panel-raised px-dr-xs py-dr-xs text-dr-caption font-semibold text-dr-edited focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={disabled || !canSaveEdit}
+          onClick={onSaveEdit}
+          type="button"
+        >
+          Edit
+        </button>
+        <button
+          className="rounded-dr-sm border border-dr-danger bg-dr-panel-raised px-dr-xs py-dr-xs text-dr-caption font-semibold text-dr-danger focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={disabled}
+          onClick={onSaveReject}
+          type="button"
+        >
+          Reject
+        </button>
+      </div>
     </div>
   );
 }
@@ -464,13 +676,53 @@ function CompliancePanel({ findings }: CompliancePanelProps): ReactElement {
 }
 
 interface ExportsPanelProps {
+  exampleId: string;
   exports: ExportResult[];
   latestDecision: ReviewDecisionResult | null;
+  mapping: ComponentMappingResult | null;
 }
 
-function ExportsPanel({ exports, latestDecision }: ExportsPanelProps): ReactElement {
+function ExportsPanel({
+  exampleId,
+  exports,
+  latestDecision,
+  mapping,
+}: ExportsPanelProps): ReactElement {
   const status = getDecisionStatus(latestDecision);
   const canExport = status === 'ACCEPTED' || status === 'EDITED';
+  const [pendingExportFormat, setPendingExportFormat] = useState<ExportFormat | null>(null);
+  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
+  const [exportMapping, exportMappingState] = useMutation<
+    ExportMappingMutation,
+    ExportMappingMutationVariables
+  >(EXPORT_MAPPING_MUTATION);
+  const isExporting = exportMappingState.loading;
+
+  async function createMappingExport(format: ExportFormat): Promise<void> {
+    if (mapping === null || !canExport || isExporting) {
+      return;
+    }
+
+    setPendingExportFormat(format);
+    setExportErrorMessage(null);
+
+    try {
+      await exportMapping({
+        variables: {
+          input: {
+            mappingId: mapping.id,
+            format,
+          },
+        },
+        refetchQueries: [{ query: REVIEW_WORKSPACE_QUERY, variables: { exampleId } }],
+        awaitRefetchQueries: true,
+      });
+    } catch (error) {
+      setExportErrorMessage(getErrorMessage(error));
+    } finally {
+      setPendingExportFormat(null);
+    }
+  }
 
   return (
     <div className="grid gap-dr-md xl:grid-cols-[22rem_minmax(0,1fr)]">
@@ -488,17 +740,21 @@ function ExportsPanel({ exports, latestDecision }: ExportsPanelProps): ReactElem
             />
           </div>
           <div className="grid grid-cols-3 gap-dr-xs">
-            {EXPORT_FORMAT_PLACEHOLDERS.map((format) => (
+            {EXPORT_FORMAT_OPTIONS.map((option) => (
               <button
                 className="rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-xs py-dr-xs text-dr-caption font-semibold text-dr-muted focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled
-                key={format}
+                disabled={!canExport || mapping === null || isExporting}
+                key={option.format}
+                onClick={() => createMappingExport(option.format)}
                 type="button"
               >
-                {format}
+                {pendingExportFormat === option.format ? 'Exporting' : option.label}
               </button>
             ))}
           </div>
+          {exportErrorMessage !== null ? (
+            <InlineAlert message={exportErrorMessage} title="Export failed" />
+          ) : null}
         </div>
       </Panel>
 
@@ -617,6 +873,20 @@ function EmptyWorkspace({ exampleId }: EmptyWorkspaceProps): ReactElement {
   );
 }
 
+interface InlineAlertProps {
+  message: string;
+  title: string;
+}
+
+function InlineAlert({ message, title }: InlineAlertProps): ReactElement {
+  return (
+    <div className="rounded-dr-sm border border-dr-danger bg-dr-panel-raised p-dr-sm" role="alert">
+      <p className="text-dr-caption font-semibold text-dr-danger">{title}</p>
+      <p className="mt-dr-xxs text-dr-small text-dr-muted">{message}</p>
+    </div>
+  );
+}
+
 interface PanelProps {
   children: ReactNode;
   title: string;
@@ -630,6 +900,89 @@ function Panel({ children, title }: PanelProps): ReactElement {
       </div>
       <div className="p-dr-md">{children}</div>
     </section>
+  );
+}
+
+interface TextFieldProps {
+  disabled: boolean;
+  id: string;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}
+
+function TextField({ disabled, id, label, onChange, value }: TextFieldProps): ReactElement {
+  return (
+    <label className="grid gap-dr-xxs text-dr-caption font-semibold text-dr-subtle" htmlFor={id}>
+      {label}
+      <input
+        className="rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs font-ui text-dr-small font-normal text-dr-text focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={disabled}
+        id={id}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        value={value}
+      />
+    </label>
+  );
+}
+
+interface SelectFieldProps {
+  disabled: boolean;
+  id: string;
+  label: string;
+  onChange: (value: string) => void;
+  options: readonly string[];
+  value: string;
+}
+
+function SelectField({
+  disabled,
+  id,
+  label,
+  onChange,
+  options,
+  value,
+}: SelectFieldProps): ReactElement {
+  return (
+    <label className="grid gap-dr-xxs text-dr-caption font-semibold text-dr-subtle" htmlFor={id}>
+      {label}
+      <select
+        className="rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs font-ui text-dr-small font-normal text-dr-text focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={disabled}
+        id={id}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        value={value}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+interface TextareaFieldProps {
+  disabled: boolean;
+  id: string;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}
+
+function TextareaField({ disabled, id, label, onChange, value }: TextareaFieldProps): ReactElement {
+  return (
+    <label className="grid gap-dr-xxs text-dr-caption font-semibold text-dr-subtle" htmlFor={id}>
+      {label}
+      <textarea
+        className="min-h-20 resize-y rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs font-ui text-dr-small font-normal text-dr-text focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={disabled}
+        id={id}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        value={value}
+      />
+    </label>
   );
 }
 
@@ -752,6 +1105,75 @@ function EmptyLine({ text }: EmptyLineProps): ReactElement {
   return <p className="text-dr-small text-dr-subtle">{text}</p>;
 }
 
+function createButtonEditDraft(
+  mapping: ComponentMappingResult | null,
+  latestDecision: ReviewDecisionResult | null,
+): ButtonEditDraft {
+  if (mapping === null) {
+    return {
+      confidence: 'MEDIUM',
+      disabled: false,
+      label: '',
+      notes: latestDecision?.notes ?? '',
+      rationale: '',
+      size: 'medium',
+      variant: 'primary',
+    };
+  }
+
+  const editedMapping = latestDecision?.status === 'EDITED' ? latestDecision.editedMapping : null;
+  const mappedProps = editedMapping?.mappedProps ?? mapping.mappedProps;
+  const mappedSlots = editedMapping?.mappedSlots ?? mapping.mappedSlots;
+
+  return {
+    confidence: editedMapping?.confidence ?? mapping.confidence,
+    disabled: getJsonBooleanValue(mappedProps, 'disabled', false),
+    label: getJsonStringValue(mappedSlots, 'default', mapping.targetComponent),
+    notes: latestDecision?.notes ?? '',
+    rationale: editedMapping?.rationale ?? mapping.rationale,
+    size: getJsonStringValue(mappedProps, 'size', 'medium'),
+    variant: getJsonStringValue(mappedProps, 'variant', 'primary'),
+  };
+}
+
+function createSaveDecisionInput(
+  mappingId: string,
+  status: ReviewDecisionStatus,
+  draft: ButtonEditDraft,
+): SaveReviewDecisionInput {
+  const notes = draft.notes.trim();
+  const base = {
+    mappingId,
+    status,
+    reviewerLabel: LOCAL_REVIEWER_LABEL,
+    ...(notes.length === 0 ? {} : { notes }),
+  };
+
+  if (status !== 'EDITED') {
+    return base;
+  }
+
+  return {
+    ...base,
+    editedMapping: createButtonMappingEdit(draft),
+  };
+}
+
+function createButtonMappingEdit(draft: ButtonEditDraft): MappingEdit {
+  return {
+    mappedProps: {
+      variant: draft.variant,
+      size: draft.size,
+      disabled: draft.disabled,
+    },
+    mappedSlots: {
+      default: draft.label.trim(),
+    },
+    confidence: draft.confidence,
+    rationale: draft.rationale.trim(),
+  };
+}
+
 function getDecisionStatus(decision: ReviewDecisionResult | null): ReviewDecisionStatus {
   return decision?.status ?? 'PENDING';
 }
@@ -774,8 +1196,32 @@ function getJsonRecordValue(record: Record<string, JsonValue>, key: string): str
   return String(value);
 }
 
+function getJsonStringValue(
+  record: Record<string, JsonValue>,
+  key: string,
+  fallback: string,
+): string {
+  const value = record[key];
+
+  return typeof value === 'string' && value.length > 0 ? value : fallback;
+}
+
+function getJsonBooleanValue(
+  record: Record<string, JsonValue>,
+  key: string,
+  fallback: boolean,
+): boolean {
+  const value = record[key];
+
+  return typeof value === 'boolean' ? value : fallback;
+}
+
 function formatJson(value: unknown): string {
   return JSON.stringify(value, null, 2);
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Request failed.';
 }
 
 function getTabId(tab: WorkspaceTab): string {
