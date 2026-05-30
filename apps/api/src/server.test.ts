@@ -119,6 +119,78 @@ describe('DesignRail GraphQL API', () => {
     });
   });
 
+  it('resolves the review workspace for the selected example', async () => {
+    const body = await graphql<{
+      reviewWorkspace: {
+        example: { id: string; name: string };
+        intent: { componentType: string } | null;
+        mapping: { id: string; targetComponent: string } | null;
+        complianceFindings: Array<{ mappingId: string; severity: string }>;
+        latestDecision: { status: string } | null;
+        exports: Array<{ id: string }>;
+        dashboardMetrics: { exportsCreated: number };
+      } | null;
+    }>(
+      `
+        query ReviewWorkspace($exampleId: ID!) {
+          reviewWorkspace(exampleId: $exampleId) {
+            example {
+              id
+              name
+            }
+            intent {
+              componentType
+            }
+            mapping {
+              id
+              targetComponent
+            }
+            complianceFindings {
+              mappingId
+              severity
+            }
+            latestDecision {
+              status
+            }
+            exports {
+              id
+            }
+            dashboardMetrics {
+              exportsCreated
+            }
+          }
+        }
+      `,
+      { exampleId: buttonExampleFixture.id },
+    );
+
+    expect(body.errors).toBeUndefined();
+    expect(body.data?.reviewWorkspace).toMatchObject({
+      example: {
+        id: buttonExampleFixture.id,
+        name: 'Button',
+      },
+      intent: {
+        componentType: 'Button',
+      },
+      mapping: {
+        id: buttonComponentMappingFixture.id,
+        targetComponent: 'sl-button',
+      },
+      complianceFindings: [
+        {
+          mappingId: buttonComponentMappingFixture.id,
+          severity: 'INFO',
+        },
+      ],
+      latestDecision: null,
+      exports: [],
+      dashboardMetrics: {
+        exportsCreated: 0,
+      },
+    });
+  });
+
   it('persists a review decision mutation', async () => {
     const body = await graphql<{
       saveReviewDecision: { id: string; status: string; reviewerLabel: string };
@@ -217,6 +289,85 @@ describe('DesignRail GraphQL API', () => {
       rejectedMappings: 0,
       editedMappings: 1,
       pendingMappings: 0,
+    });
+  });
+
+  it('updates review workspace after decisions and exports', async () => {
+    await graphql(
+      `
+        mutation SaveReviewDecision($input: SaveReviewDecisionInput!) {
+          saveReviewDecision(input: $input) {
+            id
+          }
+        }
+      `,
+      {
+        input: {
+          mappingId: buttonComponentMappingFixture.id,
+          status: 'ACCEPTED',
+          reviewerLabel: 'GraphQL test',
+        },
+      },
+    );
+
+    await graphql(
+      `
+        mutation ExportMapping($input: ExportMappingInput!) {
+          exportMapping(input: $input) {
+            id
+          }
+        }
+      `,
+      {
+        input: {
+          mappingId: buttonComponentMappingFixture.id,
+          format: 'HTML',
+        },
+      },
+    );
+
+    const body = await graphql<{
+      reviewWorkspace: {
+        latestDecision: { status: string } | null;
+        exports: Array<{ format: string; content: string }>;
+        dashboardMetrics: { acceptedMappings: number; exportsCreated: number };
+      } | null;
+    }>(
+      `
+        query ReviewWorkspace($exampleId: ID!) {
+          reviewWorkspace(exampleId: $exampleId) {
+            latestDecision {
+              status
+            }
+            exports {
+              format
+              content
+            }
+            dashboardMetrics {
+              acceptedMappings
+              exportsCreated
+            }
+          }
+        }
+      `,
+      { exampleId: buttonExampleFixture.id },
+    );
+
+    expect(body.errors).toBeUndefined();
+    expect(body.data?.reviewWorkspace).toMatchObject({
+      latestDecision: {
+        status: 'ACCEPTED',
+      },
+      exports: [
+        {
+          format: 'HTML',
+          content: '<sl-button variant="primary" size="medium">Save changes</sl-button>',
+        },
+      ],
+      dashboardMetrics: {
+        acceptedMappings: 1,
+        exportsCreated: 1,
+      },
     });
   });
 

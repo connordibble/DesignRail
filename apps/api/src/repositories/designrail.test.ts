@@ -20,7 +20,10 @@ import {
   createExport,
   getComponentIntentByExampleId,
   getDashboardMetrics,
+  getLatestReviewDecisionByMappingId,
   getMappingByExampleId,
+  getReviewWorkspace,
+  listExportsByMappingId,
   listComplianceFindingsByMappingId,
   listExamples,
   listReviewDecisions,
@@ -60,6 +63,35 @@ describe('DesignRail repositories', () => {
     ).toHaveLength(1);
   });
 
+  it('returns a review workspace for the seeded Button example', () => {
+    const workspace = getReviewWorkspace(client, buttonExampleFixture.id);
+
+    expect(workspace).toMatchObject({
+      example: buttonExampleFixture,
+      intent: {
+        componentType: 'Button',
+      },
+      mapping: {
+        id: buttonComponentMappingFixture.id,
+        targetComponent: 'sl-button',
+      },
+      complianceFindings: [
+        {
+          mappingId: buttonComponentMappingFixture.id,
+        },
+      ],
+      latestDecision: null,
+      exports: [],
+      dashboardMetrics: {
+        acceptedMappings: 0,
+        rejectedMappings: 0,
+        editedMappings: 0,
+        pendingMappings: 0,
+        exportsCreated: 0,
+      },
+    });
+  });
+
   it('persists review decisions and derives dashboard metrics', () => {
     const decision = saveReviewDecision(client, {
       id: 'decision.test.accepted',
@@ -76,6 +108,46 @@ describe('DesignRail repositories', () => {
       rejectedMappings: 0,
       editedMappings: 0,
       pendingMappings: 0,
+    });
+  });
+
+  it('returns the latest decision in the review workspace', () => {
+    saveReviewDecision(client, {
+      id: 'decision.test.accepted',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'ACCEPTED',
+      reviewerLabel: 'Repository test',
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+    saveReviewDecision(client, {
+      id: 'decision.test.edited',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'EDITED',
+      reviewerLabel: 'Repository test',
+      editedMapping: {
+        mappedSlots: {
+          default: 'Publish',
+        },
+      },
+      createdAt: '2026-01-01T00:00:02.000Z',
+    });
+    saveReviewDecision(client, {
+      id: 'decision.test.rejected',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'REJECTED',
+      reviewerLabel: 'Repository test',
+      createdAt: '2026-01-01T00:00:03.000Z',
+    });
+
+    expect(
+      getLatestReviewDecisionByMappingId(client, buttonComponentMappingFixture.id),
+    ).toMatchObject({
+      id: 'decision.test.rejected',
+      status: 'REJECTED',
+    });
+    expect(getReviewWorkspace(client, buttonExampleFixture.id)?.latestDecision).toMatchObject({
+      id: 'decision.test.rejected',
+      status: 'REJECTED',
     });
   });
 
@@ -140,6 +212,36 @@ describe('DesignRail repositories', () => {
       },
     });
     expect(getDashboardMetrics(client).exportsCreated).toBe(1);
+  });
+
+  it('returns export history after a valid export', () => {
+    expect(listExportsByMappingId(client, buttonComponentMappingFixture.id)).toEqual([]);
+
+    saveReviewDecision(client, {
+      id: 'decision.test.accepted',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'ACCEPTED',
+      reviewerLabel: 'Repository test',
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+
+    const outcome = createExport(client, {
+      id: 'export.test.react',
+      mappingId: buttonComponentMappingFixture.id,
+      format: 'REACT',
+      createdAt: '2026-01-01T00:00:02.000Z',
+    });
+
+    expect(outcome).toMatchObject({ ok: true });
+    expect(getReviewWorkspace(client, buttonExampleFixture.id)?.exports).toEqual([
+      {
+        id: 'export.test.react',
+        mappingId: buttonComponentMappingFixture.id,
+        format: 'REACT',
+        content: '<SlButton variant="primary" size="medium">Save changes</SlButton>',
+        createdAt: '2026-01-01T00:00:02.000Z',
+      },
+    ]);
   });
 
   it('records instrumentation events', () => {

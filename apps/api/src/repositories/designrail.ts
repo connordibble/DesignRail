@@ -76,6 +76,16 @@ export interface CreateExportInput {
   createdAt?: string;
 }
 
+export interface ReviewWorkspace {
+  example: Example;
+  intent: ComponentIntent | null;
+  mapping: ComponentMapping | null;
+  complianceFindings: ComplianceFinding[];
+  latestDecision: ReviewDecision | null;
+  exports: ExportResult[];
+  dashboardMetrics: DashboardMetrics;
+}
+
 export type CreateExportOutcome =
   | {
       ok: true;
@@ -194,6 +204,10 @@ function toReviewDecision(row: typeof reviewDecisions.$inferSelect): ReviewDecis
   });
 }
 
+function toExportResult(row: typeof exports.$inferSelect): ExportResult {
+  return exportResultSchema.parse(row);
+}
+
 function insertExample(client: DatabaseClient, example: Example): void {
   const parsed = exampleSchema.parse(example);
 
@@ -283,6 +297,12 @@ export function listExamples(client: DatabaseClient, input: PaginationInput = {}
     .map((row) => exampleSchema.parse(row));
 }
 
+function getExampleById(client: DatabaseClient, exampleId: string): Example | null {
+  const row = client.db.select().from(examples).where(eq(examples.id, exampleId)).get();
+
+  return row === undefined ? null : exampleSchema.parse(row);
+}
+
 export function getComponentIntentByExampleId(
   client: DatabaseClient,
   exampleId: string,
@@ -349,6 +369,21 @@ export function listReviewDecisions(
     .map(toReviewDecision);
 }
 
+export function getLatestReviewDecisionByMappingId(
+  client: DatabaseClient,
+  mappingId: string,
+): ReviewDecision | null {
+  const row = client.db
+    .select()
+    .from(reviewDecisions)
+    .where(eq(reviewDecisions.mappingId, mappingId))
+    .orderBy(desc(reviewDecisions.createdAt), desc(reviewDecisions.id))
+    .limit(1)
+    .get();
+
+  return row === undefined ? null : toReviewDecision(row);
+}
+
 export function saveReviewDecision(
   client: DatabaseClient,
   input: SaveReviewDecisionInput,
@@ -412,15 +447,7 @@ export function createExport(
   client: DatabaseClient,
   input: CreateExportInput,
 ): CreateExportOutcome {
-  const decision = client.db
-    .select()
-    .from(reviewDecisions)
-    .where(eq(reviewDecisions.mappingId, input.mappingId))
-    .orderBy(desc(reviewDecisions.createdAt))
-    .limit(1)
-    .get();
-
-  const latestDecision = decision === undefined ? null : toReviewDecision(decision);
+  const latestDecision = getLatestReviewDecisionByMappingId(client, input.mappingId);
 
   if (latestDecision === null || !['ACCEPTED', 'EDITED'].includes(latestDecision.status)) {
     return {
@@ -473,6 +500,21 @@ export function createExport(
   };
 }
 
+export function listExportsByMappingId(
+  client: DatabaseClient,
+  mappingId: string,
+  input: PaginationInput = {},
+): ExportResult[] {
+  return client.db
+    .select()
+    .from(exports)
+    .where(eq(exports.mappingId, mappingId))
+    .orderBy(desc(exports.createdAt), desc(exports.id))
+    .limit(normalizeLimit(input.limit, 100))
+    .all()
+    .map(toExportResult);
+}
+
 export function getDashboardMetrics(client: DatabaseClient): DashboardMetrics {
   const latestStatuses = getLatestDecisionStatuses(client);
   const exportCount = client.db.select({ total: count() }).from(exports).get()?.total ?? 0;
@@ -497,6 +539,32 @@ export function getDashboardMetrics(client: DatabaseClient): DashboardMetrics {
       .sort((left, right) => right.count - left.count || left.message.localeCompare(right.message))
       .slice(0, 10),
   });
+}
+
+export function getReviewWorkspace(
+  client: DatabaseClient,
+  exampleId: string,
+): ReviewWorkspace | null {
+  const example = getExampleById(client, exampleId);
+
+  if (example === null) {
+    return null;
+  }
+
+  const intent = getComponentIntentByExampleId(client, exampleId);
+  const mapping = getMappingByExampleId(client, exampleId);
+
+  return {
+    example,
+    intent,
+    mapping,
+    complianceFindings:
+      mapping === null ? [] : listComplianceFindingsByMappingId(client, mapping.id),
+    latestDecision:
+      mapping === null ? null : getLatestReviewDecisionByMappingId(client, mapping.id),
+    exports: mapping === null ? [] : listExportsByMappingId(client, mapping.id),
+    dashboardMetrics: getDashboardMetrics(client),
+  };
 }
 
 function applyMappingEdit(mapping: ComponentMapping, edit: MappingEdit): ComponentMapping {

@@ -14,6 +14,7 @@ import {
   getComponentIntentByExampleId,
   getDashboardMetrics,
   getMappingByExampleId,
+  getReviewWorkspace,
   listComplianceFindingsByMappingId,
   listExamples,
   listReviewDecisions,
@@ -175,6 +176,16 @@ export const typeDefs = gql`
     commonComplianceWarnings: [DashboardWarning!]!
   }
 
+  type ReviewWorkspace {
+    example: Example!
+    intent: ComponentIntent
+    mapping: ComponentMapping
+    complianceFindings: [ComplianceFinding!]!
+    latestDecision: ReviewDecision
+    exports: [ExportResult!]!
+    dashboardMetrics: DashboardMetrics!
+  }
+
   input TokenReferenceInput {
     name: String!
     value: String
@@ -212,6 +223,7 @@ export const typeDefs = gql`
     compliance(mappingId: ID!, limit: Int = 50): [ComplianceFinding!]!
     reviewDecisions(limit: Int = 100): [ReviewDecision!]!
     dashboardMetrics: DashboardMetrics!
+    reviewWorkspace(exampleId: ID!): ReviewWorkspace
   }
 
   type Mutation {
@@ -231,6 +243,10 @@ interface MappingIdArgs {
 
 interface LimitArgs {
   limit?: number;
+}
+
+interface ReviewWorkspaceArgs {
+  exampleId: string;
 }
 
 interface SaveReviewDecisionArgs {
@@ -298,6 +314,8 @@ export function createResolvers(client: DatabaseClient) {
         listComplianceFindingsByMappingId(client, args.mappingId, args),
       reviewDecisions: (_parent: unknown, args: LimitArgs) => listReviewDecisions(client, args),
       dashboardMetrics: () => getDashboardMetrics(client),
+      reviewWorkspace: (_parent: unknown, args: ReviewWorkspaceArgs) =>
+        getReviewWorkspace(client, args.exampleId),
     },
     Mutation: {
       saveReviewDecision: (_parent: unknown, args: SaveReviewDecisionArgs) => {
