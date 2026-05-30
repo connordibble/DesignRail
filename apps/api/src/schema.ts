@@ -183,7 +183,6 @@ export const typeDefs = gql`
     complianceFindings: [ComplianceFinding!]!
     latestDecision: ReviewDecision
     exports: [ExportResult!]!
-    dashboardMetrics: DashboardMetrics!
   }
 
   input TokenReferenceInput {

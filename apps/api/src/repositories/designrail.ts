@@ -83,7 +83,6 @@ export interface ReviewWorkspace {
   complianceFindings: ComplianceFinding[];
   latestDecision: ReviewDecision | null;
   exports: ExportResult[];
-  dashboardMetrics: DashboardMetrics;
 }
 
 export type CreateExportOutcome =
@@ -563,7 +562,6 @@ export function getReviewWorkspace(
     latestDecision:
       mapping === null ? null : getLatestReviewDecisionByMappingId(client, mapping.id),
     exports: mapping === null ? [] : listExportsByMappingId(client, mapping.id),
-    dashboardMetrics: getDashboardMetrics(client),
   };
 }
 

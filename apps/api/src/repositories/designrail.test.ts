@@ -82,13 +82,6 @@ describe('DesignRail repositories', () => {
       ],
       latestDecision: null,
       exports: [],
-      dashboardMetrics: {
-        acceptedMappings: 0,
-        rejectedMappings: 0,
-        editedMappings: 0,
-        pendingMappings: 0,
-        exportsCreated: 0,
-      },
     });
   });
 

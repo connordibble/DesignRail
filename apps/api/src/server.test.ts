@@ -128,7 +128,6 @@ describe('DesignRail GraphQL API', () => {
         complianceFindings: Array<{ mappingId: string; severity: string }>;
         latestDecision: { status: string } | null;
         exports: Array<{ id: string }>;
-        dashboardMetrics: { exportsCreated: number };
       } | null;
     }>(
       `
@@ -154,9 +153,6 @@ describe('DesignRail GraphQL API', () => {
             }
             exports {
               id
-            }
-            dashboardMetrics {
-              exportsCreated
             }
           }
         }
@@ -185,9 +181,6 @@ describe('DesignRail GraphQL API', () => {
       ],
       latestDecision: null,
       exports: [],
-      dashboardMetrics: {
-        exportsCreated: 0,
-      },
     });
   });
 
@@ -330,8 +323,8 @@ describe('DesignRail GraphQL API', () => {
       reviewWorkspace: {
         latestDecision: { status: string } | null;
         exports: Array<{ format: string; content: string }>;
-        dashboardMetrics: { acceptedMappings: number; exportsCreated: number };
       } | null;
+      dashboardMetrics: { acceptedMappings: number; exportsCreated: number };
     }>(
       `
         query ReviewWorkspace($exampleId: ID!) {
@@ -343,10 +336,10 @@ describe('DesignRail GraphQL API', () => {
               format
               content
             }
-            dashboardMetrics {
-              acceptedMappings
-              exportsCreated
-            }
+          }
+          dashboardMetrics {
+            acceptedMappings
+            exportsCreated
           }
         }
       `,
@@ -364,10 +357,10 @@ describe('DesignRail GraphQL API', () => {
           content: '<sl-button variant="primary" size="medium">Save changes</sl-button>',
         },
       ],
-      dashboardMetrics: {
-        acceptedMappings: 1,
-        exportsCreated: 1,
-      },
+    });
+    expect(body.data?.dashboardMetrics).toEqual({
+      acceptedMappings: 1,
+      exportsCreated: 1,
     });
   });
 
