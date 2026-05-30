@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 
+import { DesignRailAppProviders } from './app-providers.js';
 import { App } from './App.js';
 import './index.css';
 
@@ -11,6 +12,8 @@ if (!rootEl) {
 
 ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
-    <App />
+    <DesignRailAppProviders>
+      <App />
+    </DesignRailAppProviders>
   </React.StrictMode>,
 );

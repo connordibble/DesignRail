@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export { DESIGNRAIL_GRAPHQL_SCHEMA } from './graphql-schema.js';
+
 export const PACKAGE_NAME = '@designrail/shared';
 export const DESIGNRAIL_CONTRACT_VERSION = 'c1';
 

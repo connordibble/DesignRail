@@ -11,8 +11,10 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@apollo/client": "^4.2.0",
     "@designrail/design-tokens": "workspace:*",
     "@designrail/shared": "workspace:*",
+    "graphql": "^16.14.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
