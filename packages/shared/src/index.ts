@@ -4,6 +4,7 @@ export { DESIGNRAIL_GRAPHQL_SCHEMA } from './graphql-schema.js';
 
 export const PACKAGE_NAME = '@designrail/shared';
 export const DESIGNRAIL_CONTRACT_VERSION = 'c1';
+export const BUTTON_EXAMPLE_ID = 'example.button.primary';
 
 export type JsonValue =
   | string
@@ -193,6 +194,17 @@ export const dashboardMetricsSchema = z.object({
   commonComplianceWarnings: z.array(dashboardWarningSchema),
 });
 
+export function createEmptyDashboardMetrics(): DashboardMetrics {
+  return {
+    acceptedMappings: 0,
+    rejectedMappings: 0,
+    editedMappings: 0,
+    pendingMappings: 0,
+    exportsCreated: 0,
+    commonComplianceWarnings: [],
+  };
+}
+
 export const toolModeSchema = z.enum(['MOCK']);
 
 export function toolResultSchema<TOutput extends z.ZodType>(outputSchema: TOutput) {
@@ -295,7 +307,7 @@ export function writeJsonCliResponse<TOutput>(
 export const FIXTURE_TIMESTAMP = '2026-01-01T00:00:00.000Z';
 
 export const buttonExampleFixture: Example = {
-  id: 'example.button.primary',
+  id: BUTTON_EXAMPLE_ID,
   name: 'Button',
   componentType: 'Button',
   fixturePath: 'examples/figma-input.button.json',

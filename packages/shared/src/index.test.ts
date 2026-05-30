@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BUTTON_EXAMPLE_ID,
   buttonComponentIntentFixture,
   buttonComponentMappingFixture,
   buttonComplianceFindingFixture,
   buttonExampleFixture,
   componentIntentSchema,
   componentMappingSchema,
+  createEmptyDashboardMetrics,
   createToolResult,
   complianceFindingSchema,
   exampleSchema,
@@ -25,6 +27,18 @@ import {
 describe('@designrail/shared contracts', () => {
   it('exports a package marker', () => {
     expect(PACKAGE_NAME).toBe('@designrail/shared');
+  });
+
+  it('exports shared review defaults', () => {
+    expect(buttonExampleFixture.id).toBe(BUTTON_EXAMPLE_ID);
+    expect(createEmptyDashboardMetrics()).toEqual({
+      acceptedMappings: 0,
+      rejectedMappings: 0,
+      editedMappings: 0,
+      pendingMappings: 0,
+      exportsCreated: 0,
+      commonComplianceWarnings: [],
+    });
   });
 
   it('parses the fixture-safe C1 domain examples', () => {

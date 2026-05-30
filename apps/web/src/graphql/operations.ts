@@ -1,23 +1,113 @@
 import { gql, type TypedDocumentNode } from '@apollo/client';
 import type {
-  ComponentIntent,
-  ComponentMapping,
-  ComplianceFinding,
+  ComponentSource,
+  ComplianceCategory,
+  ComplianceSeverity,
   DashboardMetrics,
-  Example,
+  ExampleStatus,
   ExportFormat,
-  ExportResult,
   MappingEdit,
-  ReviewDecision,
+  MappingConfidence,
+  Metadata,
   ReviewDecisionStatus,
+  TargetLibrary,
 } from '@designrail/shared';
 
+export interface ExampleResult {
+  id: string;
+  name: string;
+  componentType: string;
+  fixturePath: string;
+  source: ComponentSource;
+  status: ExampleStatus;
+}
+
+export interface SourceReferenceResult {
+  type: string;
+  id: string;
+  name: string | null;
+}
+
+export interface TokenReferenceResult {
+  name: string;
+  value: string | null;
+  target: string | null;
+}
+
+export interface AccessibilityMetadataResult {
+  label: string | null;
+  role: string | null;
+  description: string | null;
+  required: boolean;
+}
+
+export interface ComponentIntentResult {
+  id: string;
+  exampleId: string;
+  source: ComponentSource;
+  sourceRefs: SourceReferenceResult[];
+  componentName: string;
+  componentType: string;
+  summary: string;
+  props: Metadata;
+  variants: string[];
+  states: string[];
+  tokenRefs: TokenReferenceResult[];
+  accessibility: AccessibilityMetadataResult;
+  createdAt: string;
+}
+
+export interface ComponentMappingResult {
+  id: string;
+  intentId: string;
+  targetLibrary: TargetLibrary;
+  targetComponent: string;
+  mappedProps: Metadata;
+  mappedEvents: Metadata;
+  mappedSlots: Metadata;
+  mappedTokens: TokenReferenceResult[];
+  confidence: MappingConfidence;
+  rationale: string;
+  fallbackNotes: string | null;
+  createdAt: string;
+}
+
+export interface ComplianceFindingResult {
+  id: string;
+  mappingId: string;
+  category: ComplianceCategory;
+  severity: ComplianceSeverity;
+  message: string;
+  remediation: string;
+  path: string | null;
+  blocking: boolean;
+  createdAt: string;
+}
+
+export interface ReviewDecisionResult {
+  id: string;
+  mappingId: string;
+  status: ReviewDecisionStatus;
+  reviewerLabel: string;
+  editedMapping: MappingEdit | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface ExportResult {
+  id: string;
+  mappingId: string;
+  format: ExportFormat;
+  content: string;
+  createdAt: string;
+}
+
 export interface ReviewWorkspace {
-  example: Example;
-  intent: ComponentIntent | null;
-  mapping: ComponentMapping | null;
-  complianceFindings: ComplianceFinding[];
-  latestDecision: ReviewDecision | null;
+  example: ExampleResult;
+  intent: ComponentIntentResult | null;
+  mapping: ComponentMappingResult | null;
+  complianceFindings: ComplianceFindingResult[];
+  latestDecision: ReviewDecisionResult | null;
   exports: ExportResult[];
 }
 
@@ -39,7 +129,7 @@ export interface SaveReviewDecisionInput {
 }
 
 export interface SaveReviewDecisionMutation {
-  saveReviewDecision: ReviewDecision;
+  saveReviewDecision: ReviewDecisionResult;
 }
 
 export interface SaveReviewDecisionMutationVariables {
