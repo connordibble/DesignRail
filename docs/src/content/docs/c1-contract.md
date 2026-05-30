@@ -30,11 +30,14 @@ The API exposes the Phase 1 review contract:
 - `compliance(mappingId)`
 - `reviewDecisions`
 - `dashboardMetrics`
+- `reviewWorkspace(exampleId)`
 - `saveReviewDecision(input)`
 - `exportMapping(input)`
 
-The review UI should use GraphQL for persisted decisions and exports. It should not bypass the API to write SQLite directly.
+The review UI should use `reviewWorkspace(exampleId)` as the selected-example read model, and query `dashboardMetrics` as a sibling top-level field when dashboard counters are needed. It should use GraphQL for persisted decisions and exports, and should not bypass the API to write SQLite directly.
 List queries are bounded, and the API applies basic query guardrails before resolver execution.
+
+The web client defaults to `http://127.0.0.1:4000/graphql`. Set `VITE_DESIGNRAIL_GRAPHQL_URL` for alternate local API URLs.
 
 ## Persistence
 

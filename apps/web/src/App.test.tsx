@@ -206,6 +206,103 @@ describe('<App />', () => {
     expect(screen.getByText('READY')).toBeInTheDocument();
   });
 
+  it('exports accepted Button mappings as HTML, React, and Agent Brief', async () => {
+    const user = userEvent.setup();
+    const acceptedDecision = createDecision('ACCEPTED');
+    const htmlExport: ExportResult = {
+      ...htmlExportFixture,
+      id: 'export.button.accepted.html',
+      createdAt: '2026-01-01T00:00:02.000Z',
+    };
+    const reactExport: ExportResult = {
+      id: 'export.button.accepted.react',
+      mappingId: buttonComponentMappingFixture.id,
+      format: 'REACT',
+      content: '<SlButton variant="primary" size="medium">Save changes</SlButton>',
+      createdAt: '2026-01-01T00:00:03.000Z',
+    };
+    const briefExport: ExportResult = {
+      id: 'export.button.accepted.brief',
+      mappingId: buttonComponentMappingFixture.id,
+      format: 'AGENT_BRIEF',
+      content: [
+        `Mapping: ${buttonComponentMappingFixture.id}`,
+        `Target: ${buttonComponentMappingFixture.targetLibrary} ${buttonComponentMappingFixture.targetComponent}`,
+        `Confidence: ${buttonComponentMappingFixture.confidence}`,
+        `Rationale: ${buttonComponentMappingFixture.rationale}`,
+      ].join('\n'),
+      createdAt: '2026-01-01T00:00:04.000Z',
+    };
+
+    renderApp([
+      createWorkspaceMock(
+        createWorkspaceResult({
+          latestDecision: acceptedDecision,
+          metrics: { acceptedMappings: 1 },
+        }),
+      ),
+      createExportMock({
+        input: {
+          mappingId: buttonComponentMappingFixture.id,
+          format: 'HTML',
+        },
+        result: htmlExport,
+      }),
+      createWorkspaceMock(
+        createWorkspaceResult({
+          exports: [htmlExport],
+          latestDecision: acceptedDecision,
+          metrics: { acceptedMappings: 1, exportsCreated: 1 },
+        }),
+      ),
+      createExportMock({
+        input: {
+          mappingId: buttonComponentMappingFixture.id,
+          format: 'REACT',
+        },
+        result: reactExport,
+      }),
+      createWorkspaceMock(
+        createWorkspaceResult({
+          exports: [reactExport, htmlExport],
+          latestDecision: acceptedDecision,
+          metrics: { acceptedMappings: 1, exportsCreated: 2 },
+        }),
+      ),
+      createExportMock({
+        input: {
+          mappingId: buttonComponentMappingFixture.id,
+          format: 'AGENT_BRIEF',
+        },
+        result: briefExport,
+      }),
+      createWorkspaceMock(
+        createWorkspaceResult({
+          exports: [briefExport, reactExport, htmlExport],
+          latestDecision: acceptedDecision,
+          metrics: { acceptedMappings: 1, exportsCreated: 3 },
+        }),
+      ),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    await user.click(screen.getByRole('button', { name: 'HTML' }));
+    expect(await screen.findByText(htmlExport.content)).toBeInTheDocument();
+    expect(screen.getByText('Exports 1')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'React' }));
+    expect(await screen.findByText(reactExport.content)).toBeInTheDocument();
+    expect(screen.getByText('Exports 2')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Agent Brief' }));
+    expect(
+      await screen.findByText(/Mapping: mapping\.button\.primary\.shoelace/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Exports 3')).toBeInTheDocument();
+  });
+
   it('saves a rejected decision and keeps exports locked', async () => {
     const user = userEvent.setup();
     const rejectedDecision = createDecision('REJECTED');

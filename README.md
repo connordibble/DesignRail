@@ -82,7 +82,9 @@ The default workflow is credential-free and deterministic. Optional Figma API/MC
 
 Checkpoint 1 defines the local review contract: shared Zod schemas, a GraphQL API, API-owned SQLite persistence through Drizzle, JSON tool-result envelopes, and persisted review decisions. The default database is local-only at `apps/api/.data/designrail.sqlite`. The API binds to localhost by default; set `HOST` and `DESIGNRAIL_ALLOW_NETWORK=true` only when intentionally exposing it beyond the local machine.
 
-The review UI should use GraphQL for examples, component intent, mappings, compliance findings, review decisions, exports, and dashboard metrics. Review/export mutations record instrumentation events internally. Tools and resolvers should exchange structured data, not markdown or stdout-shaped strings.
+The review UI uses GraphQL for examples, component intent, mappings, compliance findings, review decisions, exports, and dashboard metrics. `reviewWorkspace(exampleId)` is the UI read model for the selected review target, with `dashboardMetrics` queried as a sibling top-level field when needed. Review/export mutations record instrumentation events internally. Tools and resolvers should exchange structured data, not markdown or stdout-shaped strings.
+
+The web app points at `http://127.0.0.1:4000/graphql` by default. Set `VITE_DESIGNRAIL_GRAPHQL_URL` only when the local API is intentionally served from a different GraphQL URL.
 
 ## Agent-Assisted Development Model
 
