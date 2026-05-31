@@ -12,6 +12,7 @@ import {
   exampleSchema,
   exportResultSchema,
   instrumentationEventSchema,
+  isExportableStatus,
   mappingEditSchema,
   reviewDecisionSchema,
   type ComponentIntent,
@@ -448,7 +449,7 @@ export function createExport(
 ): CreateExportOutcome {
   const latestDecision = getLatestReviewDecisionByMappingId(client, input.mappingId);
 
-  if (latestDecision === null || !['ACCEPTED', 'EDITED'].includes(latestDecision.status)) {
+  if (latestDecision === null || !isExportableStatus(latestDecision.status)) {
     return {
       ok: false,
       code: 'MAPPING_NOT_EXPORTABLE',

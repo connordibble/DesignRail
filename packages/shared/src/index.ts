@@ -205,6 +205,12 @@ export function createEmptyDashboardMetrics(): DashboardMetrics {
   };
 }
 
+export const EXPORTABLE_REVIEW_STATUSES = ['ACCEPTED', 'EDITED'] as const;
+
+export function isExportableStatus(status: ReviewDecisionStatus): boolean {
+  return (EXPORTABLE_REVIEW_STATUSES as readonly ReviewDecisionStatus[]).includes(status);
+}
+
 export const toolModeSchema = z.enum(['MOCK']);
 
 export function toolResultSchema<TOutput extends z.ZodType>(outputSchema: TOutput) {

@@ -4,12 +4,10 @@ import {
   type DashboardMetrics,
   type ExportFormat,
   type JsonValue,
-  type MappingConfidence,
-  type MappingEdit,
   type ReviewDecisionStatus,
 } from '@designrail/shared';
 import type { KeyboardEvent, ReactElement, ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import {
   EXPORT_MAPPING_MUTATION,
@@ -24,27 +22,24 @@ import {
   type ReviewWorkspace,
   type ReviewWorkspaceQuery,
   type ReviewWorkspaceQueryVariables,
-  type SaveReviewDecisionInput,
   type SaveReviewDecisionMutation,
   type SaveReviewDecisionMutationVariables,
 } from '../graphql/operations.js';
+
+import {
+  BUTTON_SIZE_OPTIONS,
+  BUTTON_VARIANT_OPTIONS,
+  MAPPING_CONFIDENCE_OPTIONS,
+  createButtonEditDraft,
+  createSaveDecisionInput,
+  type ButtonEditDraft,
+} from './button-edit.js';
 
 const TABS = ['Dashboard', 'Review', 'Exports', 'Schema'] as const;
 
 type WorkspaceTab = (typeof TABS)[number];
 type Tone = 'success' | 'warning' | 'danger' | 'info' | 'edited' | 'neutral';
 
-interface ButtonEditDraft {
-  confidence: MappingConfidence;
-  disabled: boolean;
-  label: string;
-  notes: string;
-  rationale: string;
-  size: string;
-  variant: string;
-}
-
-const LOCAL_REVIEWER_LABEL = 'Local reviewer';
 const EMPTY_METRICS = createEmptyDashboardMetrics();
 
 const STATUS_TONES: Record<ReviewDecisionStatus, Tone> = {
@@ -84,17 +79,6 @@ const TAB_KEYBOARD_TARGETS: Record<WorkspaceTab, { previous: WorkspaceTab; next:
   Schema: { previous: 'Exports', next: 'Dashboard' },
 };
 
-const BUTTON_VARIANT_OPTIONS = [
-  'default',
-  'primary',
-  'success',
-  'neutral',
-  'warning',
-  'danger',
-  'text',
-] as const;
-const BUTTON_SIZE_OPTIONS = ['small', 'medium', 'large'] as const;
-const MAPPING_CONFIDENCE_OPTIONS: MappingConfidence[] = ['HIGH', 'MEDIUM', 'LOW'];
 const EXPORT_FORMAT_OPTIONS: Array<{ format: ExportFormat; label: string }> = [
   { format: 'HTML', label: 'HTML' },
   { format: 'REACT', label: 'React' },
@@ -309,7 +293,15 @@ function WorkspaceTabPanel({
     case 'Dashboard':
       return <DashboardPanel metrics={metrics} workspace={workspace} />;
     case 'Review':
-      return <ReviewPanel exampleId={exampleId} workspace={workspace} />;
+      // Remount the edit form whenever the underlying decision or mapping changes so
+      // the draft re-initializes from server state without a state-syncing effect.
+      return (
+        <ReviewPanel
+          exampleId={exampleId}
+          key={workspace.latestDecision?.id ?? workspace.mapping?.id ?? 'no-mapping'}
+          workspace={workspace}
+        />
+      );
     case 'Exports':
       return (
         <ExportsPanel
@@ -406,11 +398,6 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
   >(SAVE_REVIEW_DECISION_MUTATION);
   const isSavingDecision = saveDecisionState.loading;
 
-  useEffect(() => {
-    setDraft(createButtonEditDraft(mapping, workspace.latestDecision));
-    setSaveErrorMessage(null);
-  }, [mapping, workspace.latestDecision]);
-
   async function persistDecision(status: ReviewDecisionStatus): Promise<void> {
     if (mapping === null || isSavingDecision) {
       return;
@@ -501,7 +488,11 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
               />
             )}
 
-            {isSavingDecision ? <EmptyLine text="Saving review decision." /> : null}
+            {isSavingDecision ? (
+              <p aria-live="polite" className="text-dr-small text-dr-subtle" role="status">
+                Saving review decision.
+              </p>
+            ) : null}
             {saveErrorMessage !== null ? (
               <InlineAlert message={saveErrorMessage} title="Decision failed" />
             ) : null}
@@ -592,7 +583,7 @@ function ButtonEditForm({
           disabled={disabled}
           id="button-edit-confidence"
           label="Confidence"
-          onChange={(value) => updateDraft('confidence', value as MappingConfidence)}
+          onChange={(value) => updateDraft('confidence', value)}
           options={MAPPING_CONFIDENCE_OPTIONS}
           value={draft.confidence}
         />
@@ -926,23 +917,23 @@ function TextField({ disabled, id, label, onChange, value }: TextFieldProps): Re
   );
 }
 
-interface SelectFieldProps {
+interface SelectFieldProps<TValue extends string> {
   disabled: boolean;
   id: string;
   label: string;
-  onChange: (value: string) => void;
-  options: readonly string[];
-  value: string;
+  onChange: (value: TValue) => void;
+  options: readonly TValue[];
+  value: TValue;
 }
 
-function SelectField({
+function SelectField<TValue extends string>({
   disabled,
   id,
   label,
   onChange,
   options,
   value,
-}: SelectFieldProps): ReactElement {
+}: SelectFieldProps<TValue>): ReactElement {
   return (
     <label className="grid gap-dr-xxs text-dr-caption font-semibold text-dr-subtle" htmlFor={id}>
       {label}
@@ -950,7 +941,7 @@ function SelectField({
         className="rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs font-ui text-dr-small font-normal text-dr-text focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={disabled}
         id={id}
-        onChange={(event) => onChange(event.currentTarget.value)}
+        onChange={(event) => onChange(event.currentTarget.value as TValue)}
         value={value}
       >
         {options.map((option) => (
@@ -1105,75 +1096,6 @@ function EmptyLine({ text }: EmptyLineProps): ReactElement {
   return <p className="text-dr-small text-dr-subtle">{text}</p>;
 }
 
-function createButtonEditDraft(
-  mapping: ComponentMappingResult | null,
-  latestDecision: ReviewDecisionResult | null,
-): ButtonEditDraft {
-  if (mapping === null) {
-    return {
-      confidence: 'MEDIUM',
-      disabled: false,
-      label: '',
-      notes: latestDecision?.notes ?? '',
-      rationale: '',
-      size: 'medium',
-      variant: 'primary',
-    };
-  }
-
-  const editedMapping = latestDecision?.status === 'EDITED' ? latestDecision.editedMapping : null;
-  const mappedProps = editedMapping?.mappedProps ?? mapping.mappedProps;
-  const mappedSlots = editedMapping?.mappedSlots ?? mapping.mappedSlots;
-
-  return {
-    confidence: editedMapping?.confidence ?? mapping.confidence,
-    disabled: getJsonBooleanValue(mappedProps, 'disabled', false),
-    label: getJsonStringValue(mappedSlots, 'default', mapping.targetComponent),
-    notes: latestDecision?.notes ?? '',
-    rationale: editedMapping?.rationale ?? mapping.rationale,
-    size: getJsonStringValue(mappedProps, 'size', 'medium'),
-    variant: getJsonStringValue(mappedProps, 'variant', 'primary'),
-  };
-}
-
-function createSaveDecisionInput(
-  mappingId: string,
-  status: ReviewDecisionStatus,
-  draft: ButtonEditDraft,
-): SaveReviewDecisionInput {
-  const notes = draft.notes.trim();
-  const base = {
-    mappingId,
-    status,
-    reviewerLabel: LOCAL_REVIEWER_LABEL,
-    ...(notes.length === 0 ? {} : { notes }),
-  };
-
-  if (status !== 'EDITED') {
-    return base;
-  }
-
-  return {
-    ...base,
-    editedMapping: createButtonMappingEdit(draft),
-  };
-}
-
-function createButtonMappingEdit(draft: ButtonEditDraft): MappingEdit {
-  return {
-    mappedProps: {
-      variant: draft.variant,
-      size: draft.size,
-      disabled: draft.disabled,
-    },
-    mappedSlots: {
-      default: draft.label.trim(),
-    },
-    confidence: draft.confidence,
-    rationale: draft.rationale.trim(),
-  };
-}
-
 function getDecisionStatus(decision: ReviewDecisionResult | null): ReviewDecisionStatus {
   return decision?.status ?? 'PENDING';
 }
@@ -1194,26 +1116,6 @@ function getJsonRecordValue(record: Record<string, JsonValue>, key: string): str
   }
 
   return String(value);
-}
-
-function getJsonStringValue(
-  record: Record<string, JsonValue>,
-  key: string,
-  fallback: string,
-): string {
-  const value = record[key];
-
-  return typeof value === 'string' && value.length > 0 ? value : fallback;
-}
-
-function getJsonBooleanValue(
-  record: Record<string, JsonValue>,
-  key: string,
-  fallback: boolean,
-): boolean {
-  const value = record[key];
-
-  return typeof value === 'boolean' ? value : fallback;
 }
 
 function formatJson(value: unknown): string {

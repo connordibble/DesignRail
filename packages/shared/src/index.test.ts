@@ -15,6 +15,7 @@ import {
   exportResultSchema,
   htmlExportFixture,
   instrumentationEventSchema,
+  isExportableStatus,
   jsonValueSchema,
   mappingEditSchema,
   PACKAGE_NAME,
@@ -39,6 +40,13 @@ describe('@designrail/shared contracts', () => {
       exportsCreated: 0,
       commonComplianceWarnings: [],
     });
+  });
+
+  it('gates exports to accepted and edited decisions', () => {
+    expect(isExportableStatus('ACCEPTED')).toBe(true);
+    expect(isExportableStatus('EDITED')).toBe(true);
+    expect(isExportableStatus('PENDING')).toBe(false);
+    expect(isExportableStatus('REJECTED')).toBe(false);
   });
 
   it('parses the fixture-safe C1 domain examples', () => {
