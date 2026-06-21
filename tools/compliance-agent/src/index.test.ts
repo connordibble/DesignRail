@@ -2,6 +2,9 @@ import {
   buttonComplianceFindingsFixture,
   buttonComponentIntentFixture,
   buttonComponentMappingFixture,
+  cardComplianceFindingsFixture,
+  cardComponentIntentFixture,
+  cardComponentMappingFixture,
   complianceFindingSchema,
   inputComplianceFindingsFixture,
   inputComponentIntentFixture,
@@ -32,6 +35,16 @@ describe('@designrail/compliance-agent', () => {
 
     expect(result).toEqual(inputComplianceFindingsFixture);
     expect(result.some((found) => found.severity === 'WARNING')).toBe(true);
+  });
+
+  it('treats containers as not requiring an accessible name and notes absent events', () => {
+    const result = reviewCompliance({
+      intent: cardComponentIntentFixture,
+      mapping: cardComponentMappingFixture,
+    });
+
+    expect(result).toEqual(cardComplianceFindingsFixture);
+    expect(result.find((found) => found.category === 'ACCESSIBILITY')?.severity).toBe('INFO');
   });
 
   it('raises a blocking accessibility finding when no accessible name is present', () => {

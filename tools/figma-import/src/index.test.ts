@@ -1,5 +1,6 @@
 import {
   buttonComponentIntentFixture,
+  cardComponentIntentFixture,
   componentIntentSchema,
   inputComponentIntentFixture,
   toolResultSchema,
@@ -21,6 +22,12 @@ describe('@designrail/figma-import', () => {
     const result = importFigmaFixture({ inputPath: 'examples/figma-input.input.json' });
 
     expect(result).toEqual(inputComponentIntentFixture);
+  });
+
+  it('normalizes the Card fixture into the canonical component intent', () => {
+    const result = importFigmaFixture({ inputPath: 'examples/figma-input.card.json' });
+
+    expect(result).toEqual(cardComponentIntentFixture);
   });
 
   it('rejects malformed mock fixtures before producing intent', () => {
