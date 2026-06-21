@@ -1,62 +1,60 @@
 import { readFileSync } from 'node:fs';
 
 import {
-  buttonComponentIntentFixture,
   componentIntentSchema,
-  type Metadata,
+  FIXTURE_TIMESTAMP,
+  mockFigmaFixtureSchema,
   type ComponentIntent,
+  type MockFigmaFixture,
 } from '@designrail/shared';
 
 export const TOOL_NAME = '@designrail/figma-import';
-export const TOOL_VERSION = '0.1.0';
+export const TOOL_VERSION = '0.2.0';
+
+export interface NormalizeComponentIntentContext {
+  /** Path recorded on the intent's source reference (the fixture origin). */
+  sourcePath: string;
+}
+
+/**
+ * Pure normalization: validate a raw mock fixture and project it into a {@link ComponentIntent}.
+ * Used by both the CLI (after reading a file) and tests (with an in-memory object).
+ */
+export function normalizeComponentIntent(
+  rawFixture: unknown,
+  context: NormalizeComponentIntentContext,
+): ComponentIntent {
+  const fixture: MockFigmaFixture = mockFigmaFixtureSchema.parse(rawFixture);
+
+  return componentIntentSchema.parse({
+    id: fixture.intentId,
+    exampleId: fixture.exampleId,
+    source: 'MOCK',
+    sourceRefs: [
+      {
+        type: 'MOCK_FILE',
+        id: context.sourcePath,
+        name: fixture.name,
+      },
+    ],
+    componentName: fixture.componentName ?? fixture.componentType,
+    componentType: fixture.componentType,
+    summary: fixture.summary,
+    props: fixture.props,
+    variants: fixture.variants,
+    states: fixture.states,
+    tokenRefs: fixture.tokens,
+    accessibility: fixture.accessibility,
+    createdAt: FIXTURE_TIMESTAMP,
+  });
+}
 
 export interface ImportFigmaFixtureInput {
   inputPath: string;
 }
 
 export function importFigmaFixture({ inputPath }: ImportFigmaFixtureInput): ComponentIntent {
-  const rawFixture = readFileSync(inputPath, 'utf8');
-  const parsedFixture = parseMockFixture(rawFixture);
-  const fixtureComponent = readString(parsedFixture, 'component');
-  const componentName =
-    readString(parsedFixture, 'name') ??
-    (fixtureComponent === undefined ? undefined : toDisplayName(fixtureComponent)) ??
-    buttonComponentIntentFixture.componentName;
-  const componentType =
-    readString(parsedFixture, 'componentType') ??
-    componentName ??
-    buttonComponentIntentFixture.componentType;
+  const rawFixture = JSON.parse(readFileSync(inputPath, 'utf8')) as unknown;
 
-  return componentIntentSchema.parse({
-    ...buttonComponentIntentFixture,
-    componentName,
-    componentType,
-    sourceRefs: [
-      {
-        type: 'MOCK_FILE',
-        id: inputPath,
-        name: componentName,
-      },
-    ],
-  });
-}
-
-function parseMockFixture(rawFixture: string): Metadata {
-  const parsed = JSON.parse(rawFixture) as unknown;
-
-  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('Mock Figma fixture must be a JSON object.');
-  }
-
-  return parsed as Metadata;
-}
-
-function readString(value: Metadata, key: string): string | undefined {
-  const field = value[key];
-
-  return typeof field === 'string' && field.length > 0 ? field : undefined;
-}
-
-function toDisplayName(value: string): string {
-  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+  return normalizeComponentIntent(rawFixture, { sourcePath: inputPath });
 }
