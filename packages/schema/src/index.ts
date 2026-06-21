@@ -1,1 +1,2 @@
-export const PACKAGE_NAME = '@designrail/schema';
+export * from './core.js';
+export { getComponentSchema, getComponentSchemaByTag, listComponentSchemas } from './registry.js';

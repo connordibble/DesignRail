@@ -62,6 +62,9 @@ importers:
       '@as-integrations/fastify':
         specifier: ^3.1.0
         version: 3.1.0(@apollo/server@5.5.1(graphql@16.14.0))(fastify@5.8.5)
+      '@designrail/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
       '@designrail/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -99,6 +102,9 @@ importers:
       '@designrail/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
+      '@designrail/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
       '@designrail/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -164,7 +170,11 @@ importers:
 
   packages/design-tokens: {}
 
-  packages/schema: {}
+  packages/schema:
+    dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
 
   packages/shared:
     dependencies:
