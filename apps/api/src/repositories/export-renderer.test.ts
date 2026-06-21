@@ -1,4 +1,8 @@
-import { buttonComponentMappingFixture, inputComponentMappingFixture } from '@designrail/shared';
+import {
+  buttonComponentMappingFixture,
+  cardComponentMappingFixture,
+  inputComponentMappingFixture,
+} from '@designrail/shared';
 import { describe, expect, it } from 'vitest';
 
 import { renderExportContent } from './export-renderer.js';
@@ -19,6 +23,15 @@ describe('export renderer', () => {
     );
     expect(renderExportContent(inputComponentMappingFixture, 'REACT')).toBe(
       '<SlInput type="email" size="medium" label="Email address" placeholder="you@example.com" required />',
+    );
+  });
+
+  it('renders Card content through the default slot', () => {
+    expect(renderExportContent(cardComponentMappingFixture, 'HTML')).toBe(
+      '<sl-card>Wireless headphones with 30-hour battery life.</sl-card>',
+    );
+    expect(renderExportContent(cardComponentMappingFixture, 'REACT')).toBe(
+      '<SlCard>Wireless headphones with 30-hour battery life.</SlCard>',
     );
   });
 

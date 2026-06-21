@@ -63,6 +63,7 @@ pnpm test
 pnpm graphql:check
 pnpm db:check
 pnpm compliance:review
+pnpm design:verify
 pnpm mock-mode:check
 pnpm secrets:check
 pnpm release:plan
@@ -74,6 +75,7 @@ Design workflow entry points:
 ```sh
 pnpm design:import
 pnpm design:map
+pnpm design:verify
 ```
 
 The default workflow is credential-free and deterministic. Optional Figma API/MCP or AI-service integrations should be explicit additions, not requirements for local development.

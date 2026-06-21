@@ -96,7 +96,9 @@ export function reviewCompliance({ intent, mapping }: ReviewComplianceInput): Co
       message: hasEvents
         ? `Shoelace ${mapping.targetComponent} events are ready for React binding.`
         : `Shoelace ${mapping.targetComponent} has no custom events to bind.`,
-      remediation: 'Bind custom Shoelace events with their React handler names when exporting.',
+      remediation: hasEvents
+        ? 'Bind custom Shoelace events with their React handler names when exporting.'
+        : 'No custom events to wire; review interactive children separately.',
       path: 'mappedEvents',
       blocking: false,
     }),

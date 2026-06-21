@@ -707,7 +707,7 @@ export const cardComplianceFindingsFixture: ComplianceFinding[] = [
     category: 'REACT_READINESS',
     severity: 'INFO',
     message: 'Shoelace sl-card has no custom events to bind.',
-    remediation: 'Bind custom Shoelace events with their React handler names when exporting.',
+    remediation: 'No custom events to wire; review interactive children separately.',
     path: 'mappedEvents',
     blocking: false,
     createdAt: FIXTURE_TIMESTAMP,

@@ -31,6 +31,8 @@ export const shoelacePropSchema = z.object({
 export const shoelaceSlotSchema = z.object({
   /** Slot name; `default` denotes the unnamed text slot. */
   name: z.string().min(1),
+  /** Human-facing label for review UI display/edit controls. */
+  label: z.string().min(1).optional(),
   description: z.string().min(1),
 });
 
@@ -146,6 +148,10 @@ export function getProp(schema: ShoelaceComponentSchema, name: string): Shoelace
 
 export function hasDefaultSlot(schema: ShoelaceComponentSchema): boolean {
   return schema.slots.some((slot) => slot.name === DEFAULT_SLOT_NAME);
+}
+
+export function getDefaultSlotLabel(schema: ShoelaceComponentSchema): string {
+  return schema.slots.find((slot) => slot.name === DEFAULT_SLOT_NAME)?.label ?? 'Label';
 }
 
 /** Return `value` (case-insensitively matched to a canonical enum value) when valid, else `null`. */

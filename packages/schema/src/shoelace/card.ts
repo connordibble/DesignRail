@@ -8,7 +8,7 @@ export const cardSchema: ShoelaceComponentSchema = defineComponentSchema({
   // sl-card is a styling/layout container: no reactive props and no custom events.
   props: [],
   slots: [
-    { name: 'default', description: 'The card body content.' },
+    { name: 'default', label: 'Content', description: 'The card body content.' },
     { name: 'header', description: 'The card header.' },
     { name: 'footer', description: 'The card footer.' },
     { name: 'image', description: 'A cover image at the top of the card.' },
