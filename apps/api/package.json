@@ -17,6 +17,7 @@
   "dependencies": {
     "@apollo/server": "^5.0.0",
     "@as-integrations/fastify": "^3.1.0",
+    "@designrail/schema": "workspace:*",
     "@designrail/shared": "workspace:*",
     "better-sqlite3": "12.10.0",
     "drizzle-orm": "0.45.2",

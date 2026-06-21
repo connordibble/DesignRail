@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
 import {
-  buttonComponentIntentFixture,
-  buttonComponentMappingFixture,
-  buttonComplianceFindingFixture,
-  buttonExampleFixture,
+  coerceEnumValue,
+  getComponentSchemaByTag,
+  hasDefaultSlot,
+  type ShoelaceComponentSchema,
+  type ShoelaceProp,
+} from '@designrail/schema';
+import {
+  EXAMPLE_REGISTRY,
   componentIntentSchema,
   componentMappingSchema,
   complianceFindingSchema,
@@ -24,12 +28,13 @@ import {
   type ExportResult,
   type InstrumentationEntityType,
   type InstrumentationEvent,
+  type JsonValue,
   type MappingEdit,
   type Metadata,
   type ReviewDecision,
   type ReviewDecisionStatus,
 } from '@designrail/shared';
-import { count, desc, eq, inArray } from 'drizzle-orm';
+import { count, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import {
   componentIntents,
@@ -208,90 +213,138 @@ function toExportResult(row: typeof exports.$inferSelect): ExportResult {
   return exportResultSchema.parse(row);
 }
 
-function insertExample(client: DatabaseClient, example: Example): void {
+function upsertExample(client: DatabaseClient, example: Example): void {
   const parsed = exampleSchema.parse(example);
+  const { id: _id, ...rest } = parsed;
 
-  client.db.insert(examples).values(parsed).onConflictDoNothing().run();
+  client.db
+    .insert(examples)
+    .values(parsed)
+    .onConflictDoUpdate({ target: examples.id, set: rest })
+    .run();
 }
 
-function insertComponentIntent(client: DatabaseClient, intent: ComponentIntent): void {
+function upsertComponentIntent(client: DatabaseClient, intent: ComponentIntent): void {
   const parsed = componentIntentSchema.parse(intent);
+  const values = {
+    id: parsed.id,
+    exampleId: parsed.exampleId,
+    source: parsed.source,
+    sourceRefsJson: stringifyJson(parsed.sourceRefs),
+    componentName: parsed.componentName,
+    componentType: parsed.componentType,
+    summary: parsed.summary,
+    propsJson: stringifyJson(parsed.props),
+    variantsJson: stringifyJson(parsed.variants),
+    statesJson: stringifyJson(parsed.states),
+    tokenRefsJson: stringifyJson(parsed.tokenRefs),
+    accessibilityJson: stringifyJson(parsed.accessibility),
+    createdAt: parsed.createdAt,
+  };
+  const { id: _id, ...rest } = values;
 
   client.db
     .insert(componentIntents)
-    .values({
-      id: parsed.id,
-      exampleId: parsed.exampleId,
-      source: parsed.source,
-      sourceRefsJson: stringifyJson(parsed.sourceRefs),
-      componentName: parsed.componentName,
-      componentType: parsed.componentType,
-      summary: parsed.summary,
-      propsJson: stringifyJson(parsed.props),
-      variantsJson: stringifyJson(parsed.variants),
-      statesJson: stringifyJson(parsed.states),
-      tokenRefsJson: stringifyJson(parsed.tokenRefs),
-      accessibilityJson: stringifyJson(parsed.accessibility),
-      createdAt: parsed.createdAt,
-    })
-    .onConflictDoNothing()
+    .values(values)
+    .onConflictDoUpdate({ target: componentIntents.id, set: rest })
     .run();
 }
 
-function insertComponentMapping(client: DatabaseClient, mapping: ComponentMapping): void {
+function upsertComponentMapping(client: DatabaseClient, mapping: ComponentMapping): void {
   const parsed = componentMappingSchema.parse(mapping);
+
+  // If a seed-owned mapping's content changed, the prior review no longer applies to it. Reopen it
+  // by clearing its decisions and exports so it returns to pending for re-review.
+  const existing = getMappingById(client, parsed.id);
+  if (existing !== null && !mappingContentEquals(existing, parsed)) {
+    client.db.delete(exports).where(eq(exports.mappingId, parsed.id)).run();
+    client.db.delete(reviewDecisions).where(eq(reviewDecisions.mappingId, parsed.id)).run();
+  }
+
+  const values = {
+    id: parsed.id,
+    intentId: parsed.intentId,
+    targetLibrary: parsed.targetLibrary,
+    targetComponent: parsed.targetComponent,
+    mappedPropsJson: stringifyJson(parsed.mappedProps),
+    mappedEventsJson: stringifyJson(parsed.mappedEvents),
+    mappedSlotsJson: stringifyJson(parsed.mappedSlots),
+    mappedTokensJson: stringifyJson(parsed.mappedTokens),
+    confidence: parsed.confidence,
+    rationale: parsed.rationale,
+    fallbackNotes: parsed.fallbackNotes ?? null,
+    createdAt: parsed.createdAt,
+  };
+  const { id: _id, ...rest } = values;
 
   client.db
     .insert(componentMappings)
-    .values({
-      id: parsed.id,
-      intentId: parsed.intentId,
-      targetLibrary: parsed.targetLibrary,
-      targetComponent: parsed.targetComponent,
-      mappedPropsJson: stringifyJson(parsed.mappedProps),
-      mappedEventsJson: stringifyJson(parsed.mappedEvents),
-      mappedSlotsJson: stringifyJson(parsed.mappedSlots),
-      mappedTokensJson: stringifyJson(parsed.mappedTokens),
-      confidence: parsed.confidence,
-      rationale: parsed.rationale,
-      fallbackNotes: parsed.fallbackNotes ?? null,
-      createdAt: parsed.createdAt,
-    })
-    .onConflictDoNothing()
+    .values(values)
+    .onConflictDoUpdate({ target: componentMappings.id, set: rest })
     .run();
 }
 
-function insertComplianceFinding(client: DatabaseClient, finding: ComplianceFinding): void {
-  const parsed = complianceFindingSchema.parse(finding);
-
-  client.db
-    .insert(complianceFindings)
-    .values({
-      id: parsed.id,
-      mappingId: parsed.mappingId,
-      category: parsed.category,
-      severity: parsed.severity,
-      message: parsed.message,
-      remediation: parsed.remediation,
-      path: parsed.path ?? null,
-      blocking: parsed.blocking,
-      createdAt: parsed.createdAt,
-    })
-    .onConflictDoNothing()
-    .run();
+function mappingContentEquals(a: ComponentMapping, b: ComponentMapping): boolean {
+  return (
+    a.targetLibrary === b.targetLibrary &&
+    a.targetComponent === b.targetComponent &&
+    a.confidence === b.confidence &&
+    a.rationale === b.rationale &&
+    (a.fallbackNotes ?? null) === (b.fallbackNotes ?? null) &&
+    stringifyJson(a.mappedProps) === stringifyJson(b.mappedProps) &&
+    stringifyJson(a.mappedEvents) === stringifyJson(b.mappedEvents) &&
+    stringifyJson(a.mappedSlots) === stringifyJson(b.mappedSlots) &&
+    stringifyJson(a.mappedTokens) === stringifyJson(b.mappedTokens)
+  );
 }
 
+/** Replace the seed-owned findings for a mapping; findings have no dependents, so this is safe. */
+function reseedComplianceFindings(
+  client: DatabaseClient,
+  mappingId: string,
+  findings: ComplianceFinding[],
+): void {
+  client.db.delete(complianceFindings).where(eq(complianceFindings.mappingId, mappingId)).run();
+
+  for (const finding of findings) {
+    const parsed = complianceFindingSchema.parse(finding);
+
+    client.db
+      .insert(complianceFindings)
+      .values({
+        id: parsed.id,
+        mappingId: parsed.mappingId,
+        category: parsed.category,
+        severity: parsed.severity,
+        message: parsed.message,
+        remediation: parsed.remediation,
+        path: parsed.path ?? null,
+        blocking: parsed.blocking,
+        createdAt: parsed.createdAt,
+      })
+      .run();
+  }
+}
+
+/**
+ * Seed the canonical, pipeline-verified examples. Seed-owned rows are upserted (and findings
+ * replaced) so re-seeding a local database refreshes mappings without stranding stale C1 rows,
+ * while review decisions, exports, and instrumentation events are never touched.
+ */
 export function seedDesignRailData(client: DatabaseClient): void {
-  insertExample(client, buttonExampleFixture);
-  insertComponentIntent(client, buttonComponentIntentFixture);
-  insertComponentMapping(client, buttonComponentMappingFixture);
-  insertComplianceFinding(client, buttonComplianceFindingFixture);
+  for (const entry of EXAMPLE_REGISTRY) {
+    upsertExample(client, entry.example);
+    upsertComponentIntent(client, entry.intent);
+    upsertComponentMapping(client, entry.mapping);
+    reseedComplianceFindings(client, entry.mapping.id, entry.findings);
+  }
 }
 
 export function listExamples(client: DatabaseClient, input: PaginationInput = {}): Example[] {
   return client.db
     .select()
     .from(examples)
+    .orderBy(examples.name, examples.id)
     .limit(normalizeLimit(input.limit))
     .all()
     .map((row) => exampleSchema.parse(row));
@@ -347,13 +400,20 @@ export function listComplianceFindingsByMappingId(
   mappingId: string,
   input: PaginationInput = {},
 ): ComplianceFinding[] {
-  return client.db
-    .select()
-    .from(complianceFindings)
-    .where(eq(complianceFindings.mappingId, mappingId))
-    .limit(normalizeLimit(input.limit))
-    .all()
-    .map(toComplianceFinding);
+  return (
+    client.db
+      .select()
+      .from(complianceFindings)
+      .where(eq(complianceFindings.mappingId, mappingId))
+      // Most severe first (BLOCKER, WARNING, INFO), then by id for a stable order.
+      .orderBy(
+        sql`CASE ${complianceFindings.severity} WHEN 'BLOCKER' THEN 0 WHEN 'WARNING' THEN 1 ELSE 2 END`,
+        complianceFindings.id,
+      )
+      .limit(normalizeLimit(input.limit))
+      .all()
+      .map(toComplianceFinding)
+  );
 }
 
 export function listReviewDecisions(
@@ -388,12 +448,30 @@ export function saveReviewDecision(
   client: DatabaseClient,
   input: SaveReviewDecisionInput,
 ): ReviewDecision {
+  let editedMapping = input.editedMapping;
+
+  // An edited mapping must validate against the target component's Shoelace schema before it is
+  // persisted, so a GraphQL caller cannot store (and later export) invalid props or enum values.
+  if (input.status === 'EDITED' && editedMapping !== undefined) {
+    const mapping = getMappingById(client, input.mappingId);
+
+    if (mapping === null) {
+      throw new Error(`Cannot edit unknown mapping ${input.mappingId}.`);
+    }
+
+    const schema = getComponentSchemaByTag(mapping.targetComponent);
+
+    if (schema !== null) {
+      editedMapping = coerceEditedMapping(schema, editedMapping);
+    }
+  }
+
   const decision = reviewDecisionSchema.parse({
     id: input.id ?? createId('decision'),
     mappingId: input.mappingId,
     status: input.status,
     reviewerLabel: input.reviewerLabel,
-    ...(input.editedMapping === undefined ? {} : { editedMapping: input.editedMapping }),
+    ...(editedMapping === undefined ? {} : { editedMapping }),
     ...(input.notes === undefined ? {} : { notes: input.notes }),
     createdAt: input.createdAt ?? nowIso(),
   });
@@ -517,6 +595,8 @@ export function listExportsByMappingId(
 
 export function getDashboardMetrics(client: DatabaseClient): DashboardMetrics {
   const latestStatuses = getLatestDecisionStatuses(client);
+  const totalMappings =
+    client.db.select({ total: count() }).from(componentMappings).get()?.total ?? 0;
   const exportCount = client.db.select({ total: count() }).from(exports).get()?.total ?? 0;
   const warnings = client.db
     .select({
@@ -528,11 +608,20 @@ export function getDashboardMetrics(client: DatabaseClient): DashboardMetrics {
     .groupBy(complianceFindings.message)
     .all();
 
+  const acceptedMappings = latestStatuses.get('ACCEPTED') ?? 0;
+  const rejectedMappings = latestStatuses.get('REJECTED') ?? 0;
+  const editedMappings = latestStatuses.get('EDITED') ?? 0;
+  const explicitlyPending = latestStatuses.get('PENDING') ?? 0;
+  // A mapping is pending when it has no decision yet (matching the UI's PENDING default) or its
+  // latest decision is PENDING.
+  const decidedMappings = acceptedMappings + rejectedMappings + editedMappings + explicitlyPending;
+  const undecidedMappings = Math.max(totalMappings - decidedMappings, 0);
+
   return dashboardMetricsSchema.parse({
-    acceptedMappings: latestStatuses.get('ACCEPTED') ?? 0,
-    rejectedMappings: latestStatuses.get('REJECTED') ?? 0,
-    editedMappings: latestStatuses.get('EDITED') ?? 0,
-    pendingMappings: latestStatuses.get('PENDING') ?? 0,
+    acceptedMappings,
+    rejectedMappings,
+    editedMappings,
+    pendingMappings: explicitlyPending + undecidedMappings,
     exportsCreated: exportCount,
     commonComplianceWarnings: warnings
       .map((warning) => ({ message: warning.message, count: warning.total }))
@@ -564,6 +653,83 @@ export function getReviewWorkspace(
       mapping === null ? null : getLatestReviewDecisionByMappingId(client, mapping.id),
     exports: mapping === null ? [] : listExportsByMappingId(client, mapping.id),
   };
+}
+
+/**
+ * Validate and coerce an edited mapping against the component's Shoelace schema. Unknown props and
+ * uncoercible values are rejected so invalid edits can never be persisted or exported.
+ */
+function coerceEditedMapping(schema: ShoelaceComponentSchema, edit: MappingEdit): MappingEdit {
+  const result: MappingEdit = { ...edit };
+
+  if (edit.mappedProps !== undefined) {
+    const coerced: Metadata = {};
+
+    for (const [name, value] of Object.entries(edit.mappedProps)) {
+      const prop = schema.props.find((candidate) => candidate.name === name);
+
+      if (prop === undefined) {
+        throw new Error(`Edited mapping has prop "${name}" not supported by ${schema.tag}.`);
+      }
+
+      coerced[name] = coercePropValueForSchema(prop, value, schema.tag);
+    }
+
+    result.mappedProps = coerced;
+  }
+
+  if (edit.mappedSlots?.['default'] !== undefined && !hasDefaultSlot(schema)) {
+    throw new Error(`Edited mapping sets a default slot, but ${schema.tag} has none.`);
+  }
+
+  return result;
+}
+
+function coercePropValueForSchema(prop: ShoelaceProp, value: JsonValue, tag: string): JsonValue {
+  switch (prop.kind) {
+    case 'enum': {
+      const coerced = typeof value === 'string' ? coerceEnumValue(prop, value) : null;
+
+      if (coerced === null) {
+        throw new Error(
+          `Edited mapping has invalid value for "${prop.name}" on ${tag}: ${JSON.stringify(value)}.`,
+        );
+      }
+
+      return coerced;
+    }
+    case 'boolean': {
+      if (typeof value === 'boolean') {
+        return value;
+      }
+
+      if (value === 'true') {
+        return true;
+      }
+
+      if (value === 'false') {
+        return false;
+      }
+
+      throw new Error(`Edited mapping prop "${prop.name}" on ${tag} must be a boolean.`);
+    }
+    case 'number': {
+      const numeric = typeof value === 'number' ? value : Number(value);
+
+      if (!Number.isFinite(numeric)) {
+        throw new Error(`Edited mapping prop "${prop.name}" on ${tag} must be a number.`);
+      }
+
+      return numeric;
+    }
+    default: {
+      if (typeof value !== 'string') {
+        throw new Error(`Edited mapping prop "${prop.name}" on ${tag} must be a string.`);
+      }
+
+      return value;
+    }
+  }
 }
 
 function applyMappingEdit(mapping: ComponentMapping, edit: MappingEdit): ComponentMapping {

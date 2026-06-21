@@ -1,4 +1,4 @@
-import { buttonComponentMappingFixture } from '@designrail/shared';
+import { buttonComponentMappingFixture, inputComponentMappingFixture } from '@designrail/shared';
 import { describe, expect, it } from 'vitest';
 
 import { renderExportContent } from './export-renderer.js';
@@ -11,6 +11,24 @@ describe('export renderer', () => {
     expect(renderExportContent(buttonComponentMappingFixture, 'REACT')).toBe(
       '<SlButton variant="primary" size="medium">Save changes</SlButton>',
     );
+  });
+
+  it('renders childless components without a default slot', () => {
+    expect(renderExportContent(inputComponentMappingFixture, 'HTML')).toBe(
+      '<sl-input type="email" size="medium" label="Email address" placeholder="you@example.com" required></sl-input>',
+    );
+    expect(renderExportContent(inputComponentMappingFixture, 'REACT')).toBe(
+      '<SlInput type="email" size="medium" label="Email address" placeholder="you@example.com" required />',
+    );
+  });
+
+  it('rejects mappings with no registered Shoelace schema', () => {
+    expect(() =>
+      renderExportContent(
+        { ...buttonComponentMappingFixture, targetComponent: 'sl-carousel' },
+        'HTML',
+      ),
+    ).toThrow(/cannot be exported/);
   });
 
   it('escapes mapped props and slot text before export', () => {

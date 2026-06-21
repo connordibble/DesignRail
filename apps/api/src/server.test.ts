@@ -2,7 +2,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { buttonComponentMappingFixture, buttonExampleFixture } from '@designrail/shared';
+import {
+  buttonComponentMappingFixture,
+  buttonExampleFixture,
+  inputExampleFixture,
+} from '@designrail/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { closeDatabaseClient, createDatabaseClient, type DatabaseClient } from './db/index.js';
@@ -67,6 +71,10 @@ describe('DesignRail GraphQL API', () => {
         id: buttonExampleFixture.id,
         name: buttonExampleFixture.name,
       },
+      {
+        id: inputExampleFixture.id,
+        name: inputExampleFixture.name,
+      },
     ]);
   });
 
@@ -89,7 +97,7 @@ describe('DesignRail GraphQL API', () => {
     expect(body.errors).toBeUndefined();
     expect(body.data?.componentIntent).toMatchObject({
       componentType: 'Button',
-      variants: ['primary', 'secondary'],
+      variants: ['primary', 'neutral'],
     });
   });
 
@@ -178,6 +186,14 @@ describe('DesignRail GraphQL API', () => {
           mappingId: buttonComponentMappingFixture.id,
           severity: 'INFO',
         },
+        {
+          mappingId: buttonComponentMappingFixture.id,
+          severity: 'INFO',
+        },
+        {
+          mappingId: buttonComponentMappingFixture.id,
+          severity: 'INFO',
+        },
       ],
       latestDecision: null,
       exports: [],
@@ -251,7 +267,7 @@ describe('DesignRail GraphQL API', () => {
           reviewerLabel: 'GraphQL test',
           editedMapping: {
             mappedProps: {
-              variant: 'secondary',
+              variant: 'neutral',
             },
           },
         },
@@ -277,11 +293,12 @@ describe('DesignRail GraphQL API', () => {
     `);
 
     expect(body.errors).toBeUndefined();
+    // Button is edited; the seeded Input mapping has no decision yet, so it counts as pending.
     expect(body.data?.dashboardMetrics).toEqual({
       acceptedMappings: 0,
       rejectedMappings: 0,
       editedMappings: 1,
-      pendingMappings: 0,
+      pendingMappings: 1,
     });
   });
 
