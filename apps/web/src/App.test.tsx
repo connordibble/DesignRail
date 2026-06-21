@@ -6,6 +6,7 @@ import {
   buttonComponentIntentFixture,
   buttonComponentMappingFixture,
   buttonExampleFixture,
+  cardExampleFixture,
   createEmptyDashboardMetrics,
   htmlExportFixture,
   INPUT_EXAMPLE_ID,
@@ -45,7 +46,11 @@ const REVIEW_WORKSPACE_VARIABLES = {
   exampleId: BUTTON_EXAMPLE_ID,
 };
 
-const DEFAULT_EXAMPLES: ExampleResult[] = [buttonExampleFixture, inputExampleFixture];
+const DEFAULT_EXAMPLES: ExampleResult[] = [
+  buttonExampleFixture,
+  cardExampleFixture,
+  inputExampleFixture,
+];
 
 function toIntentResult(
   intent: typeof buttonComponentIntentFixture | typeof inputComponentIntentFixture,
