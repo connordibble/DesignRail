@@ -20,7 +20,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'bg-dr-accent text-dr-on-accent shadow-dr-sm hover:bg-dr-accent-hover',
   secondary:
     'border border-dr-border-strong bg-dr-panel-raised text-dr-text hover:bg-dr-panel-hover',
-  danger: 'border border-transparent text-dr-danger hover:border-dr-danger hover:bg-dr-panel-hover',
+  danger:
+    'border border-dr-border-strong bg-dr-panel-raised text-dr-danger hover:border-dr-danger hover:bg-dr-panel-hover',
   ghost: 'border border-transparent text-dr-muted hover:bg-dr-panel-hover hover:text-dr-text',
 };
 

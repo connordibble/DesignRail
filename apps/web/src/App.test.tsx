@@ -176,6 +176,17 @@ describe('<App />', () => {
     expect(screen.getByText(buttonComplianceFindingsFixture[0]!.message)).toBeInTheDocument();
   });
 
+  it('keeps example rows independent from the selected review decision state', async () => {
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    const examplesRegion = screen.getByRole('region', { name: 'Examples' });
+
+    expect(within(examplesRegion).queryByText('PENDING')).not.toBeInTheDocument();
+    expect(within(examplesRegion).queryByText('Ready')).not.toBeInTheDocument();
+  });
+
   it('switches the workspace when another example is selected', async () => {
     const user = userEvent.setup();
     renderApp([

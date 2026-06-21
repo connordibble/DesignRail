@@ -126,8 +126,7 @@ export function ReviewWorkspaceShell({
   const decisionTone = decisionStatus === null ? 'neutral' : STATUS_TONES[decisionStatus];
   const decisionLabel = decisionStatus ?? (loading ? 'Loading' : 'Unavailable');
   const shellTitle = workspace?.example.name ?? 'Workspace';
-  const exampleName =
-    workspace?.example.name ?? (loading ? 'Loading example' : 'Requested example');
+  const headerExampleId = workspace?.example.id ?? exampleId;
   const tabPanelId = getTabPanelId(activeTab);
   const workspaceBody = renderWorkspaceBody({
     activeTab,
@@ -156,9 +155,9 @@ export function ReviewWorkspaceShell({
 
   return (
     <main className="min-h-screen bg-dr-canvas font-ui text-dr-body text-dr-text">
-      <div className="grid lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="grid lg:grid-cols-[17rem_minmax(0,1fr)]">
         <aside className="border-b border-dr-border bg-dr-shell lg:border-b-0 lg:border-r">
-          <div className="flex h-full flex-col gap-dr-lg p-dr-lg">
+          <div className="flex h-full flex-col gap-dr-md p-dr-lg">
             <div className="flex items-start justify-between gap-dr-sm lg:block">
               <div>
                 <p className="text-dr-caption font-medium text-dr-subtle">DesignRail</p>
@@ -166,19 +165,21 @@ export function ReviewWorkspaceShell({
                   Review Console
                 </p>
               </div>
-              <StatusBadge label="Mock mode" tone="info" />
+              <span className="mt-dr-sm inline-flex lg:mt-dr-xs">
+                <MetaTag label="Mock mode" tone="info" />
+              </span>
             </div>
 
-            <nav aria-label="Workspace areas" className="grid gap-dr-xs" role="tablist">
+            <nav aria-label="Workspace areas" className="grid gap-dr-xxs" role="tablist">
               {TABS.map((tab) => (
                 <button
                   aria-controls={activeTab === tab ? getTabPanelId(tab) : undefined}
                   aria-selected={activeTab === tab}
                   className={cx(
-                    'rounded-dr-sm border-l-2 px-dr-sm py-dr-xs text-left text-dr-small font-medium transition-colors focus-visible:outline focus-visible:outline-2',
+                    'rounded-dr-xs px-dr-sm py-dr-xs text-left text-dr-small font-medium transition-colors focus-visible:outline focus-visible:outline-2',
                     activeTab === tab
-                      ? 'border-dr-accent bg-dr-accent-soft text-dr-text'
-                      : 'border-transparent text-dr-muted hover:bg-dr-panel hover:text-dr-text',
+                      ? 'bg-dr-panel text-dr-text ring-1 ring-inset ring-dr-border'
+                      : 'text-dr-muted hover:bg-dr-panel hover:text-dr-text',
                   )}
                   id={getTabId(tab)}
                   key={tab}
@@ -210,52 +211,35 @@ export function ReviewWorkspaceShell({
                         <button
                           aria-current={isSelected}
                           className={cx(
-                            'flex w-full items-center justify-between gap-dr-sm rounded-dr-sm border-l-2 px-dr-sm py-dr-xs text-left transition-colors focus-visible:outline focus-visible:outline-2',
+                            'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-dr-sm rounded-dr-xs px-dr-sm py-dr-xs text-left transition-colors focus-visible:outline focus-visible:outline-2',
                             isSelected
-                              ? 'border-dr-accent bg-dr-accent-soft text-dr-text'
-                              : 'border-transparent text-dr-muted hover:bg-dr-panel-hover hover:text-dr-text',
+                              ? 'bg-dr-panel text-dr-text ring-1 ring-inset ring-dr-border'
+                              : 'text-dr-muted hover:bg-dr-panel-hover hover:text-dr-text',
                             example.status === 'READY' ? '' : 'opacity-60',
                           )}
                           disabled={onSelectExample === undefined || example.status !== 'READY'}
                           onClick={() => onSelectExample?.(example.id)}
                           type="button"
                         >
-                          <span>
-                            <span className="block text-dr-small font-semibold text-dr-text">
+                          <span className="min-w-0">
+                            <span className="block truncate text-dr-small font-semibold text-dr-text">
                               {example.name}
                             </span>
-                            <span className="mt-dr-xxs block font-mono text-dr-caption text-dr-subtle">
-                              {example.componentType}
+                            <span className="mt-dr-xxs flex min-w-0 items-center gap-dr-xs text-dr-caption text-dr-subtle">
+                              <span className="truncate font-mono">{example.componentType}</span>
+                              <span aria-hidden="true">·</span>
+                              <span>{example.source}</span>
                             </span>
                           </span>
-                          <StatusDot tone={isSelected ? 'info' : 'neutral'} />
+                          {example.status === 'DISABLED' ? (
+                            <MetaTag label="Disabled" tone="neutral" />
+                          ) : null}
                         </button>
                       </li>
                     );
                   })}
                 </ul>
               )}
-            </section>
-
-            <section aria-label="Selected example" className="grid gap-dr-xs">
-              <p className="text-dr-caption font-medium text-dr-subtle">Selected</p>
-              <div className="rounded-dr-md border border-dr-border bg-dr-panel p-dr-sm">
-                <div className="flex items-center justify-between gap-dr-sm">
-                  <div>
-                    <p className="text-dr-small font-semibold text-dr-text">{exampleName}</p>
-                    <p className="mt-dr-xxs font-mono text-dr-caption text-dr-subtle">
-                      {workspace?.example.id ?? exampleId}
-                    </p>
-                  </div>
-                  <StatusDot tone={decisionTone} />
-                </div>
-                <div className="mt-dr-sm flex flex-wrap gap-dr-xs">
-                  {workspace === null ? null : (
-                    <StatusBadge label={workspace.example.source} tone="info" />
-                  )}
-                  <StatusBadge label={decisionLabel} tone={decisionTone} />
-                </div>
-              </div>
             </section>
           </div>
         </aside>
@@ -265,13 +249,19 @@ export function ReviewWorkspaceShell({
             <p className="text-dr-caption font-medium text-dr-subtle">Human review</p>
             <div className="mt-dr-xxs flex flex-wrap items-center gap-dr-sm">
               <h1 className="text-dr-page-title font-semibold text-dr-text">{shellTitle}</h1>
-              {workspace === null ? null : (
-                <span className="flex items-center gap-dr-xs text-dr-caption text-dr-subtle">
-                  <span className="font-mono text-dr-muted">{workspace.example.componentType}</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{workspace.example.source}</span>
-                </span>
-              )}
+              <span className="flex min-w-0 flex-wrap items-center gap-dr-xs text-dr-caption text-dr-subtle">
+                {workspace === null ? null : (
+                  <>
+                    <span className="font-mono text-dr-muted">
+                      {workspace.example.componentType}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>{workspace.example.source}</span>
+                    <span aria-hidden="true">·</span>
+                  </>
+                )}
+                <span className="break-all font-mono">{headerExampleId}</span>
+              </span>
               <span className="xl:ml-auto">
                 <StatusBadge label={decisionLabel} tone={decisionTone} />
               </span>
@@ -490,7 +480,7 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
 
   return (
     <div className="grid gap-dr-lg">
-      <div className="grid gap-dr-md xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_19rem]">
+      <div className="grid gap-dr-md xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_20rem]">
         <Panel title="Source Intent">
           {intent === null ? (
             <EmptyLine text="No normalized component intent is available." />
@@ -532,12 +522,12 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
         </Panel>
 
         <aside className="xl:sticky xl:top-dr-lg xl:self-start">
-          <Panel className="shadow-dr-sm" title="Decision">
+          <Panel className="shadow-dr-sm" density="compact" title="Decision">
             <div className="grid gap-dr-md">
-              <div className="flex items-center justify-between gap-dr-sm">
-                <span className="text-dr-small text-dr-muted">Current status</span>
-                <StatusBadge label={decisionStatus} tone={STATUS_TONES[decisionStatus]} />
-              </div>
+              <RailStatusRows
+                complianceFindings={workspace.complianceFindings}
+                decisionStatus={decisionStatus}
+              />
 
               {schema === null || mapping === null || draft === null ? (
                 <EmptyLine text="No schema-backed mapping is available for a review decision." />
@@ -561,7 +551,7 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
 
               {isSavingDecision ? (
                 <p aria-live="polite" className="text-dr-small text-dr-subtle" role="status">
-                  Saving review decision.
+                  Saving review decision…
                 </p>
               ) : null}
               {saveErrorMessage !== null ? (
@@ -569,7 +559,7 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
               ) : null}
 
               {workspace.latestDecision === null ? (
-                <EmptyLine text="Awaiting human review." />
+                <EmptyLine text="No decision saved." />
               ) : (
                 <DefinitionList
                   items={[
@@ -585,6 +575,58 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
       </div>
 
       <ComplianceBand findings={workspace.complianceFindings} />
+    </div>
+  );
+}
+
+interface RailStatusRowsProps {
+  complianceFindings: ComplianceFindingResult[];
+  decisionStatus: ReviewDecisionStatus;
+}
+
+function RailStatusRows({ complianceFindings, decisionStatus }: RailStatusRowsProps): ReactElement {
+  const decision = getDecisionSummary(decisionStatus);
+  const exportGate = getExportGateSummary(decisionStatus);
+  const compliance = getComplianceSummary(complianceFindings);
+
+  return (
+    <div className="grid gap-dr-sm">
+      <div className="grid gap-dr-xxs">
+        <div className="flex items-center gap-dr-xs">
+          <StatusDot tone={decision.tone} />
+          <p className={cx('text-dr-small font-semibold', getToneTextClass(decision.tone))}>
+            {decision.label}
+          </p>
+        </div>
+        <p className="text-dr-small text-dr-subtle">{decision.description}</p>
+      </div>
+      <dl className="grid gap-dr-xs border-t border-dr-border pt-dr-sm">
+        <StatusRow label="Export" value={exportGate.label} tone={exportGate.tone} />
+        <StatusRow label="Findings" value={compliance.label} tone={compliance.tone} />
+      </dl>
+    </div>
+  );
+}
+
+interface StatusRowProps {
+  label: string;
+  value: string;
+  tone: Tone;
+}
+
+function StatusRow({ label, value, tone }: StatusRowProps): ReactElement {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-dr-sm">
+      <dt className="text-dr-caption font-medium text-dr-subtle">{label}</dt>
+      <dd
+        className={cx(
+          'flex items-center gap-dr-xs text-dr-small font-medium',
+          getToneTextClass(tone),
+        )}
+      >
+        <StatusDot tone={tone} />
+        {value}
+      </dd>
     </div>
   );
 }
@@ -608,7 +650,7 @@ function DecisionActions({
         Accept
       </Button>
       <div className="grid grid-cols-2 gap-dr-xs">
-        <Button aria-expanded={false} disabled={disabled} onClick={onEdit} variant="secondary">
+        <Button disabled={disabled} onClick={onEdit} variant="secondary">
           Edit
         </Button>
         <Button disabled={disabled} onClick={onReject} variant="danger">
@@ -698,7 +740,7 @@ function MappingEditor({
         <Button disabled={disabled || !canSave} onClick={onSave} variant="primary">
           Save changes
         </Button>
-        <Button disabled={disabled} onClick={onCancel} variant="ghost">
+        <Button disabled={disabled} onClick={onCancel} variant="secondary">
           Cancel
         </Button>
       </div>
@@ -730,6 +772,7 @@ function MappingPropField({
           checked={typeof value === 'boolean' ? value : false}
           className="size-4 accent-dr-accent focus-visible:outline focus-visible:outline-2"
           disabled={disabled}
+          name={fieldId}
           onChange={(event) => onChange(event.currentTarget.checked)}
           type="checkbox"
         />
@@ -830,10 +873,7 @@ function ComplianceBand({ findings }: ComplianceBandProps): ReactElement {
 }
 
 function summarizeFindings(findings: ComplianceFindingResult[]): string {
-  const counts = { BLOCKER: 0, WARNING: 0, INFO: 0 };
-  for (const finding of findings) {
-    counts[finding.severity] += 1;
-  }
+  const counts = countFindings(findings);
 
   const parts: string[] = [];
   if (counts.BLOCKER > 0) {
@@ -847,6 +887,86 @@ function summarizeFindings(findings: ComplianceFindingResult[]): string {
   }
 
   return parts.join(' · ');
+}
+
+function countFindings(
+  findings: ComplianceFindingResult[],
+): Record<ComplianceFindingResult['severity'], number> {
+  const counts = { BLOCKER: 0, WARNING: 0, INFO: 0 };
+  for (const finding of findings) {
+    counts[finding.severity] += 1;
+  }
+
+  return counts;
+}
+
+function getComplianceSummary(findings: ComplianceFindingResult[]): { label: string; tone: Tone } {
+  const counts = countFindings(findings);
+
+  if (counts.BLOCKER > 0) {
+    return {
+      label: `${counts.BLOCKER} ${counts.BLOCKER === 1 ? 'blocker' : 'blockers'}`,
+      tone: 'danger',
+    };
+  }
+
+  if (counts.WARNING > 0) {
+    return {
+      label: `${counts.WARNING} ${counts.WARNING === 1 ? 'warning' : 'warnings'}`,
+      tone: 'warning',
+    };
+  }
+
+  if (counts.INFO > 0) {
+    return { label: `${counts.INFO} informational`, tone: 'info' };
+  }
+
+  return { label: 'Clear', tone: 'success' };
+}
+
+function getDecisionSummary(status: ReviewDecisionStatus): {
+  description: string;
+  label: string;
+  tone: Tone;
+} {
+  switch (status) {
+    case 'ACCEPTED':
+      return {
+        description: 'The recommended mapping is approved and ready to export.',
+        label: 'Accepted by reviewer',
+        tone: 'success',
+      };
+    case 'EDITED':
+      return {
+        description: 'Human edits are saved and ready to export.',
+        label: 'Edited by reviewer',
+        tone: 'edited',
+      };
+    case 'PENDING':
+      return {
+        description: 'Accept, edit, or reject this mapping before export.',
+        label: 'Pending review',
+        tone: 'warning',
+      };
+    case 'REJECTED':
+      return {
+        description: 'The mapping was rejected and export is unavailable.',
+        label: 'Rejected by reviewer',
+        tone: 'danger',
+      };
+  }
+}
+
+function getExportGateSummary(status: ReviewDecisionStatus): { label: string; tone: Tone } {
+  switch (status) {
+    case 'ACCEPTED':
+    case 'EDITED':
+      return { label: 'Ready', tone: 'success' };
+    case 'REJECTED':
+      return { label: 'Locked', tone: 'danger' };
+    case 'PENDING':
+      return { label: 'Locked', tone: 'warning' };
+  }
 }
 
 interface ExportsPanelProps {
@@ -922,7 +1042,7 @@ function ExportsPanel({
                 size="sm"
                 variant="secondary"
               >
-                {pendingExportFormat === option.format ? 'Exporting' : option.label}
+                {pendingExportFormat === option.format ? 'Exporting…' : option.label}
               </Button>
             ))}
           </div>
@@ -1065,15 +1185,30 @@ interface PanelProps {
   children: ReactNode;
   title: string;
   className?: string;
+  density?: 'regular' | 'compact';
 }
 
-function Panel({ children, title, className }: PanelProps): ReactElement {
+function Panel({ children, title, className, density = 'regular' }: PanelProps): ReactElement {
+  const isCompact = density === 'compact';
+
   return (
     <section className={cx('min-w-0 rounded-dr-lg border border-dr-border bg-dr-panel', className)}>
-      <div className="border-b border-dr-border px-dr-md py-dr-sm">
-        <h2 className="text-dr-section-title font-semibold text-dr-text">{title}</h2>
+      <div
+        className={cx(
+          'border-b border-dr-border',
+          isCompact ? 'px-dr-sm py-dr-xs' : 'px-dr-md py-dr-sm',
+        )}
+      >
+        <h2
+          className={cx(
+            'font-semibold text-dr-text',
+            isCompact ? 'text-dr-small' : 'text-dr-section-title',
+          )}
+        >
+          {title}
+        </h2>
       </div>
-      <div className="p-dr-md">{children}</div>
+      <div className={isCompact ? 'p-dr-sm' : 'p-dr-md'}>{children}</div>
     </section>
   );
 }
@@ -1091,9 +1226,11 @@ function TextField({ disabled, id, label, onChange, value }: TextFieldProps): Re
     <label className="grid gap-dr-xxs text-dr-caption font-medium text-dr-subtle" htmlFor={id}>
       {label}
       <input
+        autoComplete="off"
         className="rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs font-ui text-dr-small font-normal text-dr-text focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={disabled}
         id={id}
+        name={id}
         onChange={(event) => onChange(event.currentTarget.value)}
         value={value}
       />
@@ -1122,9 +1259,11 @@ function SelectField<TValue extends string>({
     <label className="grid gap-dr-xxs text-dr-caption font-medium text-dr-subtle" htmlFor={id}>
       {label}
       <select
+        autoComplete="off"
         className="rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs font-ui text-dr-small font-normal text-dr-text focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={disabled}
         id={id}
+        name={id}
         onChange={(event) => onChange(event.currentTarget.value as TValue)}
         value={value}
       >
@@ -1151,9 +1290,11 @@ function TextareaField({ disabled, id, label, onChange, value }: TextareaFieldPr
     <label className="grid gap-dr-xxs text-dr-caption font-medium text-dr-subtle" htmlFor={id}>
       {label}
       <textarea
+        autoComplete="off"
         className="min-h-20 resize-y rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs font-ui text-dr-small font-normal text-dr-text focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={disabled}
         id={id}
+        name={id}
         onChange={(event) => onChange(event.currentTarget.value)}
         value={value}
       />
@@ -1245,6 +1386,24 @@ function CodeBlock({ label, value }: CodeBlockProps): ReactElement {
       </figcaption>
       <pre className="overflow-x-auto p-dr-sm font-mono text-dr-code text-dr-text">{value}</pre>
     </figure>
+  );
+}
+
+interface MetaTagProps {
+  label: string;
+  tone?: Tone;
+}
+
+function MetaTag({ label, tone = 'neutral' }: MetaTagProps): ReactElement {
+  return (
+    <span
+      className={cx(
+        'inline-flex shrink-0 items-center rounded-dr-xs border border-dr-border bg-dr-shell px-dr-xs py-dr-xxs text-dr-caption font-medium',
+        getToneTextClass(tone),
+      )}
+    >
+      {label}
+    </span>
   );
 }
 
