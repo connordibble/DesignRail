@@ -10,7 +10,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { closeDatabaseClient, createDatabaseClient, type DatabaseClient } from './db/index.js';
-import { buildServer, resolveServerHost } from './server.js';
+import { buildServer, isLocalOrigin, resolveServerHost } from './server.js';
 
 interface GraphQlResponse<TData> {
   data?: TData;
@@ -381,6 +381,31 @@ describe('DesignRail GraphQL API', () => {
     });
   });
 
+  it('allows local origins via CORS and ignores foreign ones', async () => {
+    const preflight = await app.inject({
+      method: 'OPTIONS',
+      url: '/graphql',
+      headers: {
+        origin: 'http://localhost:5173',
+        'access-control-request-method': 'POST',
+      },
+    });
+
+    expect(preflight.statusCode).toBe(204);
+    expect(preflight.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+
+    const foreign = await app.inject({
+      method: 'OPTIONS',
+      url: '/graphql',
+      headers: {
+        origin: 'https://evil.example.com',
+        'access-control-request-method': 'POST',
+      },
+    });
+
+    expect(foreign.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
   it('blocks overly broad GraphQL queries before resolver execution', async () => {
     const response = await app.inject({
       method: 'POST',
@@ -412,5 +437,12 @@ describe('DesignRail API host binding', () => {
     expect(resolveServerHost({ HOST: '0.0.0.0', DESIGNRAIL_ALLOW_NETWORK: 'true' })).toBe(
       '0.0.0.0',
     );
+  });
+
+  it('recognizes local development origins on any port', () => {
+    expect(isLocalOrigin('http://localhost:5173')).toBe(true);
+    expect(isLocalOrigin('http://127.0.0.1:4000')).toBe(true);
+    expect(isLocalOrigin('https://example.com')).toBe(false);
+    expect(isLocalOrigin(undefined)).toBe(false);
   });
 });
