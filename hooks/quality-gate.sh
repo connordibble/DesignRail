@@ -23,3 +23,4 @@ run_script graphql:check
 run_script db:check
 run_script test
 run_script compliance:review
+run_script design:verify

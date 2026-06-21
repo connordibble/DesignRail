@@ -41,13 +41,13 @@ apps/
   api/                Fastify + Apollo GraphQL server
 packages/
   shared/             Cross-cutting domain types and Zod schemas
-  schema/             Shoelace component schemas (props, slots, variants, parts)
+  schema/             Shoelace component schemas (props, slots, events, parts) — source of truth for mapping
   design-tokens/      Design tokens → Shoelace CSS custom properties
 tools/
   figma-import/       Mock Figma fixture → normalized ComponentIntent
-  component-mapper/   Intent → deterministic Shoelace mapping
+  component-mapper/   Intent → deterministic, schema-driven Shoelace mapping
   compliance-agent/   Mapping + intent → structured compliance findings
-examples/             Mock Figma fixtures (Button now; Card/Input/Badge/Dialog/Spinner planned)
+examples/             Mock Figma fixtures (Button + Input now; Card/Badge/Dialog/Spinner planned)
 docs/                 Astro + Starlight documentation site with ADRs
 agents/               DesignRail-specific skill files
 hooks/                Repeatable local quality, secrets, and mock-mode checks

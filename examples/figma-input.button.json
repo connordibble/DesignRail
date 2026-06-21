@@ -1,7 +1,29 @@
 {
   "$schema": "https://designrail.local/figma-input.schema.json",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "exampleId": "example.button.primary",
+  "intentId": "intent.button.primary",
   "component": "button",
-  "status": "stub",
-  "note": "Phase 1 Checkpoint 0 stub. Fleshed out with realistic variants and states in Checkpoint 2."
+  "componentType": "Button",
+  "name": "Primary Button",
+  "summary": "A primary action button with size and disabled state intent.",
+  "props": {
+    "label": "Save changes",
+    "size": "medium",
+    "appearance": "primary"
+  },
+  "variants": ["primary", "neutral"],
+  "states": ["default", "hover", "focus", "disabled"],
+  "tokens": [
+    {
+      "name": "color.action.primary",
+      "value": "#2563eb",
+      "target": "--sl-color-primary-600"
+    }
+  ],
+  "accessibility": {
+    "label": "Save changes",
+    "role": "button",
+    "required": false
+  }
 }

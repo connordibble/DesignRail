@@ -1,33 +1,47 @@
-import { componentIntentSchema, toolResultSchema } from '@designrail/shared';
+import {
+  buttonComponentIntentFixture,
+  componentIntentSchema,
+  inputComponentIntentFixture,
+  toolResultSchema,
+} from '@designrail/shared';
 import { describe, expect, it } from 'vitest';
 
 import { createFigmaImportCliResponse } from './cli.js';
 
-import { importFigmaFixture } from './index.js';
+import { importFigmaFixture, normalizeComponentIntent } from './index.js';
 
 describe('@designrail/figma-import', () => {
-  it('returns a valid skeletal component intent', () => {
+  it('normalizes the Button fixture into the canonical component intent', () => {
     const result = importFigmaFixture({ inputPath: 'examples/figma-input.button.json' });
 
-    expect(componentIntentSchema.parse(result)).toMatchObject({
-      componentType: 'Button',
-      source: 'MOCK',
-    });
+    expect(result).toEqual(buttonComponentIntentFixture);
+  });
+
+  it('normalizes the Input fixture into the canonical component intent', () => {
+    const result = importFigmaFixture({ inputPath: 'examples/figma-input.input.json' });
+
+    expect(result).toEqual(inputComponentIntentFixture);
+  });
+
+  it('rejects malformed mock fixtures before producing intent', () => {
+    expect(() =>
+      normalizeComponentIntent({ component: 'button' }, { sourcePath: 'x.json' }),
+    ).toThrow();
   });
 
   it('returns JSON-safe CLI output for a fixture path', () => {
-    const response = createFigmaImportCliResponse(['examples/figma-input.button.json']);
+    const response = createFigmaImportCliResponse(['examples/figma-input.input.json']);
 
     expect(response.exitCode).toBe(0);
     expect(() => JSON.stringify(response.stdout)).not.toThrow();
     expect(toolResultSchema(componentIntentSchema).parse(response.stdout)).toMatchObject({
       toolName: '@designrail/figma-import',
       output: {
-        componentType: 'Button',
+        componentType: 'Input',
       },
     });
     expect(componentIntentSchema.parse(response.stdout?.output)).toMatchObject({
-      componentType: 'Button',
+      componentType: 'Input',
     });
   });
 

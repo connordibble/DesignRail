@@ -9,5 +9,9 @@
     "types": ["vite/client"]
   },
   "include": ["src", "vite.config.ts", "vitest.config.ts", "tailwind.config.ts"],
-  "references": [{ "path": "../../packages/shared" }, { "path": "../../packages/design-tokens" }]
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/schema" },
+    { "path": "../../packages/design-tokens" }
+  ]
 }

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://designrail.local/figma-input.schema.json",
+  "version": "0.2.0",
+  "exampleId": "example.input.email",
+  "intentId": "intent.input.email",
+  "component": "input",
+  "componentType": "Input",
+  "name": "Email Field",
+  "summary": "An email text field with label, placeholder, and required validation intent.",
+  "props": {
+    "label": "Email address",
+    "placeholder": "you@example.com",
+    "type": "email",
+    "size": "medium",
+    "required": true
+  },
+  "variants": [],
+  "states": ["default", "focus", "disabled", "invalid"],
+  "tokens": [
+    {
+      "name": "color.border.input",
+      "value": "#cbd5e1",
+      "target": "--sl-input-border-color"
+    },
+    {
+      "name": "spacing.input.gap",
+      "value": "8px"
+    }
+  ],
+  "accessibility": {
+    "label": "Email address",
+    "role": "textbox",
+    "required": true
+  }
+}

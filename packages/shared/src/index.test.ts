@@ -2,22 +2,26 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BUTTON_EXAMPLE_ID,
+  buttonComplianceFindingsFixture,
   buttonComponentIntentFixture,
   buttonComponentMappingFixture,
-  buttonComplianceFindingFixture,
   buttonExampleFixture,
   componentIntentSchema,
   componentMappingSchema,
   createEmptyDashboardMetrics,
   createToolResult,
   complianceFindingSchema,
+  EXAMPLE_REGISTRY,
   exampleSchema,
   exportResultSchema,
   htmlExportFixture,
+  inputComponentIntentFixture,
+  inputComponentMappingFixture,
   instrumentationEventSchema,
   isExportableStatus,
   jsonValueSchema,
   mappingEditSchema,
+  mockFigmaFixtureSchema,
   PACKAGE_NAME,
   pendingReviewDecisionFixture,
   reviewDecisionSchema,
@@ -57,9 +61,9 @@ describe('@designrail/shared contracts', () => {
     expect(componentMappingSchema.parse(buttonComponentMappingFixture)).toEqual(
       buttonComponentMappingFixture,
     );
-    expect(complianceFindingSchema.parse(buttonComplianceFindingFixture)).toEqual(
-      buttonComplianceFindingFixture,
-    );
+    for (const found of buttonComplianceFindingsFixture) {
+      expect(complianceFindingSchema.parse(found)).toEqual(found);
+    }
     expect(reviewDecisionSchema.parse(pendingReviewDecisionFixture)).toEqual(
       pendingReviewDecisionFixture,
     );
@@ -67,6 +71,33 @@ describe('@designrail/shared contracts', () => {
     expect(instrumentationEventSchema.parse(reviewSavedEventFixture)).toEqual(
       reviewSavedEventFixture,
     );
+  });
+
+  it('parses the Input domain example and bundles it in the seed registry', () => {
+    expect(componentIntentSchema.parse(inputComponentIntentFixture)).toEqual(
+      inputComponentIntentFixture,
+    );
+    expect(componentMappingSchema.parse(inputComponentMappingFixture)).toEqual(
+      inputComponentMappingFixture,
+    );
+    expect(EXAMPLE_REGISTRY.map((entry) => entry.example.componentType)).toEqual([
+      'Button',
+      'Input',
+    ]);
+  });
+
+  it('validates raw mock Figma fixtures before normalization', () => {
+    expect(
+      mockFigmaFixtureSchema.parse({
+        exampleId: 'example.input.email',
+        intentId: 'intent.input.email',
+        component: 'input',
+        componentType: 'Input',
+        name: 'Email Field',
+        summary: 'An email text field.',
+      }),
+    ).toMatchObject({ componentType: 'Input', props: {}, variants: [], states: [] });
+    expect(() => mockFigmaFixtureSchema.parse({ component: 'input' })).toThrow();
   });
 
   it('accepts nested JSON metadata values', () => {

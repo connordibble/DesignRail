@@ -1,42 +1,58 @@
-import type { ComponentMapping, ExportFormat, Metadata } from '@designrail/shared';
-
-const SL_BUTTON_PROPS = new Set(['disabled', 'size', 'variant']);
+import {
+  getComponentSchemaByTag,
+  hasDefaultSlot,
+  type ShoelaceComponentSchema,
+  type ShoelaceProp,
+} from '@designrail/schema';
+import type { ComponentMapping, ExportFormat, JsonValue, Metadata } from '@designrail/shared';
 
 export function renderExportContent(mapping: ComponentMapping, format: ExportFormat): string {
-  assertSupportedTarget(mapping);
+  const schema = resolveSchema(mapping);
 
   if (format === 'HTML') {
-    return renderHtml(mapping);
+    return renderHtml(mapping, schema);
   }
 
   if (format === 'REACT') {
-    return renderReact(mapping);
+    return renderReact(mapping, schema);
   }
 
   return renderAgentBrief(mapping);
 }
 
-function assertSupportedTarget(mapping: ComponentMapping): void {
-  if (mapping.targetLibrary !== 'SHOELACE' || mapping.targetComponent !== 'sl-button') {
+function resolveSchema(mapping: ComponentMapping): ShoelaceComponentSchema {
+  const schema =
+    mapping.targetLibrary === 'SHOELACE' ? getComponentSchemaByTag(mapping.targetComponent) : null;
+
+  if (schema === null) {
     throw new Error(
       `Mapping ${mapping.id} cannot be exported for ${mapping.targetLibrary}:${mapping.targetComponent}.`,
     );
   }
+
+  return schema;
 }
 
-function renderHtml(mapping: ComponentMapping): string {
-  const attributes = renderHtmlAttributes(mapping.mappedProps);
-  const label = getDefaultSlotText(mapping);
+function renderHtml(mapping: ComponentMapping, schema: ShoelaceComponentSchema): string {
+  const attributes = renderAttributes(mapping.mappedProps, schema, 'html');
 
-  return `<${mapping.targetComponent}${attributes}>${escapeHtml(label)}</${mapping.targetComponent}>`;
+  if (!hasDefaultSlot(schema)) {
+    // Custom elements cannot self-close in HTML; render an explicit empty tag.
+    return `<${schema.tag}${attributes}></${schema.tag}>`;
+  }
+
+  return `<${schema.tag}${attributes}>${escapeHtml(getDefaultSlotText(mapping, schema))}</${schema.tag}>`;
 }
 
-function renderReact(mapping: ComponentMapping): string {
-  const componentName = toReactComponentName(mapping.targetComponent);
-  const props = renderReactProps(mapping.mappedProps);
-  const label = getDefaultSlotText(mapping);
+function renderReact(mapping: ComponentMapping, schema: ShoelaceComponentSchema): string {
+  const componentName = toReactComponentName(schema.tag);
+  const props = renderAttributes(mapping.mappedProps, schema, 'react');
 
-  return `<${componentName}${props}>${escapeJsxText(label)}</${componentName}>`;
+  if (!hasDefaultSlot(schema)) {
+    return `<${componentName}${props} />`;
+  }
+
+  return `<${componentName}${props}>${escapeJsxText(getDefaultSlotText(mapping, schema))}</${componentName}>`;
 }
 
 function renderAgentBrief(mapping: ComponentMapping): string {
@@ -48,59 +64,61 @@ function renderAgentBrief(mapping: ComponentMapping): string {
   ].join('\n');
 }
 
-function renderHtmlAttributes(props: Metadata): string {
-  const attributes = Object.entries(props)
-    .filter(
-      ([name, value]) =>
-        SL_BUTTON_PROPS.has(name) && isSafeHtmlAttributeName(name) && isRenderableProp(value),
-    )
-    .flatMap(([name, value]) => {
-      if (value === false) {
-        return [];
-      }
+type ExportTarget = 'html' | 'react';
 
-      if (value === true) {
-        return [name];
-      }
+/** Render attributes from mapped props, allowlisted and named by the component schema. */
+function renderAttributes(
+  props: Metadata,
+  schema: ShoelaceComponentSchema,
+  target: ExportTarget,
+): string {
+  const attributes = Object.entries(props).flatMap(([name, value]) => {
+    const prop = schema.props.find((candidate) => candidate.name === name);
 
-      return [`${name}="${escapeHtml(String(value))}"`];
-    });
+    if (prop === undefined || !isRenderableProp(value)) {
+      return [];
+    }
 
-  return attributes.length === 0 ? '' : ` ${attributes.join(' ')}`;
-}
-
-function renderReactProps(props: Metadata): string {
-  const attributes = Object.entries(props)
-    .filter(
-      ([name, value]) =>
-        SL_BUTTON_PROPS.has(name) && isSafeJsxPropName(name) && isRenderableProp(value),
-    )
-    .flatMap(([name, value]) => {
-      if (value === false) {
-        return [];
-      }
-
-      if (value === true) {
-        return [name];
-      }
-
-      if (typeof value === 'number') {
-        return [`${name}={${value}}`];
-      }
-
-      return [`${name}="${escapeHtml(String(value))}"`];
-    });
+    return renderAttribute(prop, value, target);
+  });
 
   return attributes.length === 0 ? '' : ` ${attributes.join(' ')}`;
 }
 
-function getDefaultSlotText(mapping: ComponentMapping): string {
+function renderAttribute(
+  prop: ShoelaceProp,
+  value: string | number | boolean,
+  target: ExportTarget,
+): string[] {
+  const attributeName = target === 'html' ? prop.htmlAttribute : prop.reactProp;
+  const isSafeName = target === 'html' ? isSafeHtmlAttributeName : isSafeJsxPropName;
+
+  if (!isSafeName(attributeName)) {
+    return [];
+  }
+
+  if (value === false) {
+    return [];
+  }
+
+  if (value === true) {
+    return [attributeName];
+  }
+
+  if (target === 'react' && typeof value === 'number') {
+    return [`${attributeName}={${value}}`];
+  }
+
+  return [`${attributeName}="${escapeHtml(String(value))}"`];
+}
+
+function getDefaultSlotText(mapping: ComponentMapping, schema: ShoelaceComponentSchema): string {
   const label = mapping.mappedSlots['default'];
 
-  return typeof label === 'string' && label.length > 0 ? label : mapping.targetComponent;
+  return typeof label === 'string' && label.length > 0 ? label : schema.tag;
 }
 
-function isRenderableProp(value: unknown): value is string | number | boolean {
+function isRenderableProp(value: JsonValue): value is string | number | boolean {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 }
 

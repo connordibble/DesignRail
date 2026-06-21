@@ -1,5 +1,11 @@
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
+  getComponentSchema,
+  listEditableProps,
+  type ShoelaceComponentSchema,
+  type ShoelaceProp,
+} from '@designrail/schema';
+import {
   createEmptyDashboardMetrics,
   type DashboardMetrics,
   type ExportFormat,
@@ -15,6 +21,7 @@ import {
   SAVE_REVIEW_DECISION_MUTATION,
   type ComponentMappingResult,
   type ComplianceFindingResult,
+  type ExampleResult,
   type ExportMappingMutation,
   type ExportMappingMutationVariables,
   type ExportResult,
@@ -27,13 +34,12 @@ import {
 } from '../graphql/operations.js';
 
 import {
-  BUTTON_SIZE_OPTIONS,
-  BUTTON_VARIANT_OPTIONS,
   MAPPING_CONFIDENCE_OPTIONS,
-  createButtonEditDraft,
+  canSaveMappingEdit,
+  createMappingEditDraft,
   createSaveDecisionInput,
-  type ButtonEditDraft,
-} from './button-edit.js';
+  type MappingEditDraft,
+} from './mapping-edit.js';
 
 const TABS = ['Dashboard', 'Review', 'Exports', 'Schema'] as const;
 
@@ -87,9 +93,17 @@ const EXPORT_FORMAT_OPTIONS: Array<{ format: ExportFormat; label: string }> = [
 
 export interface ReviewWorkspaceShellProps {
   exampleId: string;
+  examples?: ExampleResult[];
+  selectedExampleId?: string;
+  onSelectExample?: (exampleId: string) => void;
 }
 
-export function ReviewWorkspaceShell({ exampleId }: ReviewWorkspaceShellProps): ReactElement {
+export function ReviewWorkspaceShell({
+  exampleId,
+  examples = [],
+  selectedExampleId = exampleId,
+  onSelectExample,
+}: ReviewWorkspaceShellProps): ReactElement {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('Review');
   const tabButtonRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
     Dashboard: null,
@@ -180,8 +194,49 @@ export function ReviewWorkspaceShell({ exampleId }: ReviewWorkspaceShellProps): 
               ))}
             </nav>
 
+            <section aria-label="Examples" className="grid gap-dr-xs">
+              <p className="text-dr-caption font-semibold uppercase text-dr-subtle">Examples</p>
+              {examples.length === 0 ? (
+                <EmptyLine text="No examples available." />
+              ) : (
+                <ul className="grid gap-dr-xs">
+                  {examples.map((example) => {
+                    const isSelected = example.id === selectedExampleId;
+
+                    return (
+                      <li key={example.id}>
+                        <button
+                          aria-current={isSelected}
+                          className={cx(
+                            'flex w-full items-center justify-between gap-dr-sm rounded-dr-sm border px-dr-sm py-dr-xs text-left transition-colors focus-visible:outline focus-visible:outline-2',
+                            isSelected
+                              ? 'border-dr-accent bg-dr-accent-soft text-dr-text'
+                              : 'border-dr-border bg-dr-panel text-dr-muted hover:border-dr-border-strong hover:bg-dr-panel-hover',
+                            example.status === 'READY' ? '' : 'opacity-60',
+                          )}
+                          disabled={onSelectExample === undefined || example.status !== 'READY'}
+                          onClick={() => onSelectExample?.(example.id)}
+                          type="button"
+                        >
+                          <span>
+                            <span className="block text-dr-small font-semibold text-dr-text">
+                              {example.name}
+                            </span>
+                            <span className="mt-dr-xxs block font-mono text-dr-caption text-dr-subtle">
+                              {example.componentType}
+                            </span>
+                          </span>
+                          <StatusDot tone={isSelected ? 'info' : 'neutral'} />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+
             <section aria-label="Selected example" className="grid gap-dr-xs">
-              <p className="text-dr-caption font-semibold uppercase text-dr-subtle">Example</p>
+              <p className="text-dr-caption font-semibold uppercase text-dr-subtle">Selected</p>
               <div className="rounded-dr-md border border-dr-border bg-dr-panel p-dr-sm">
                 <div className="flex items-center justify-between gap-dr-sm">
                   <div>
@@ -387,9 +442,12 @@ interface ReviewPanelProps extends WorkspacePanelProps {
 function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
   const intent = workspace.intent;
   const mapping = workspace.mapping;
+  const schema = intent === null ? null : getComponentSchema(intent.componentType);
   const decisionStatus = getDecisionStatus(workspace.latestDecision);
-  const [draft, setDraft] = useState<ButtonEditDraft>(() =>
-    createButtonEditDraft(mapping, workspace.latestDecision),
+  const [draft, setDraft] = useState<MappingEditDraft | null>(() =>
+    schema === null || mapping === null
+      ? null
+      : createMappingEditDraft(schema, mapping, workspace.latestDecision),
   );
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [saveReviewDecision, saveDecisionState] = useMutation<
@@ -399,11 +457,11 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
   const isSavingDecision = saveDecisionState.loading;
 
   async function persistDecision(status: ReviewDecisionStatus): Promise<void> {
-    if (mapping === null || isSavingDecision) {
+    if (schema === null || mapping === null || draft === null || isSavingDecision) {
       return;
     }
 
-    const input = createSaveDecisionInput(mapping.id, status, draft);
+    const input = createSaveDecisionInput(schema, mapping.id, status, draft);
 
     setSaveErrorMessage(null);
 
@@ -453,14 +511,7 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
                 {mapping.targetComponent}
               </span>
             </div>
-            <DefinitionList
-              items={[
-                ['Label', getSlotLabel(mapping.mappedSlots)],
-                ['Variant', getJsonRecordValue(mapping.mappedProps, 'variant')],
-                ['Size', getJsonRecordValue(mapping.mappedProps, 'size')],
-                ['Disabled', getJsonRecordValue(mapping.mappedProps, 'disabled')],
-              ]}
-            />
+            <DefinitionList items={buildMappingDisplayItems(mapping)} />
             <CodeBlock label="mappedProps" value={formatJson(mapping.mappedProps)} />
             <p className="text-dr-small text-dr-muted">{mapping.rationale}</p>
           </div>
@@ -475,16 +526,17 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
               <StatusBadge label={decisionStatus} tone={STATUS_TONES[decisionStatus]} />
             </div>
 
-            {mapping === null ? (
-              <EmptyLine text="No mapping is available for a review decision." />
+            {schema === null || mapping === null || draft === null ? (
+              <EmptyLine text="No schema-backed mapping is available for a review decision." />
             ) : (
-              <ButtonEditForm
-                draft={draft}
+              <MappingEditForm
                 disabled={isSavingDecision}
+                draft={draft}
                 onChange={setDraft}
                 onSaveAccept={() => persistDecision('ACCEPTED')}
                 onSaveEdit={() => persistDecision('EDITED')}
                 onSaveReject={() => persistDecision('REJECTED')}
+                schema={schema}
               />
             )}
 
@@ -517,28 +569,34 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
   );
 }
 
-interface ButtonEditFormProps {
+interface MappingEditFormProps {
   disabled: boolean;
-  draft: ButtonEditDraft;
-  onChange: (draft: ButtonEditDraft) => void;
+  draft: MappingEditDraft;
+  onChange: (draft: MappingEditDraft) => void;
   onSaveAccept: () => void;
   onSaveEdit: () => void;
   onSaveReject: () => void;
+  schema: ShoelaceComponentSchema;
 }
 
-function ButtonEditForm({
+function MappingEditForm({
   disabled,
   draft,
   onChange,
   onSaveAccept,
   onSaveEdit,
   onSaveReject,
-}: ButtonEditFormProps): ReactElement {
-  const canSaveEdit = draft.label.trim().length > 0 && draft.rationale.trim().length > 0;
+  schema,
+}: MappingEditFormProps): ReactElement {
+  const canSaveEdit = canSaveMappingEdit(draft);
 
-  function updateDraft<TKey extends keyof ButtonEditDraft>(
+  function updateProp(name: string, value: string | boolean): void {
+    onChange({ ...draft, props: { ...draft.props, [name]: value } });
+  }
+
+  function updateField<TKey extends 'slotLabel' | 'confidence' | 'rationale' | 'notes'>(
     key: TKey,
-    value: ButtonEditDraft[TKey],
+    value: MappingEditDraft[TKey],
   ): void {
     onChange({ ...draft, [key]: value });
   }
@@ -546,59 +604,44 @@ function ButtonEditForm({
   return (
     <div className="grid gap-dr-sm">
       <div className="grid gap-dr-xs">
-        <TextField
-          disabled={disabled}
-          id="button-edit-label"
-          label="Label"
-          onChange={(value) => updateDraft('label', value)}
-          value={draft.label}
-        />
-        <SelectField
-          disabled={disabled}
-          id="button-edit-variant"
-          label="Variant"
-          onChange={(value) => updateDraft('variant', value)}
-          options={BUTTON_VARIANT_OPTIONS}
-          value={draft.variant}
-        />
-        <SelectField
-          disabled={disabled}
-          id="button-edit-size"
-          label="Size"
-          onChange={(value) => updateDraft('size', value)}
-          options={BUTTON_SIZE_OPTIONS}
-          value={draft.size}
-        />
-        <label className="flex items-center justify-between gap-dr-sm rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs text-dr-small text-dr-muted">
-          Disabled
-          <input
-            checked={draft.disabled}
-            className="size-4 accent-dr-accent focus-visible:outline focus-visible:outline-2"
+        {draft.slotLabel === null ? null : (
+          <TextField
             disabled={disabled}
-            onChange={(event) => updateDraft('disabled', event.currentTarget.checked)}
-            type="checkbox"
+            id="mapping-edit-slot-label"
+            label="Label"
+            onChange={(value) => updateField('slotLabel', value)}
+            value={draft.slotLabel}
           />
-        </label>
+        )}
+        {listEditableProps(schema).map((prop) => (
+          <MappingPropField
+            disabled={disabled}
+            key={prop.name}
+            onChange={(value) => updateProp(prop.name, value)}
+            prop={prop}
+            value={draft.props[prop.name] ?? (prop.kind === 'boolean' ? false : '')}
+          />
+        ))}
         <SelectField
           disabled={disabled}
-          id="button-edit-confidence"
+          id="mapping-edit-confidence"
           label="Confidence"
-          onChange={(value) => updateDraft('confidence', value)}
+          onChange={(value) => updateField('confidence', value)}
           options={MAPPING_CONFIDENCE_OPTIONS}
           value={draft.confidence}
         />
         <TextareaField
           disabled={disabled}
-          id="button-edit-rationale"
+          id="mapping-edit-rationale"
           label="Rationale"
-          onChange={(value) => updateDraft('rationale', value)}
+          onChange={(value) => updateField('rationale', value)}
           value={draft.rationale}
         />
         <TextareaField
           disabled={disabled}
-          id="button-edit-notes"
+          id="mapping-edit-notes"
           label="Notes"
-          onChange={(value) => updateDraft('notes', value)}
+          onChange={(value) => updateField('notes', value)}
           value={draft.notes}
         />
       </div>
@@ -630,6 +673,61 @@ function ButtonEditForm({
         </button>
       </div>
     </div>
+  );
+}
+
+interface MappingPropFieldProps {
+  disabled: boolean;
+  onChange: (value: string | boolean) => void;
+  prop: ShoelaceProp;
+  value: string | boolean;
+}
+
+function MappingPropField({
+  disabled,
+  onChange,
+  prop,
+  value,
+}: MappingPropFieldProps): ReactElement {
+  const label = humanizeLabel(prop.name);
+  const fieldId = `mapping-edit-${prop.name}`;
+
+  if (prop.kind === 'boolean') {
+    return (
+      <label className="flex items-center justify-between gap-dr-sm rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs text-dr-small text-dr-muted">
+        {label}
+        <input
+          checked={typeof value === 'boolean' ? value : false}
+          className="size-4 accent-dr-accent focus-visible:outline focus-visible:outline-2"
+          disabled={disabled}
+          onChange={(event) => onChange(event.currentTarget.checked)}
+          type="checkbox"
+        />
+      </label>
+    );
+  }
+
+  if (prop.kind === 'enum' && prop.values !== undefined) {
+    return (
+      <SelectField
+        disabled={disabled}
+        id={fieldId}
+        label={label}
+        onChange={onChange}
+        options={prop.values}
+        value={typeof value === 'string' ? value : ''}
+      />
+    );
+  }
+
+  return (
+    <TextField
+      disabled={disabled}
+      id={fieldId}
+      label={label}
+      onChange={onChange}
+      value={typeof value === 'string' ? value : ''}
+    />
   );
 }
 
@@ -1100,15 +1198,29 @@ function getDecisionStatus(decision: ReviewDecisionResult | null): ReviewDecisio
   return decision?.status ?? 'PENDING';
 }
 
-function getSlotLabel(slots: Record<string, JsonValue>): string {
-  return getJsonRecordValue(slots, 'default');
+/** Build the read-only mapping display rows directly from the mapped data (schema-agnostic). */
+function buildMappingDisplayItems(mapping: ComponentMappingResult): Array<[string, string]> {
+  const items: Array<[string, string]> = [];
+  const slot = mapping.mappedSlots['default'];
+
+  if (typeof slot === 'string') {
+    items.push(['Label', slot]);
+  }
+
+  for (const [key, value] of Object.entries(mapping.mappedProps)) {
+    items.push([humanizeLabel(key), formatMappedValue(value)]);
+  }
+
+  return items;
 }
 
-function getJsonRecordValue(record: Record<string, JsonValue>, key: string): string {
-  const value = record[key];
+function formatMappedValue(value: JsonValue): string {
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
 
-  if (value === undefined || value === null) {
-    return 'Unmapped';
+  if (value === null) {
+    return 'null';
   }
 
   if (typeof value === 'object') {
@@ -1116,6 +1228,13 @@ function getJsonRecordValue(record: Record<string, JsonValue>, key: string): str
   }
 
   return String(value);
+}
+
+/** Turn a camelCase prop name into a human label (e.g. `helpText` → `Help Text`). */
+function humanizeLabel(name: string): string {
+  const spaced = name.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
 function formatJson(value: unknown): string {

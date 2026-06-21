@@ -5,6 +5,7 @@ export { DESIGNRAIL_GRAPHQL_SCHEMA } from './graphql-schema.js';
 export const PACKAGE_NAME = '@designrail/shared';
 export const DESIGNRAIL_CONTRACT_VERSION = 'c1';
 export const BUTTON_EXAMPLE_ID = 'example.button.primary';
+export const INPUT_EXAMPLE_ID = 'example.input.email';
 
 export type JsonValue =
   | string
@@ -79,6 +80,28 @@ export const exampleSchema = z.object({
   fixturePath: z.string().min(1),
   source: componentSourceSchema,
   status: exampleStatusSchema,
+});
+
+/**
+ * Shape of a raw mock Figma fixture (`examples/figma-input.*.json`) before normalization.
+ * The importer validates against this so malformed mock input fails loudly.
+ */
+export const mockFigmaFixtureSchema = z.object({
+  // Provenance metadata carried in the JSON file; retained but not used during normalization.
+  $schema: z.string().optional(),
+  version: z.string().optional(),
+  exampleId: z.string().min(1),
+  intentId: z.string().min(1),
+  component: z.string().min(1),
+  componentType: z.string().min(1),
+  name: z.string().min(1),
+  summary: z.string().min(1),
+  componentName: z.string().min(1).optional(),
+  props: metadataSchema.default({}),
+  variants: z.array(z.string().min(1)).default([]),
+  states: z.array(z.string().min(1)).default([]),
+  tokens: z.array(tokenReferenceSchema).default([]),
+  accessibility: accessibilityMetadataSchema.default({ required: false }),
 });
 
 export const componentIntentSchema = z.object({
@@ -239,6 +262,7 @@ export type SourceReference = z.infer<typeof sourceReferenceSchema>;
 export type TokenReference = z.infer<typeof tokenReferenceSchema>;
 export type AccessibilityMetadata = z.infer<typeof accessibilityMetadataSchema>;
 export type Example = z.infer<typeof exampleSchema>;
+export type MockFigmaFixture = z.infer<typeof mockFigmaFixtureSchema>;
 export type ComponentIntent = z.infer<typeof componentIntentSchema>;
 export type ComponentMapping = z.infer<typeof componentMappingSchema>;
 export type MappingEdit = z.infer<typeof mappingEditSchema>;
@@ -340,7 +364,7 @@ export const buttonComponentIntentFixture: ComponentIntent = {
     size: 'medium',
     appearance: 'primary',
   },
-  variants: ['primary', 'secondary'],
+  variants: ['primary', 'neutral'],
   states: ['default', 'hover', 'focus', 'disabled'],
   tokenRefs: [
     {
@@ -368,7 +392,9 @@ export const buttonComponentMappingFixture: ComponentMapping = {
     disabled: false,
   },
   mappedEvents: {
-    click: 'sl-click',
+    click: 'click',
+    focus: 'sl-focus',
+    blur: 'sl-blur',
   },
   mappedSlots: {
     default: 'Save changes',
@@ -381,23 +407,47 @@ export const buttonComponentMappingFixture: ComponentMapping = {
   ],
   confidence: 'HIGH',
   rationale:
-    'The design intent maps directly to Shoelace button variant, size, disabled prop, and default slot.',
+    'Design intent maps to Shoelace sl-button: variant=primary, size=medium, disabled=false. Default slot text "Save changes".',
   fallbackNotes:
-    'If brand color tokens diverge, keep the component mapping and adjust the token alias.',
+    'All design intent resolved cleanly; adjust Shoelace token aliases if brand values diverge.',
   createdAt: FIXTURE_TIMESTAMP,
 };
 
-export const buttonComplianceFindingFixture: ComplianceFinding = {
-  id: 'finding.button.primary.react-readiness',
-  mappingId: buttonComponentMappingFixture.id,
-  category: 'REACT_READINESS',
-  severity: 'INFO',
-  message: 'Shoelace button usage is ready for React event binding.',
-  remediation: 'Wrap custom events intentionally when exporting React examples.',
-  path: 'mappedEvents.click',
-  blocking: false,
-  createdAt: FIXTURE_TIMESTAMP,
-};
+export const buttonComplianceFindingsFixture: ComplianceFinding[] = [
+  {
+    id: 'finding.button.primary.accessibility',
+    mappingId: buttonComponentMappingFixture.id,
+    category: 'ACCESSIBILITY',
+    severity: 'INFO',
+    message: 'Accessible name resolved from design intent ("Save changes").',
+    remediation: 'Keep the accessible name in sync with the Shoelace label or default slot.',
+    path: 'accessibility.label',
+    blocking: false,
+    createdAt: FIXTURE_TIMESTAMP,
+  },
+  {
+    id: 'finding.button.primary.documentation-readiness',
+    mappingId: buttonComponentMappingFixture.id,
+    category: 'DOCUMENTATION_READINESS',
+    severity: 'INFO',
+    message: 'Documentation will use the component summary; no extended description provided.',
+    remediation: 'Add an accessibility description to enrich generated documentation.',
+    path: 'summary',
+    blocking: false,
+    createdAt: FIXTURE_TIMESTAMP,
+  },
+  {
+    id: 'finding.button.primary.react-readiness',
+    mappingId: buttonComponentMappingFixture.id,
+    category: 'REACT_READINESS',
+    severity: 'INFO',
+    message: 'Shoelace sl-button events are ready for React binding.',
+    remediation: 'Bind custom Shoelace events with their React handler names when exporting.',
+    path: 'mappedEvents',
+    blocking: false,
+    createdAt: FIXTURE_TIMESTAMP,
+  },
+];
 
 export const pendingReviewDecisionFixture: ReviewDecision = {
   id: 'decision.button.primary.pending',
@@ -427,3 +477,163 @@ export const reviewSavedEventFixture: InstrumentationEvent = {
     mappingId: pendingReviewDecisionFixture.mappingId,
   },
 };
+
+export const inputExampleFixture: Example = {
+  id: INPUT_EXAMPLE_ID,
+  name: 'Input',
+  componentType: 'Input',
+  fixturePath: 'examples/figma-input.input.json',
+  source: 'MOCK',
+  status: 'READY',
+};
+
+export const inputComponentIntentFixture: ComponentIntent = {
+  id: 'intent.input.email',
+  exampleId: inputExampleFixture.id,
+  source: 'MOCK',
+  sourceRefs: [
+    {
+      type: 'MOCK_FILE',
+      id: inputExampleFixture.fixturePath,
+      name: 'Email Field',
+    },
+  ],
+  componentName: 'Input',
+  componentType: 'Input',
+  summary: 'An email text field with label, placeholder, and required validation intent.',
+  props: {
+    label: 'Email address',
+    placeholder: 'you@example.com',
+    type: 'email',
+    size: 'medium',
+    required: true,
+  },
+  variants: [],
+  states: ['default', 'focus', 'disabled', 'invalid'],
+  tokenRefs: [
+    {
+      name: 'color.border.input',
+      value: '#cbd5e1',
+      target: '--sl-input-border-color',
+    },
+    {
+      name: 'spacing.input.gap',
+      value: '8px',
+    },
+  ],
+  accessibility: {
+    label: 'Email address',
+    role: 'textbox',
+    required: true,
+  },
+  createdAt: FIXTURE_TIMESTAMP,
+};
+
+export const inputComponentMappingFixture: ComponentMapping = {
+  id: 'mapping.input.email.shoelace',
+  intentId: inputComponentIntentFixture.id,
+  targetLibrary: 'SHOELACE',
+  targetComponent: 'sl-input',
+  mappedProps: {
+    type: 'email',
+    size: 'medium',
+    label: 'Email address',
+    placeholder: 'you@example.com',
+    disabled: false,
+    required: true,
+  },
+  mappedEvents: {
+    input: 'sl-input',
+    change: 'sl-change',
+    focus: 'sl-focus',
+    blur: 'sl-blur',
+  },
+  mappedSlots: {},
+  mappedTokens: [
+    {
+      name: 'color.border.input',
+      target: '--sl-input-border-color',
+    },
+  ],
+  confidence: 'MEDIUM',
+  rationale:
+    'Design intent maps to Shoelace sl-input: type=email, size=medium, label=Email address, placeholder=you@example.com, disabled=false, required=true.',
+  fallbackNotes:
+    'Unmapped design tokens without a Shoelace target: spacing.input.gap. Alias them before relying on themed values.',
+  createdAt: FIXTURE_TIMESTAMP,
+};
+
+export const inputComplianceFindingsFixture: ComplianceFinding[] = [
+  {
+    id: 'finding.input.email.accessibility',
+    mappingId: inputComponentMappingFixture.id,
+    category: 'ACCESSIBILITY',
+    severity: 'INFO',
+    message: 'Accessible name resolved from design intent ("Email address").',
+    remediation: 'Keep the accessible name in sync with the Shoelace label or default slot.',
+    path: 'accessibility.label',
+    blocking: false,
+    createdAt: FIXTURE_TIMESTAMP,
+  },
+  {
+    id: 'finding.input.email.token-usage',
+    mappingId: inputComponentMappingFixture.id,
+    category: 'TOKEN_USAGE',
+    severity: 'WARNING',
+    message: 'Design tokens without a Shoelace target: spacing.input.gap.',
+    remediation:
+      'Map each design token to a Shoelace CSS custom property (--sl-*) before relying on it.',
+    path: 'tokenRefs',
+    blocking: false,
+    createdAt: FIXTURE_TIMESTAMP,
+  },
+  {
+    id: 'finding.input.email.documentation-readiness',
+    mappingId: inputComponentMappingFixture.id,
+    category: 'DOCUMENTATION_READINESS',
+    severity: 'INFO',
+    message: 'Documentation will use the component summary; no extended description provided.',
+    remediation: 'Add an accessibility description to enrich generated documentation.',
+    path: 'summary',
+    blocking: false,
+    createdAt: FIXTURE_TIMESTAMP,
+  },
+  {
+    id: 'finding.input.email.react-readiness',
+    mappingId: inputComponentMappingFixture.id,
+    category: 'REACT_READINESS',
+    severity: 'INFO',
+    message: 'Shoelace sl-input events are ready for React binding.',
+    remediation: 'Bind custom Shoelace events with their React handler names when exporting.',
+    path: 'mappedEvents',
+    blocking: false,
+    createdAt: FIXTURE_TIMESTAMP,
+  },
+];
+
+/** Bundled, pipeline-verified seed data for one reviewable example. */
+export interface SeedExample {
+  example: Example;
+  intent: ComponentIntent;
+  mapping: ComponentMapping;
+  findings: ComplianceFinding[];
+}
+
+/**
+ * Canonical seed set. Each entry is the deterministic pipeline output for its fixture;
+ * the import/mapping/compliance tools are tested to reproduce these exact values.
+ */
+export const EXAMPLE_REGISTRY: SeedExample[] = [
+  {
+    example: buttonExampleFixture,
+    intent: buttonComponentIntentFixture,
+    mapping: buttonComponentMappingFixture,
+    findings: buttonComplianceFindingsFixture,
+  },
+  {
+    example: inputExampleFixture,
+    intent: inputComponentIntentFixture,
+    mapping: inputComponentMappingFixture,
+    findings: inputComplianceFindingsFixture,
+  },
+];

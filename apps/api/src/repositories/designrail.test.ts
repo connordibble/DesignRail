@@ -6,11 +6,14 @@ import {
   buttonComponentMappingFixture,
   buttonExampleFixture,
   FIXTURE_TIMESTAMP,
+  inputExampleFixture,
 } from '@designrail/shared';
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   closeDatabaseClient,
+  componentMappings,
   createDatabaseClient,
   migrateDatabase,
   type DatabaseClient,
@@ -50,17 +53,20 @@ describe('DesignRail repositories', () => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('lists the seeded Button example, intent, mapping, and findings', () => {
-    expect(listExamples(client)).toEqual([buttonExampleFixture]);
+  it('lists the seeded Button and Input examples, intents, mappings, and findings', () => {
+    expect(listExamples(client)).toEqual([buttonExampleFixture, inputExampleFixture]);
     expect(getComponentIntentByExampleId(client, buttonExampleFixture.id)?.componentType).toBe(
       'Button',
+    );
+    expect(getComponentIntentByExampleId(client, inputExampleFixture.id)?.componentType).toBe(
+      'Input',
     );
     expect(getMappingByExampleId(client, buttonExampleFixture.id)).toEqual(
       buttonComponentMappingFixture,
     );
     expect(
       listComplianceFindingsByMappingId(client, buttonComponentMappingFixture.id),
-    ).toHaveLength(1);
+    ).toHaveLength(3);
   });
 
   it('returns a review workspace for the seeded Button example', () => {
@@ -75,14 +81,13 @@ describe('DesignRail repositories', () => {
         id: buttonComponentMappingFixture.id,
         targetComponent: 'sl-button',
       },
-      complianceFindings: [
-        {
-          mappingId: buttonComponentMappingFixture.id,
-        },
-      ],
       latestDecision: null,
       exports: [],
     });
+    expect(workspace?.complianceFindings).toHaveLength(3);
+    expect(
+      workspace?.complianceFindings.every((f) => f.mappingId === buttonComponentMappingFixture.id),
+    ).toBe(true);
   });
 
   it('persists review decisions and derives dashboard metrics', () => {
@@ -96,11 +101,12 @@ describe('DesignRail repositories', () => {
     });
 
     expect(listReviewDecisions(client)).toEqual([decision]);
+    // Button is accepted; the seeded Input mapping has no decision yet, so it counts as pending.
     expect(getDashboardMetrics(client)).toMatchObject({
       acceptedMappings: 1,
       rejectedMappings: 0,
       editedMappings: 0,
-      pendingMappings: 0,
+      pendingMappings: 1,
     });
   });
 
@@ -289,5 +295,63 @@ describe('DesignRail repositories', () => {
         status: 'ACCEPTED',
       },
     });
+  });
+
+  it('rejects edited mappings with props or values outside the Shoelace schema', () => {
+    expect(() =>
+      saveReviewDecision(client, {
+        mappingId: buttonComponentMappingFixture.id,
+        status: 'EDITED',
+        reviewerLabel: 'Repository test',
+        editedMapping: { mappedProps: { variant: 'bogus' } },
+      }),
+    ).toThrow(/invalid value/);
+
+    expect(() =>
+      saveReviewDecision(client, {
+        mappingId: buttonComponentMappingFixture.id,
+        status: 'EDITED',
+        reviewerLabel: 'Repository test',
+        editedMapping: { mappedProps: { href: 'https://example.com' } },
+      }),
+    ).toThrow(/not supported/);
+  });
+
+  it('coerces edited mapping values against the schema before saving', () => {
+    const decision = saveReviewDecision(client, {
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'EDITED',
+      reviewerLabel: 'Repository test',
+      editedMapping: { mappedProps: { variant: 'Primary', disabled: 'true' } },
+    });
+
+    expect(decision.editedMapping?.mappedProps).toEqual({ variant: 'primary', disabled: true });
+  });
+
+  it('reopens review when a seed-owned mapping changes', () => {
+    saveReviewDecision(client, {
+      id: 'decision.reopen.accepted',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'ACCEPTED',
+      reviewerLabel: 'Repository test',
+      createdAt: FIXTURE_TIMESTAMP,
+    });
+    expect(
+      getLatestReviewDecisionByMappingId(client, buttonComponentMappingFixture.id),
+    ).not.toBeNull();
+
+    // Simulate a prior-version mapping row whose content differs from the canonical fixture.
+    client.db
+      .update(componentMappings)
+      .set({ rationale: 'Outdated rationale from a previous version.' })
+      .where(eq(componentMappings.id, buttonComponentMappingFixture.id))
+      .run();
+
+    seedDesignRailData(client);
+
+    expect(getLatestReviewDecisionByMappingId(client, buttonComponentMappingFixture.id)).toBeNull();
+    expect(getMappingByExampleId(client, buttonExampleFixture.id)?.rationale).toBe(
+      buttonComponentMappingFixture.rationale,
+    );
   });
 });
