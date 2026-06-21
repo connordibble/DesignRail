@@ -1,0 +1,25 @@
+{
+  "$schema": "https://designrail.local/figma-input.schema.json",
+  "version": "0.2.0",
+  "exampleId": "example.card.basic",
+  "intentId": "intent.card.basic",
+  "component": "card",
+  "componentType": "Card",
+  "name": "Product Card",
+  "summary": "A content card presenting a short product blurb.",
+  "props": {
+    "content": "Wireless headphones with 30-hour battery life."
+  },
+  "variants": [],
+  "states": ["default"],
+  "tokens": [
+    {
+      "name": "radius.card",
+      "value": "12px",
+      "target": "--border-radius"
+    }
+  ],
+  "accessibility": {
+    "role": "group"
+  }
+}
