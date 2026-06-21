@@ -19,6 +19,13 @@ import { createResolvers, typeDefs } from './schema.js';
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 
+const LOCAL_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+
+/** Whether a browser Origin is a local development host (any port). */
+export function isLocalOrigin(origin: string | undefined): boolean {
+  return origin !== undefined && LOCAL_ORIGIN_PATTERN.test(origin);
+}
+
 export interface QueryGuardOptions {
   maxAliases?: number;
 }
@@ -84,6 +91,26 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
   const app = Fastify({ logger: true, ...fastifyOptions });
   const client = databaseClient ?? createDatabaseClient();
   const shouldOwnDatabaseClient = databaseClient === undefined;
+
+  // Allow the local review UI (served from a different dev port) to call the API in a browser.
+  // Scoped to local origins; the host-binding guard still controls who can reach the server.
+  app.addHook('onRequest', async (request, reply) => {
+    const origin = request.headers.origin;
+
+    if (typeof origin !== 'string' || !isLocalOrigin(origin)) {
+      return;
+    }
+
+    reply.header('Access-Control-Allow-Origin', origin);
+    reply.header('Vary', 'Origin');
+    reply.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    reply.header('Access-Control-Allow-Headers', 'content-type');
+    reply.header('Access-Control-Max-Age', '86400');
+
+    if (request.method === 'OPTIONS') {
+      return reply.code(204).send();
+    }
+  });
 
   if (runMigrations) {
     migrateDatabase(client);
