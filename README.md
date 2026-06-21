@@ -4,6 +4,8 @@
 
 DesignRail is a design-system handoff control plane for AI-assisted implementation. It ingests mock or optional real Figma input, normalizes it into component intent, maps that intent to Shoelace Web Components, runs compliance review, and records human review decisions before anything is treated as export-ready.
 
+![DesignRail review workspace — source intent, recommended Shoelace mapping, and the schema-driven decision editor](assets/review-workspace.png)
+
 DesignRail does not try to replace coding agents, IDEs, or Figma Dev Mode. It sits between design intent and implementation as the governed review layer: designers and developers can inspect mapping recommendations, see compliance findings, accept, reject, or edit decisions, and export implementation-ready HTML, React examples, or agent-ready briefs. Review decisions are persisted and instrumented through a GraphQL API so mapping quality can be audited over time.
 
 ## What DesignRail Is For
