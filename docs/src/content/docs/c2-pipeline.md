@@ -18,10 +18,13 @@ Each `ShoelaceComponentSchema` records, for one component:
   `default`, the design-intent keys it maps from (`intentKeys`), and its export names
   (`htmlAttribute`, `reactProp`) so divergences like `help-text` vs `helpText` are explicit.
 - `slots` (a `default` slot marks a component that carries text; its absence marks a childless
-  component such as Input).
+  component such as Input). Slots may carry a `label` used for review-UI edit controls.
 - `events`, modeled as `native` (e.g. `click`) or `custom` (e.g. `sl-input`) with a React handler name.
+- `requiresAccessibleName`, which separates interactive controls that must carry an accessible name
+  (Button, Input) from containers that do not (Card).
 
-The registry currently covers **Button** and **Input**.
+The registry currently covers **Button**, **Input**, and **Card** — a no-props, event-less
+container that exercises the schema-driven pipeline's empty-props and non-interactive paths.
 
 ## Deterministic pipeline
 
@@ -35,11 +38,13 @@ fixtures exported from `@designrail/shared`:
   slot (when present) is filled from the intent label, events and tokens are projected, and a
   `confidence` plus generated `rationale`/`fallbackNotes` summarize coverage gaps.
 - `compliance-agent` emits schema-aware findings across accessibility, variant coverage, token
-  usage, design-system alignment, and React readiness, in a stable order.
+  usage, design-system alignment, documentation readiness, and React readiness, in a stable order.
+  Accessibility respects `requiresAccessibleName`, so containers like Card are not flagged for a
+  missing name, and React readiness notes when a component has no custom events to bind.
 
 ## Multi-example review
 
-The API seeds Button and Input from the canonical registry (`EXAMPLE_REGISTRY`). Seed-owned rows
+The API seeds Button, Input, and Card from the canonical registry (`EXAMPLE_REGISTRY`). Seed-owned rows
 are upserted and seed findings are replaced on each boot, so re-seeding a local database refreshes
 the mappings without stranding stale rows. Unchanged re-seeds leave review decisions, exports, and
 instrumentation events untouched. If a seed-owned mapping's **content changes**, however, the prior
@@ -53,8 +58,8 @@ or exported even by a direct GraphQL caller.
 
 The review UI lists examples from the `examples` query and lets reviewers switch between them. The
 recommended-mapping display and the decision editor are both driven by the component schema, so the
-same UI handles Button (with a default slot) and Input (childless, `help-text` props) without
-component-specific code.
+same UI handles Button (default slot), Input (childless, `help-text` props), and Card (no props,
+slot-only) without component-specific code.
 
 ## Export
 
