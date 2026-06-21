@@ -47,7 +47,7 @@ tools/
   figma-import/       Mock Figma fixture → normalized ComponentIntent
   component-mapper/   Intent → deterministic, schema-driven Shoelace mapping
   compliance-agent/   Mapping + intent → structured compliance findings
-examples/             Mock Figma fixtures (Button + Input now; Card/Badge/Dialog/Spinner planned)
+examples/             Mock Figma fixtures (Button, Input, Card now; Badge/Dialog/Spinner planned)
 docs/                 Astro + Starlight documentation site with ADRs
 agents/               DesignRail-specific skill files
 hooks/                Repeatable local quality, secrets, and mock-mode checks

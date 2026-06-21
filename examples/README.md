@@ -10,9 +10,10 @@ The importer normalizes fixtures to `ComponentIntent` (see [packages/shared](../
 
 ## Phase 1 status
 
-Checkpoint 2 ships two fully-realized fixtures: `figma-input.button.json` (variants, states,
-accessibility metadata, and tokens) and `figma-input.input.json` (label, placeholder, type,
-required validation, and a deliberately unmapped token to exercise compliance). Each fixture
-includes an `exampleId`/`intentId` and is normalized by [tools/figma-import](../tools/figma-import/)
-into a `ComponentIntent`. Later checkpoints add Card, Badge, Dialog, and Spinner using the same
-schema-driven pipeline.
+Three fully-realized fixtures ship today: `figma-input.button.json` (variants, states,
+accessibility metadata, and tokens), `figma-input.input.json` (label, placeholder, type, required
+validation, and a deliberately unmapped token to exercise compliance), and `figma-input.card.json`
+(a no-props container component with a default slot, exercising the non-interactive accessibility
+path). Each fixture includes an `exampleId`/`intentId` and is normalized by
+[tools/figma-import](../tools/figma-import/) into a `ComponentIntent`. Later checkpoints add Badge,
+Dialog, and Spinner using the same schema-driven pipeline.
