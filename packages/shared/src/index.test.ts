@@ -83,6 +83,7 @@ describe('@designrail/shared contracts', () => {
     expect(EXAMPLE_REGISTRY.map((entry) => entry.example.componentType)).toEqual([
       'Button',
       'Input',
+      'Card',
     ]);
   });
 

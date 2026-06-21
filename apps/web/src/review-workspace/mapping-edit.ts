@@ -19,7 +19,6 @@ import type {
 
 export const LOCAL_REVIEWER_LABEL = 'Local reviewer';
 export const MAPPING_CONFIDENCE_OPTIONS: MappingConfidence[] = ['HIGH', 'MEDIUM', 'LOW'];
-export const DEFAULT_SLOT_FIELD_LABEL = 'Label';
 
 export type MappingPropValue = string | boolean;
 

@@ -31,6 +31,8 @@ export const shoelacePropSchema = z.object({
 export const shoelaceSlotSchema = z.object({
   /** Slot name; `default` denotes the unnamed text slot. */
   name: z.string().min(1),
+  /** Human-facing label for review UI display/edit controls. */
+  label: z.string().min(1).optional(),
   description: z.string().min(1),
 });
 
@@ -58,6 +60,8 @@ export const shoelaceComponentSchemaSchema = z.object({
   slots: z.array(shoelaceSlotSchema),
   events: z.array(shoelaceEventSchema),
   parts: z.array(z.string().min(1)),
+  /** Whether this component must carry an accessible name (interactive controls) vs a container. */
+  requiresAccessibleName: z.boolean(),
 });
 
 export type ShoelacePropKind = z.infer<typeof shoelacePropKindSchema>;
@@ -107,6 +111,8 @@ export interface DefineComponentSchemaInput {
   }>;
   parts: string[];
   libraryVersion?: string;
+  /** Defaults to `true`; set `false` for container components that need no accessible name. */
+  requiresAccessibleName?: boolean;
 }
 
 export type ShoelaceEventKind = z.infer<typeof shoelaceEventKindSchema>;
@@ -128,6 +134,7 @@ export function defineComponentSchema(input: DefineComponentSchemaInput): Shoela
       ),
     ),
     parts: input.parts,
+    requiresAccessibleName: input.requiresAccessibleName ?? true,
   });
 }
 
@@ -141,6 +148,10 @@ export function getProp(schema: ShoelaceComponentSchema, name: string): Shoelace
 
 export function hasDefaultSlot(schema: ShoelaceComponentSchema): boolean {
   return schema.slots.some((slot) => slot.name === DEFAULT_SLOT_NAME);
+}
+
+export function getDefaultSlotLabel(schema: ShoelaceComponentSchema): string {
+  return schema.slots.find((slot) => slot.name === DEFAULT_SLOT_NAME)?.label ?? 'Label';
 }
 
 /** Return `value` (case-insensitively matched to a canonical enum value) when valid, else `null`. */

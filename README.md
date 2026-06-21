@@ -49,7 +49,7 @@ tools/
   figma-import/       Mock Figma fixture → normalized ComponentIntent
   component-mapper/   Intent → deterministic, schema-driven Shoelace mapping
   compliance-agent/   Mapping + intent → structured compliance findings
-examples/             Mock Figma fixtures (Button + Input now; Card/Badge/Dialog/Spinner planned)
+examples/             Mock Figma fixtures (Button, Input, Card now; Badge/Dialog/Spinner planned)
 docs/                 Astro + Starlight documentation site with ADRs
 agents/               DesignRail-specific skill files
 hooks/                Repeatable local quality, secrets, and mock-mode checks
@@ -65,6 +65,7 @@ pnpm test
 pnpm graphql:check
 pnpm db:check
 pnpm compliance:review
+pnpm design:verify
 pnpm mock-mode:check
 pnpm secrets:check
 pnpm release:plan
@@ -76,6 +77,7 @@ Design workflow entry points:
 ```sh
 pnpm design:import
 pnpm design:map
+pnpm design:verify
 ```
 
 The default workflow is credential-free and deterministic. Optional Figma API/MCP or AI-service integrations should be explicit additions, not requirements for local development.

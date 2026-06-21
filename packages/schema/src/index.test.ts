@@ -6,6 +6,7 @@ import {
   coerceEnumValue,
   defineProp,
   getComponentSchema,
+  getDefaultSlotLabel,
   getProp,
   hasDefaultSlot,
   listComponentSchemas,
@@ -18,10 +19,10 @@ describe('@designrail/schema', () => {
     expect(PACKAGE_NAME).toBe('@designrail/schema');
   });
 
-  it('registers valid Button and Input schemas keyed by component type', () => {
+  it('registers valid Button, Input, and Card schemas keyed by component type', () => {
     const schemas = listComponentSchemas();
 
-    expect(schemas.map((schema) => schema.componentType)).toEqual(['Button', 'Input']);
+    expect(schemas.map((schema) => schema.componentType)).toEqual(['Button', 'Input', 'Card']);
 
     for (const schema of schemas) {
       expect(() => shoelaceComponentSchemaSchema.parse(schema)).not.toThrow();
@@ -32,17 +33,29 @@ describe('@designrail/schema', () => {
   it('resolves schemas by intent component type', () => {
     expect(getComponentSchema('Button')?.tag).toBe('sl-button');
     expect(getComponentSchema('Input')?.tag).toBe('sl-input');
+    expect(getComponentSchema('Card')?.tag).toBe('sl-card');
     expect(getComponentSchema('Unknown')).toBeNull();
+  });
+
+  it('marks interactive controls as requiring an accessible name and containers as not', () => {
+    expect(getComponentSchema('Button')?.requiresAccessibleName).toBe(true);
+    expect(getComponentSchema('Input')?.requiresAccessibleName).toBe(true);
+    expect(getComponentSchema('Card')?.requiresAccessibleName).toBe(false);
   });
 
   it('treats Button as having a default slot and Input as childless', () => {
     const button = getComponentSchema('Button');
     const input = getComponentSchema('Input');
+    const card = getComponentSchema('Card');
 
     expect(button).not.toBeNull();
     expect(input).not.toBeNull();
+    expect(card).not.toBeNull();
     expect(hasDefaultSlot(button!)).toBe(true);
     expect(hasDefaultSlot(input!)).toBe(false);
+    expect(hasDefaultSlot(card!)).toBe(true);
+    expect(getDefaultSlotLabel(button!)).toBe('Label');
+    expect(getDefaultSlotLabel(card!)).toBe('Content');
   });
 
   it('records diverging export names for input help text', () => {

@@ -31,7 +31,7 @@ export function reviewCompliance({ intent, mapping }: ReviewComplianceInput): Co
   const slug = deriveSlug(mapping.id);
   const findings: ComplianceFinding[] = [];
 
-  findings.push(buildAccessibilityFinding(slug, mapping.id, intent));
+  findings.push(buildAccessibilityFinding(slug, mapping.id, intent, schema));
 
   const variantGaps = resolveVariantGaps(schema, intent.variants);
   if (variantGaps.length > 0) {
@@ -89,11 +89,16 @@ export function reviewCompliance({ intent, mapping }: ReviewComplianceInput): Co
     }),
   );
 
+  const hasEvents = Object.keys(mapping.mappedEvents).length > 0;
   findings.push(
     finding(slug, mapping.id, 'REACT_READINESS', 'react-readiness', {
       severity: 'INFO',
-      message: `Shoelace ${mapping.targetComponent} events are ready for React binding.`,
-      remediation: 'Bind custom Shoelace events with their React handler names when exporting.',
+      message: hasEvents
+        ? `Shoelace ${mapping.targetComponent} events are ready for React binding.`
+        : `Shoelace ${mapping.targetComponent} has no custom events to bind.`,
+      remediation: hasEvents
+        ? 'Bind custom Shoelace events with their React handler names when exporting.'
+        : 'No custom events to wire; review interactive children separately.',
       path: 'mappedEvents',
       blocking: false,
     }),
@@ -106,7 +111,20 @@ function buildAccessibilityFinding(
   slug: string,
   mappingId: string,
   intent: ComponentIntent,
+  schema: ShoelaceComponentSchema | null,
 ): ComplianceFinding {
+  // Containers (e.g. Card) carry no accessible name of their own; only flag interactive controls.
+  if (schema?.requiresAccessibleName === false) {
+    return finding(slug, mappingId, 'ACCESSIBILITY', 'accessibility', {
+      severity: 'INFO',
+      message: 'Container component; no accessible name required.',
+      remediation:
+        'Ensure any interactive children inside the container are individually labelled.',
+      path: 'accessibility',
+      blocking: false,
+    });
+  }
+
   const label = intent.accessibility.label;
 
   if (label === undefined || label.length === 0) {

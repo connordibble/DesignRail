@@ -1,6 +1,8 @@
 import {
   buttonComponentIntentFixture,
   buttonComponentMappingFixture,
+  cardComponentIntentFixture,
+  cardComponentMappingFixture,
   componentMappingSchema,
   inputComponentIntentFixture,
   inputComponentMappingFixture,
@@ -22,6 +24,12 @@ describe('@designrail/component-mapper', () => {
   it('derives the canonical Shoelace mapping for the Input intent', () => {
     expect(mapComponent({ intent: inputComponentIntentFixture })).toEqual(
       inputComponentMappingFixture,
+    );
+  });
+
+  it('derives the canonical Shoelace mapping for the Card intent (no props, container slot)', () => {
+    expect(mapComponent({ intent: cardComponentIntentFixture })).toEqual(
+      cardComponentMappingFixture,
     );
   });
 

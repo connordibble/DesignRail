@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import {
   buttonComponentMappingFixture,
   buttonExampleFixture,
+  cardExampleFixture,
   FIXTURE_TIMESTAMP,
   inputExampleFixture,
 } from '@designrail/shared';
@@ -53,13 +54,20 @@ describe('DesignRail repositories', () => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('lists the seeded Button and Input examples, intents, mappings, and findings', () => {
-    expect(listExamples(client)).toEqual([buttonExampleFixture, inputExampleFixture]);
+  it('lists the seeded examples ordered by name, with intents, mappings, and findings', () => {
+    expect(listExamples(client)).toEqual([
+      buttonExampleFixture,
+      cardExampleFixture,
+      inputExampleFixture,
+    ]);
     expect(getComponentIntentByExampleId(client, buttonExampleFixture.id)?.componentType).toBe(
       'Button',
     );
     expect(getComponentIntentByExampleId(client, inputExampleFixture.id)?.componentType).toBe(
       'Input',
+    );
+    expect(getComponentIntentByExampleId(client, cardExampleFixture.id)?.componentType).toBe(
+      'Card',
     );
     expect(getMappingByExampleId(client, buttonExampleFixture.id)).toEqual(
       buttonComponentMappingFixture,
@@ -101,12 +109,12 @@ describe('DesignRail repositories', () => {
     });
 
     expect(listReviewDecisions(client)).toEqual([decision]);
-    // Button is accepted; the seeded Input mapping has no decision yet, so it counts as pending.
+    // Button is accepted; the seeded Input and Card mappings have no decision yet, so they pend.
     expect(getDashboardMetrics(client)).toMatchObject({
       acceptedMappings: 1,
       rejectedMappings: 0,
       editedMappings: 0,
-      pendingMappings: 1,
+      pendingMappings: 2,
     });
   });
 

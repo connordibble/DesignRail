@@ -22,7 +22,7 @@ export const buttonSchema: ShoelaceComponentSchema = defineComponentSchema({
     }),
     defineProp({ name: 'disabled', kind: 'boolean', default: false, intentKeys: ['disabled'] }),
   ],
-  slots: [{ name: 'default', description: 'The button label.' }],
+  slots: [{ name: 'default', label: 'Label', description: 'The button label.' }],
   events: [
     // Button click is the native DOM event; Shoelace does not emit a custom click.
     { designEvent: 'click', kind: 'native', reactHandler: 'onClick' },

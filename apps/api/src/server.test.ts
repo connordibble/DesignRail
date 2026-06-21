@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import {
   buttonComponentMappingFixture,
   buttonExampleFixture,
+  cardExampleFixture,
   inputExampleFixture,
 } from '@designrail/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -70,6 +71,10 @@ describe('DesignRail GraphQL API', () => {
       {
         id: buttonExampleFixture.id,
         name: buttonExampleFixture.name,
+      },
+      {
+        id: cardExampleFixture.id,
+        name: cardExampleFixture.name,
       },
       {
         id: inputExampleFixture.id,
@@ -293,12 +298,12 @@ describe('DesignRail GraphQL API', () => {
     `);
 
     expect(body.errors).toBeUndefined();
-    // Button is edited; the seeded Input mapping has no decision yet, so it counts as pending.
+    // Button is edited; the seeded Input and Card mappings have no decision yet, so they pend.
     expect(body.data?.dashboardMetrics).toEqual({
       acceptedMappings: 0,
       rejectedMappings: 0,
       editedMappings: 1,
-      pendingMappings: 1,
+      pendingMappings: 2,
     });
   });
 

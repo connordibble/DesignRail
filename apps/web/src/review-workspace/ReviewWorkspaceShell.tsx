@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
   getComponentSchema,
+  getDefaultSlotLabel,
   listEditableProps,
   type ShoelaceComponentSchema,
   type ShoelaceProp,
@@ -511,7 +512,7 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
                 {mapping.targetComponent}
               </span>
             </div>
-            <DefinitionList items={buildMappingDisplayItems(mapping)} />
+            <DefinitionList items={buildMappingDisplayItems(mapping, schema)} />
             <CodeBlock label="mappedProps" value={formatJson(mapping.mappedProps)} />
             <p className="text-dr-small text-dr-muted">{mapping.rationale}</p>
           </div>
@@ -608,7 +609,7 @@ function MappingEditForm({
           <TextField
             disabled={disabled}
             id="mapping-edit-slot-label"
-            label="Label"
+            label={getDefaultSlotLabel(schema)}
             onChange={(value) => updateField('slotLabel', value)}
             value={draft.slotLabel}
           />
@@ -1198,13 +1199,16 @@ function getDecisionStatus(decision: ReviewDecisionResult | null): ReviewDecisio
   return decision?.status ?? 'PENDING';
 }
 
-/** Build the read-only mapping display rows directly from the mapped data (schema-agnostic). */
-function buildMappingDisplayItems(mapping: ComponentMappingResult): Array<[string, string]> {
+/** Build the read-only mapping display rows directly from the mapped data. */
+function buildMappingDisplayItems(
+  mapping: ComponentMappingResult,
+  schema: ShoelaceComponentSchema | null,
+): Array<[string, string]> {
   const items: Array<[string, string]> = [];
   const slot = mapping.mappedSlots['default'];
 
   if (typeof slot === 'string') {
-    items.push(['Label', slot]);
+    items.push([schema === null ? 'Label' : getDefaultSlotLabel(schema), slot]);
   }
 
   for (const [key, value] of Object.entries(mapping.mappedProps)) {

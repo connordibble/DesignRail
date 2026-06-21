@@ -6,6 +6,7 @@ export const PACKAGE_NAME = '@designrail/shared';
 export const DESIGNRAIL_CONTRACT_VERSION = 'c1';
 export const BUTTON_EXAMPLE_ID = 'example.button.primary';
 export const INPUT_EXAMPLE_ID = 'example.input.email';
+export const CARD_EXAMPLE_ID = 'example.card.basic';
 
 export type JsonValue =
   | string
@@ -611,6 +612,108 @@ export const inputComplianceFindingsFixture: ComplianceFinding[] = [
   },
 ];
 
+export const cardExampleFixture: Example = {
+  id: CARD_EXAMPLE_ID,
+  name: 'Card',
+  componentType: 'Card',
+  fixturePath: 'examples/figma-input.card.json',
+  source: 'MOCK',
+  status: 'READY',
+};
+
+export const cardComponentIntentFixture: ComponentIntent = {
+  id: 'intent.card.basic',
+  exampleId: cardExampleFixture.id,
+  source: 'MOCK',
+  sourceRefs: [
+    {
+      type: 'MOCK_FILE',
+      id: cardExampleFixture.fixturePath,
+      name: 'Product Card',
+    },
+  ],
+  componentName: 'Card',
+  componentType: 'Card',
+  summary: 'A content card presenting a short product blurb.',
+  props: {
+    content: 'Wireless headphones with 30-hour battery life.',
+  },
+  variants: [],
+  states: ['default'],
+  tokenRefs: [
+    {
+      name: 'radius.card',
+      value: '12px',
+      target: '--border-radius',
+    },
+  ],
+  accessibility: {
+    role: 'group',
+    required: false,
+  },
+  createdAt: FIXTURE_TIMESTAMP,
+};
+
+export const cardComponentMappingFixture: ComponentMapping = {
+  id: 'mapping.card.basic.shoelace',
+  intentId: cardComponentIntentFixture.id,
+  targetLibrary: 'SHOELACE',
+  targetComponent: 'sl-card',
+  mappedProps: {},
+  mappedEvents: {},
+  mappedSlots: {
+    default: 'Wireless headphones with 30-hour battery life.',
+  },
+  mappedTokens: [
+    {
+      name: 'radius.card',
+      target: '--border-radius',
+    },
+  ],
+  confidence: 'HIGH',
+  rationale:
+    'Design intent maps to Shoelace sl-card: no props. Default slot text "Wireless headphones with 30-hour battery life.".',
+  fallbackNotes:
+    'All design intent resolved cleanly; adjust Shoelace token aliases if brand values diverge.',
+  createdAt: FIXTURE_TIMESTAMP,
+};
+
+export const cardComplianceFindingsFixture: ComplianceFinding[] = [
+  {
+    id: 'finding.card.basic.accessibility',
+    mappingId: cardComponentMappingFixture.id,
+    category: 'ACCESSIBILITY',
+    severity: 'INFO',
+    message: 'Container component; no accessible name required.',
+    remediation: 'Ensure any interactive children inside the container are individually labelled.',
+    path: 'accessibility',
+    blocking: false,
+    createdAt: FIXTURE_TIMESTAMP,
+  },
+  {
+    id: 'finding.card.basic.documentation-readiness',
+    mappingId: cardComponentMappingFixture.id,
+    category: 'DOCUMENTATION_READINESS',
+    severity: 'INFO',
+    message: 'Documentation will use the component summary; no extended description provided.',
+    remediation: 'Add an accessibility description to enrich generated documentation.',
+    path: 'summary',
+    blocking: false,
+    createdAt: FIXTURE_TIMESTAMP,
+  },
+  {
+    id: 'finding.card.basic.react-readiness',
+    mappingId: cardComponentMappingFixture.id,
+    category: 'REACT_READINESS',
+    severity: 'INFO',
+    message: 'Shoelace sl-card has no custom events to bind.',
+    remediation: 'No custom events to wire; review interactive children separately.',
+    path: 'mappedEvents',
+    blocking: false,
+    createdAt: FIXTURE_TIMESTAMP,
+  },
+];
+
 /** Bundled, pipeline-verified seed data for one reviewable example. */
 export interface SeedExample {
   example: Example;
@@ -635,5 +738,11 @@ export const EXAMPLE_REGISTRY: SeedExample[] = [
     intent: inputComponentIntentFixture,
     mapping: inputComponentMappingFixture,
     findings: inputComplianceFindingsFixture,
+  },
+  {
+    example: cardExampleFixture,
+    intent: cardComponentIntentFixture,
+    mapping: cardComponentMappingFixture,
+    findings: cardComplianceFindingsFixture,
   },
 ];

@@ -6,6 +6,10 @@ import {
   buttonComponentIntentFixture,
   buttonComponentMappingFixture,
   buttonExampleFixture,
+  cardComplianceFindingsFixture,
+  cardComponentIntentFixture,
+  cardComponentMappingFixture,
+  cardExampleFixture,
   createEmptyDashboardMetrics,
   htmlExportFixture,
   INPUT_EXAMPLE_ID,
@@ -45,10 +49,17 @@ const REVIEW_WORKSPACE_VARIABLES = {
   exampleId: BUTTON_EXAMPLE_ID,
 };
 
-const DEFAULT_EXAMPLES: ExampleResult[] = [buttonExampleFixture, inputExampleFixture];
+const DEFAULT_EXAMPLES: ExampleResult[] = [
+  buttonExampleFixture,
+  cardExampleFixture,
+  inputExampleFixture,
+];
 
 function toIntentResult(
-  intent: typeof buttonComponentIntentFixture | typeof inputComponentIntentFixture,
+  intent:
+    | typeof buttonComponentIntentFixture
+    | typeof inputComponentIntentFixture
+    | typeof cardComponentIntentFixture,
 ): ComponentIntentResult {
   return {
     ...intent,
@@ -71,7 +82,10 @@ function toIntentResult(
 }
 
 function toMappingResult(
-  mapping: typeof buttonComponentMappingFixture | typeof inputComponentMappingFixture,
+  mapping:
+    | typeof buttonComponentMappingFixture
+    | typeof inputComponentMappingFixture
+    | typeof cardComponentMappingFixture,
 ): ComponentMappingResult {
   return {
     ...mapping,
@@ -104,6 +118,15 @@ const INPUT_WORKSPACE: ReviewWorkspace = {
   intent: toIntentResult(inputComponentIntentFixture),
   mapping: toMappingResult(inputComponentMappingFixture),
   complianceFindings: toFindingResults(inputComplianceFindingsFixture),
+  latestDecision: null,
+  exports: [],
+};
+
+const CARD_WORKSPACE: ReviewWorkspace = {
+  example: cardExampleFixture,
+  intent: toIntentResult(cardComponentIntentFixture),
+  mapping: toMappingResult(cardComponentMappingFixture),
+  complianceFindings: toFindingResults(cardComplianceFindingsFixture),
   latestDecision: null,
   exports: [],
 };
@@ -250,6 +273,65 @@ describe('<App />', () => {
     await user.click(screen.getByRole('button', { name: 'HTML' }));
 
     expect(await screen.findByText(inputExport.content)).toBeInTheDocument();
+  });
+
+  it('accepts and exports the Card mapping with content slot language', async () => {
+    const user = userEvent.setup();
+    const acceptedCardDecision = createDecision('ACCEPTED', {
+      id: 'decision.card.accepted',
+      mappingId: cardComponentMappingFixture.id,
+    });
+    const cardExport: ExportResult = {
+      id: 'export.card.accepted.html',
+      mappingId: cardComponentMappingFixture.id,
+      format: 'HTML',
+      content: '<sl-card>Wireless headphones with 30-hour battery life.</sl-card>',
+      createdAt: '2026-01-01T00:00:02.000Z',
+    };
+    const cardResult = (overrides: Partial<ReviewWorkspace> = {}): ReviewWorkspaceQuery => ({
+      reviewWorkspace: { ...CARD_WORKSPACE, ...overrides },
+      dashboardMetrics: createEmptyDashboardMetrics(),
+    });
+
+    renderApp(
+      [
+        createWorkspaceMock(POPULATED_RESULT),
+        createWorkspaceMock(cardResult(), { exampleId: cardExampleFixture.id }),
+        createSaveDecisionMock({
+          input: {
+            mappingId: cardComponentMappingFixture.id,
+            status: 'ACCEPTED',
+            reviewerLabel: 'Local reviewer',
+          },
+          decision: acceptedCardDecision,
+        }),
+        createWorkspaceMock(cardResult({ latestDecision: acceptedCardDecision }), {
+          exampleId: cardExampleFixture.id,
+        }),
+        createExportMock({
+          input: { mappingId: cardComponentMappingFixture.id, format: 'HTML' },
+          result: cardExport,
+        }),
+        createWorkspaceMock(
+          cardResult({ latestDecision: acceptedCardDecision, exports: [cardExport] }),
+          { exampleId: cardExampleFixture.id },
+        ),
+      ],
+      [cardExampleFixture],
+    );
+
+    expect(await screen.findByText(cardComponentIntentFixture.summary)).toBeInTheDocument();
+    expect(screen.getByLabelText('Content')).toHaveValue(
+      'Wireless headphones with 30-hour battery life.',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Accept' }));
+    expect(await screen.findAllByText('ACCEPTED')).not.toHaveLength(0);
+
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    await user.click(screen.getByRole('button', { name: 'HTML' }));
+
+    expect(await screen.findByText(cardExport.content)).toBeInTheDocument();
   });
 
   it('navigates between dashboard, review, exports, and schema tabs', async () => {
