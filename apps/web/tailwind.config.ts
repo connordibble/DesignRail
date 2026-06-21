@@ -9,6 +9,7 @@ const config: Config = {
           accent: 'var(--dr-color-accent)',
           'accent-hover': 'var(--dr-color-accent-hover)',
           'accent-soft': 'var(--dr-color-accent-soft)',
+          'on-accent': 'var(--dr-color-on-accent)',
           canvas: 'var(--dr-color-canvas)',
           shell: 'var(--dr-color-shell)',
           panel: 'var(--dr-color-panel)',
@@ -41,6 +42,11 @@ const config: Config = {
         'dr-sm': 'var(--dr-radius-sm)',
         'dr-md': 'var(--dr-radius-md)',
         'dr-lg': 'var(--dr-radius-lg)',
+        'dr-xl': 'var(--dr-radius-xl)',
+      },
+      boxShadow: {
+        'dr-sm': 'var(--dr-shadow-sm)',
+        'dr-pop': 'var(--dr-shadow-pop)',
       },
       fontFamily: {
         ui: 'var(--dr-font-ui)',

@@ -7,7 +7,8 @@
     --dr-color-accent: #6f7dfb;
     --dr-color-accent-hover: #8490ff;
     --dr-color-accent-soft: #20264f;
-    --dr-color-canvas: #08090b;
+    --dr-color-on-accent: #ffffff;
+    --dr-color-canvas: #0a0c10;
     --dr-color-shell: #0d0f12;
     --dr-color-panel: #12151a;
     --dr-color-panel-raised: #171b22;
@@ -31,6 +32,9 @@
     --dr-radius-sm: 6px;
     --dr-radius-md: 8px;
     --dr-radius-lg: 10px;
+    --dr-radius-xl: 12px;
+    --dr-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --dr-shadow-pop: 0 8px 24px -12px rgb(0 0 0 / 0.65);
     --dr-space-xxs: 4px;
     --dr-space-xs: 8px;
     --dr-space-sm: 12px;
@@ -61,6 +65,17 @@
   textarea,
   [tabindex]:not([tabindex='-1']) {
     outline-color: var(--dr-color-accent);
-    outline-offset: 3px;
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

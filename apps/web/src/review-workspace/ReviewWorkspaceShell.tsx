@@ -33,6 +33,7 @@ import {
   type SaveReviewDecisionMutation,
   type SaveReviewDecisionMutationVariables,
 } from '../graphql/operations.js';
+import { Button } from '../ui/Button.js';
 
 import {
   MAPPING_CONFIDENCE_OPTIONS,
@@ -125,8 +126,7 @@ export function ReviewWorkspaceShell({
   const decisionTone = decisionStatus === null ? 'neutral' : STATUS_TONES[decisionStatus];
   const decisionLabel = decisionStatus ?? (loading ? 'Loading' : 'Unavailable');
   const shellTitle = workspace?.example.name ?? 'Workspace';
-  const exampleName =
-    workspace?.example.name ?? (loading ? 'Loading example' : 'Requested example');
+  const headerExampleId = workspace?.example.id ?? exampleId;
   const tabPanelId = getTabPanelId(activeTab);
   const workspaceBody = renderWorkspaceBody({
     activeTab,
@@ -155,29 +155,31 @@ export function ReviewWorkspaceShell({
 
   return (
     <main className="min-h-screen bg-dr-canvas font-ui text-dr-body text-dr-text">
-      <div className="grid lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="grid lg:grid-cols-[17rem_minmax(0,1fr)]">
         <aside className="border-b border-dr-border bg-dr-shell lg:border-b-0 lg:border-r">
-          <div className="flex h-full flex-col gap-dr-lg p-dr-lg">
+          <div className="flex h-full flex-col gap-dr-md p-dr-lg">
             <div className="flex items-start justify-between gap-dr-sm lg:block">
               <div>
-                <p className="text-dr-caption font-semibold text-dr-subtle">DesignRail</p>
+                <p className="text-dr-caption font-medium text-dr-subtle">DesignRail</p>
                 <p className="mt-dr-xxs text-dr-section-title font-semibold text-dr-text">
                   Review Console
                 </p>
               </div>
-              <StatusBadge label="Mock mode" tone="info" />
+              <span className="mt-dr-sm inline-flex lg:mt-dr-xs">
+                <MetaTag label="Mock mode" tone="info" />
+              </span>
             </div>
 
-            <nav aria-label="Workspace areas" className="grid gap-dr-xs" role="tablist">
+            <nav aria-label="Workspace areas" className="grid gap-dr-xxs" role="tablist">
               {TABS.map((tab) => (
                 <button
                   aria-controls={activeTab === tab ? getTabPanelId(tab) : undefined}
                   aria-selected={activeTab === tab}
                   className={cx(
-                    'rounded-dr-sm border px-dr-sm py-dr-xs text-left text-dr-small font-medium transition-colors focus-visible:outline focus-visible:outline-2',
+                    'rounded-dr-xs px-dr-sm py-dr-xs text-left text-dr-small font-medium transition-colors focus-visible:outline focus-visible:outline-2',
                     activeTab === tab
-                      ? 'border-dr-accent bg-dr-accent-soft text-dr-text'
-                      : 'border-transparent text-dr-muted hover:border-dr-border hover:bg-dr-panel',
+                      ? 'bg-dr-panel text-dr-text ring-1 ring-inset ring-dr-border'
+                      : 'text-dr-muted hover:bg-dr-panel hover:text-dr-text',
                   )}
                   id={getTabId(tab)}
                   key={tab}
@@ -196,11 +198,11 @@ export function ReviewWorkspaceShell({
             </nav>
 
             <section aria-label="Examples" className="grid gap-dr-xs">
-              <p className="text-dr-caption font-semibold uppercase text-dr-subtle">Examples</p>
+              <p className="text-dr-caption font-medium text-dr-subtle">Examples</p>
               {examples.length === 0 ? (
                 <EmptyLine text="No examples available." />
               ) : (
-                <ul className="grid gap-dr-xs">
+                <ul className="grid gap-dr-xxs">
                   {examples.map((example) => {
                     const isSelected = example.id === selectedExampleId;
 
@@ -209,25 +211,29 @@ export function ReviewWorkspaceShell({
                         <button
                           aria-current={isSelected}
                           className={cx(
-                            'flex w-full items-center justify-between gap-dr-sm rounded-dr-sm border px-dr-sm py-dr-xs text-left transition-colors focus-visible:outline focus-visible:outline-2',
+                            'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-dr-sm rounded-dr-xs px-dr-sm py-dr-xs text-left transition-colors focus-visible:outline focus-visible:outline-2',
                             isSelected
-                              ? 'border-dr-accent bg-dr-accent-soft text-dr-text'
-                              : 'border-dr-border bg-dr-panel text-dr-muted hover:border-dr-border-strong hover:bg-dr-panel-hover',
+                              ? 'bg-dr-panel text-dr-text ring-1 ring-inset ring-dr-border'
+                              : 'text-dr-muted hover:bg-dr-panel-hover hover:text-dr-text',
                             example.status === 'READY' ? '' : 'opacity-60',
                           )}
                           disabled={onSelectExample === undefined || example.status !== 'READY'}
                           onClick={() => onSelectExample?.(example.id)}
                           type="button"
                         >
-                          <span>
-                            <span className="block text-dr-small font-semibold text-dr-text">
+                          <span className="min-w-0">
+                            <span className="block truncate text-dr-small font-semibold text-dr-text">
                               {example.name}
                             </span>
-                            <span className="mt-dr-xxs block font-mono text-dr-caption text-dr-subtle">
-                              {example.componentType}
+                            <span className="mt-dr-xxs flex min-w-0 items-center gap-dr-xs text-dr-caption text-dr-subtle">
+                              <span className="truncate font-mono">{example.componentType}</span>
+                              <span aria-hidden="true">·</span>
+                              <span>{example.source}</span>
                             </span>
                           </span>
-                          <StatusDot tone={isSelected ? 'info' : 'neutral'} />
+                          {example.status === 'DISABLED' ? (
+                            <MetaTag label="Disabled" tone="neutral" />
+                          ) : null}
                         </button>
                       </li>
                     );
@@ -235,46 +241,30 @@ export function ReviewWorkspaceShell({
                 </ul>
               )}
             </section>
-
-            <section aria-label="Selected example" className="grid gap-dr-xs">
-              <p className="text-dr-caption font-semibold uppercase text-dr-subtle">Selected</p>
-              <div className="rounded-dr-md border border-dr-border bg-dr-panel p-dr-sm">
-                <div className="flex items-center justify-between gap-dr-sm">
-                  <div>
-                    <p className="text-dr-small font-semibold text-dr-text">{exampleName}</p>
-                    <p className="mt-dr-xxs font-mono text-dr-caption text-dr-subtle">
-                      {workspace?.example.id ?? exampleId}
-                    </p>
-                  </div>
-                  <StatusDot tone={decisionTone} />
-                </div>
-                <div className="mt-dr-sm flex flex-wrap gap-dr-xs">
-                  {workspace === null ? null : (
-                    <StatusBadge label={workspace.example.source} tone="info" />
-                  )}
-                  <StatusBadge label={decisionLabel} tone={decisionTone} />
-                </div>
-              </div>
-            </section>
           </div>
         </aside>
 
         <section className="min-w-0 bg-dr-canvas">
           <header className="border-b border-dr-border bg-dr-shell px-dr-lg py-dr-md">
-            <div className="flex flex-col gap-dr-md xl:flex-row xl:items-center xl:justify-between">
-              <div>
-                <p className="text-dr-caption font-semibold uppercase text-dr-subtle">
-                  Human review
-                </p>
-                <h1 className="mt-dr-xxs text-dr-page-title font-semibold text-dr-text">
-                  {shellTitle}
-                </h1>
-              </div>
-              <div className="flex flex-wrap gap-dr-xs">
-                <StatusBadge label="GraphQL contract" tone="neutral" />
+            <p className="text-dr-caption font-medium text-dr-subtle">Human review</p>
+            <div className="mt-dr-xxs flex flex-wrap items-center gap-dr-sm">
+              <h1 className="text-dr-page-title font-semibold text-dr-text">{shellTitle}</h1>
+              <span className="flex min-w-0 flex-wrap items-center gap-dr-xs text-dr-caption text-dr-subtle">
+                {workspace === null ? null : (
+                  <>
+                    <span className="font-mono text-dr-muted">
+                      {workspace.example.componentType}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>{workspace.example.source}</span>
+                    <span aria-hidden="true">·</span>
+                  </>
+                )}
+                <span className="break-all font-mono">{headerExampleId}</span>
+              </span>
+              <span className="xl:ml-auto">
                 <StatusBadge label={decisionLabel} tone={decisionTone} />
-                <StatusBadge label={`Exports ${metrics.exportsCreated}`} tone="success" />
-              </div>
+              </span>
             </div>
           </header>
 
@@ -391,7 +381,7 @@ function DashboardPanel({
               className="rounded-dr-sm border border-dr-border bg-dr-panel-raised p-dr-sm"
               key={item.key}
             >
-              <p className="text-dr-caption font-semibold text-dr-subtle">{item.label}</p>
+              <p className="text-dr-caption font-medium text-dr-subtle">{item.label}</p>
               <p className="mt-dr-xs text-dr-page-title font-semibold text-dr-text">
                 {metrics[item.key]}
               </p>
@@ -450,6 +440,7 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
       ? null
       : createMappingEditDraft(schema, mapping, workspace.latestDecision),
   );
+  const [isEditing, setIsEditing] = useState(false);
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [saveReviewDecision, saveDecisionState] = useMutation<
     SaveReviewDecisionMutation,
@@ -477,119 +468,217 @@ function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactElement {
     }
   }
 
+  function cancelEdit(): void {
+    setDraft(
+      schema === null || mapping === null
+        ? null
+        : createMappingEditDraft(schema, mapping, workspace.latestDecision),
+    );
+    setSaveErrorMessage(null);
+    setIsEditing(false);
+  }
+
   return (
-    <div className="grid gap-dr-md xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_22rem]">
-      <Panel title="Source Intent">
-        {intent === null ? (
-          <EmptyLine text="No normalized component intent is available." />
-        ) : (
-          <div className="grid gap-dr-md">
-            <p className="text-dr-body text-dr-text">{intent.summary}</p>
-            <DefinitionList
-              items={[
-                ['Component', intent.componentName],
-                ['Type', intent.componentType],
-                ['Source', intent.source],
-                ['Accessibility', intent.accessibility.label ?? 'No accessible label'],
-              ]}
-            />
-            <PillGroup label="Variants" values={intent.variants} />
-            <PillGroup label="States" values={intent.states} />
-            <TokenList tokens={intent.tokenRefs} />
-          </div>
-        )}
-      </Panel>
-
-      <Panel title="Recommended Mapping">
-        {mapping === null ? (
-          <EmptyLine text="No Shoelace mapping is available." />
-        ) : (
-          <div className="grid gap-dr-md">
-            <div className="flex flex-wrap items-center gap-dr-xs">
-              <StatusBadge label={mapping.targetLibrary} tone="neutral" />
-              <StatusBadge label={mapping.confidence} tone="success" />
-              <span className="font-mono text-dr-section-title text-dr-text">
-                {mapping.targetComponent}
-              </span>
-            </div>
-            <DefinitionList items={buildMappingDisplayItems(mapping, schema)} />
-            <CodeBlock label="mappedProps" value={formatJson(mapping.mappedProps)} />
-            <p className="text-dr-small text-dr-muted">{mapping.rationale}</p>
-          </div>
-        )}
-      </Panel>
-
-      <aside className="grid content-start gap-dr-md">
-        <Panel title="Decision">
-          <div className="grid gap-dr-sm">
-            <div className="flex items-center justify-between gap-dr-sm">
-              <span className="text-dr-small text-dr-muted">Current status</span>
-              <StatusBadge label={decisionStatus} tone={STATUS_TONES[decisionStatus]} />
-            </div>
-
-            {schema === null || mapping === null || draft === null ? (
-              <EmptyLine text="No schema-backed mapping is available for a review decision." />
-            ) : (
-              <MappingEditForm
-                disabled={isSavingDecision}
-                draft={draft}
-                onChange={setDraft}
-                onSaveAccept={() => persistDecision('ACCEPTED')}
-                onSaveEdit={() => persistDecision('EDITED')}
-                onSaveReject={() => persistDecision('REJECTED')}
-                schema={schema}
-              />
-            )}
-
-            {isSavingDecision ? (
-              <p aria-live="polite" className="text-dr-small text-dr-subtle" role="status">
-                Saving review decision.
-              </p>
-            ) : null}
-            {saveErrorMessage !== null ? (
-              <InlineAlert message={saveErrorMessage} title="Decision failed" />
-            ) : null}
-
-            {workspace.latestDecision === null ? (
-              <EmptyLine text="Awaiting human review." />
-            ) : (
+    <div className="grid gap-dr-lg">
+      <div className="grid gap-dr-md xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_20rem]">
+        <Panel title="Source Intent">
+          {intent === null ? (
+            <EmptyLine text="No normalized component intent is available." />
+          ) : (
+            <div className="grid gap-dr-md">
+              <p className="text-dr-body text-dr-text">{intent.summary}</p>
               <DefinitionList
                 items={[
-                  ['Reviewer', workspace.latestDecision.reviewerLabel],
-                  ['Saved', workspace.latestDecision.createdAt],
-                  ['Notes', workspace.latestDecision.notes ?? 'No notes'],
+                  ['Component', intent.componentName],
+                  ['Type', intent.componentType],
+                  ['Source', intent.source],
+                  ['Accessibility', intent.accessibility.label ?? 'No accessible label'],
                 ]}
               />
-            )}
-          </div>
+              <PillGroup label="Variants" values={intent.variants} />
+              <PillGroup label="States" values={intent.states} />
+              <TokenList tokens={intent.tokenRefs} />
+            </div>
+          )}
         </Panel>
 
-        <CompliancePanel findings={workspace.complianceFindings} />
-      </aside>
+        <Panel title="Recommended Mapping">
+          {mapping === null ? (
+            <EmptyLine text="No Shoelace mapping is available." />
+          ) : (
+            <div className="grid gap-dr-md">
+              <div className="flex flex-wrap items-center gap-dr-sm">
+                <span className="font-mono text-dr-section-title text-dr-text">
+                  {mapping.targetComponent}
+                </span>
+                <StatusBadge label={mapping.targetLibrary} tone="neutral" />
+                <StatusBadge label={`${mapping.confidence} confidence`} tone="success" />
+              </div>
+              <DefinitionList items={buildMappingDisplayItems(mapping, schema)} />
+              <CodeBlock label="mappedProps" value={formatJson(mapping.mappedProps)} />
+              <p className="text-dr-small text-dr-muted">{mapping.rationale}</p>
+            </div>
+          )}
+        </Panel>
+
+        <aside className="xl:sticky xl:top-dr-lg xl:self-start">
+          <Panel className="shadow-dr-sm" density="compact" title="Decision">
+            <div className="grid gap-dr-md">
+              <RailStatusRows
+                complianceFindings={workspace.complianceFindings}
+                decisionStatus={decisionStatus}
+              />
+
+              {schema === null || mapping === null || draft === null ? (
+                <EmptyLine text="No schema-backed mapping is available for a review decision." />
+              ) : isEditing ? (
+                <MappingEditor
+                  disabled={isSavingDecision}
+                  draft={draft}
+                  onCancel={cancelEdit}
+                  onChange={setDraft}
+                  onSave={() => persistDecision('EDITED')}
+                  schema={schema}
+                />
+              ) : (
+                <DecisionActions
+                  disabled={isSavingDecision}
+                  onAccept={() => persistDecision('ACCEPTED')}
+                  onEdit={() => setIsEditing(true)}
+                  onReject={() => persistDecision('REJECTED')}
+                />
+              )}
+
+              {isSavingDecision ? (
+                <p aria-live="polite" className="text-dr-small text-dr-subtle" role="status">
+                  Saving review decision…
+                </p>
+              ) : null}
+              {saveErrorMessage !== null ? (
+                <InlineAlert message={saveErrorMessage} title="Decision failed" />
+              ) : null}
+
+              {workspace.latestDecision === null ? (
+                <EmptyLine text="No decision saved." />
+              ) : (
+                <DefinitionList
+                  items={[
+                    ['Reviewer', workspace.latestDecision.reviewerLabel],
+                    ['Saved', workspace.latestDecision.createdAt],
+                    ['Notes', workspace.latestDecision.notes ?? 'No notes'],
+                  ]}
+                />
+              )}
+            </div>
+          </Panel>
+        </aside>
+      </div>
+
+      <ComplianceBand findings={workspace.complianceFindings} />
     </div>
   );
 }
 
-interface MappingEditFormProps {
+interface RailStatusRowsProps {
+  complianceFindings: ComplianceFindingResult[];
+  decisionStatus: ReviewDecisionStatus;
+}
+
+function RailStatusRows({ complianceFindings, decisionStatus }: RailStatusRowsProps): ReactElement {
+  const decision = getDecisionSummary(decisionStatus);
+  const exportGate = getExportGateSummary(decisionStatus);
+  const compliance = getComplianceSummary(complianceFindings);
+
+  return (
+    <div className="grid gap-dr-sm">
+      <div className="grid gap-dr-xxs">
+        <div className="flex items-center gap-dr-xs">
+          <StatusDot tone={decision.tone} />
+          <p className={cx('text-dr-small font-semibold', getToneTextClass(decision.tone))}>
+            {decision.label}
+          </p>
+        </div>
+        <p className="text-dr-small text-dr-subtle">{decision.description}</p>
+      </div>
+      <dl className="grid gap-dr-xs border-t border-dr-border pt-dr-sm">
+        <StatusRow label="Export" value={exportGate.label} tone={exportGate.tone} />
+        <StatusRow label="Findings" value={compliance.label} tone={compliance.tone} />
+      </dl>
+    </div>
+  );
+}
+
+interface StatusRowProps {
+  label: string;
+  value: string;
+  tone: Tone;
+}
+
+function StatusRow({ label, value, tone }: StatusRowProps): ReactElement {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-dr-sm">
+      <dt className="text-dr-caption font-medium text-dr-subtle">{label}</dt>
+      <dd
+        className={cx(
+          'flex items-center gap-dr-xs text-dr-small font-medium',
+          getToneTextClass(tone),
+        )}
+      >
+        <StatusDot tone={tone} />
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+interface DecisionActionsProps {
+  disabled: boolean;
+  onAccept: () => void;
+  onEdit: () => void;
+  onReject: () => void;
+}
+
+function DecisionActions({
+  disabled,
+  onAccept,
+  onEdit,
+  onReject,
+}: DecisionActionsProps): ReactElement {
+  return (
+    <div className="grid gap-dr-xs">
+      <Button disabled={disabled} onClick={onAccept} variant="primary">
+        Accept
+      </Button>
+      <div className="grid grid-cols-2 gap-dr-xs">
+        <Button disabled={disabled} onClick={onEdit} variant="secondary">
+          Edit
+        </Button>
+        <Button disabled={disabled} onClick={onReject} variant="danger">
+          Reject
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+interface MappingEditorProps {
   disabled: boolean;
   draft: MappingEditDraft;
+  onCancel: () => void;
   onChange: (draft: MappingEditDraft) => void;
-  onSaveAccept: () => void;
-  onSaveEdit: () => void;
-  onSaveReject: () => void;
+  onSave: () => void;
   schema: ShoelaceComponentSchema;
 }
 
-function MappingEditForm({
+function MappingEditor({
   disabled,
   draft,
+  onCancel,
   onChange,
-  onSaveAccept,
-  onSaveEdit,
-  onSaveReject,
+  onSave,
   schema,
-}: MappingEditFormProps): ReactElement {
-  const canSaveEdit = canSaveMappingEdit(draft);
+}: MappingEditorProps): ReactElement {
+  const canSave = canSaveMappingEdit(draft);
 
   function updateProp(name: string, value: string | boolean): void {
     onChange({ ...draft, props: { ...draft.props, [name]: value } });
@@ -603,8 +692,8 @@ function MappingEditForm({
   }
 
   return (
-    <div className="grid gap-dr-sm">
-      <div className="grid gap-dr-xs">
+    <div aria-label="Edit mapping" className="grid gap-dr-sm">
+      <div className="grid gap-dr-sm">
         {draft.slotLabel === null ? null : (
           <TextField
             disabled={disabled}
@@ -647,31 +736,13 @@ function MappingEditForm({
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-dr-xs">
-        <button
-          className="rounded-dr-sm border border-dr-success bg-dr-panel-raised px-dr-xs py-dr-xs text-dr-caption font-semibold text-dr-success focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={disabled}
-          onClick={onSaveAccept}
-          type="button"
-        >
-          Accept
-        </button>
-        <button
-          className="rounded-dr-sm border border-dr-edited bg-dr-panel-raised px-dr-xs py-dr-xs text-dr-caption font-semibold text-dr-edited focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={disabled || !canSaveEdit}
-          onClick={onSaveEdit}
-          type="button"
-        >
-          Edit
-        </button>
-        <button
-          className="rounded-dr-sm border border-dr-danger bg-dr-panel-raised px-dr-xs py-dr-xs text-dr-caption font-semibold text-dr-danger focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={disabled}
-          onClick={onSaveReject}
-          type="button"
-        >
-          Reject
-        </button>
+      <div className="grid grid-cols-2 gap-dr-xs">
+        <Button disabled={disabled || !canSave} onClick={onSave} variant="primary">
+          Save changes
+        </Button>
+        <Button disabled={disabled} onClick={onCancel} variant="secondary">
+          Cancel
+        </Button>
       </div>
     </div>
   );
@@ -695,12 +766,13 @@ function MappingPropField({
 
   if (prop.kind === 'boolean') {
     return (
-      <label className="flex items-center justify-between gap-dr-sm rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs text-dr-small text-dr-muted">
+      <label className="flex items-center justify-between gap-dr-sm py-dr-xxs text-dr-small text-dr-muted">
         {label}
         <input
           checked={typeof value === 'boolean' ? value : false}
           className="size-4 accent-dr-accent focus-visible:outline focus-visible:outline-2"
           disabled={disabled}
+          name={fieldId}
           onChange={(event) => onChange(event.currentTarget.checked)}
           type="checkbox"
         />
@@ -732,37 +804,169 @@ function MappingPropField({
   );
 }
 
-interface CompliancePanelProps {
+interface ComplianceBandProps {
   findings: ComplianceFindingResult[];
 }
 
-function CompliancePanel({ findings }: CompliancePanelProps): ReactElement {
+const SEVERITY_ORDER: Record<ComplianceFindingResult['severity'], number> = {
+  BLOCKER: 0,
+  WARNING: 1,
+  INFO: 2,
+};
+
+function ComplianceBand({ findings }: ComplianceBandProps): ReactElement {
+  if (findings.length === 0) {
+    return (
+      <Panel title="Compliance">
+        <EmptyLine text="No compliance findings recorded." />
+      </Panel>
+    );
+  }
+
+  const ordered = [...findings].sort(
+    (left, right) =>
+      SEVERITY_ORDER[left.severity] - SEVERITY_ORDER[right.severity] ||
+      left.id.localeCompare(right.id),
+  );
+
   return (
     <Panel title="Compliance">
-      {findings.length === 0 ? (
-        <EmptyLine text="No compliance findings recorded." />
-      ) : (
-        <div className="grid gap-dr-xs">
-          {findings.map((finding) => (
-            <article
-              className="rounded-dr-sm border border-dr-border bg-dr-panel-raised p-dr-sm"
-              key={finding.id}
-            >
-              <div className="flex flex-wrap items-center gap-dr-xs">
-                <StatusBadge label={finding.severity} tone={SEVERITY_TONES[finding.severity]} />
-                <span className="font-mono text-dr-caption text-dr-subtle">{finding.category}</span>
-              </div>
-              <p className="mt-dr-xs text-dr-small font-semibold text-dr-text">{finding.message}</p>
-              <p className="mt-dr-xxs text-dr-small text-dr-muted">{finding.remediation}</p>
-              {finding.path ? (
-                <p className="mt-dr-xs font-mono text-dr-caption text-dr-subtle">{finding.path}</p>
-              ) : null}
-            </article>
-          ))}
-        </div>
-      )}
+      <p className="text-dr-caption text-dr-subtle">{summarizeFindings(findings)}</p>
+      <ul className="mt-dr-sm divide-y divide-dr-border">
+        {ordered.map((finding) => (
+          <li
+            className="flex flex-col gap-dr-xxs py-dr-sm sm:flex-row sm:items-start sm:gap-dr-md"
+            key={finding.id}
+          >
+            <span className="flex flex-col gap-dr-xxs sm:w-48 sm:shrink-0">
+              <span className="flex items-center gap-dr-xs">
+                <StatusDot tone={SEVERITY_TONES[finding.severity]} />
+                <span
+                  className={cx(
+                    'text-dr-caption font-semibold',
+                    getToneTextClass(SEVERITY_TONES[finding.severity]),
+                  )}
+                >
+                  {finding.severity}
+                </span>
+              </span>
+              <span className="break-words font-mono text-dr-caption text-dr-subtle">
+                {finding.category}
+              </span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-dr-small text-dr-text">{finding.message}</span>
+              <span className="mt-dr-xxs block text-dr-small text-dr-muted">
+                {finding.remediation}
+              </span>
+            </span>
+            {finding.path ? (
+              <span className="font-mono text-dr-caption text-dr-subtle sm:text-right">
+                {finding.path}
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
     </Panel>
   );
+}
+
+function summarizeFindings(findings: ComplianceFindingResult[]): string {
+  const counts = countFindings(findings);
+
+  const parts: string[] = [];
+  if (counts.BLOCKER > 0) {
+    parts.push(`${counts.BLOCKER} blocking`);
+  }
+  if (counts.WARNING > 0) {
+    parts.push(`${counts.WARNING} ${counts.WARNING === 1 ? 'warning' : 'warnings'}`);
+  }
+  if (counts.INFO > 0) {
+    parts.push(`${counts.INFO} informational`);
+  }
+
+  return parts.join(' · ');
+}
+
+function countFindings(
+  findings: ComplianceFindingResult[],
+): Record<ComplianceFindingResult['severity'], number> {
+  const counts = { BLOCKER: 0, WARNING: 0, INFO: 0 };
+  for (const finding of findings) {
+    counts[finding.severity] += 1;
+  }
+
+  return counts;
+}
+
+function getComplianceSummary(findings: ComplianceFindingResult[]): { label: string; tone: Tone } {
+  const counts = countFindings(findings);
+
+  if (counts.BLOCKER > 0) {
+    return {
+      label: `${counts.BLOCKER} ${counts.BLOCKER === 1 ? 'blocker' : 'blockers'}`,
+      tone: 'danger',
+    };
+  }
+
+  if (counts.WARNING > 0) {
+    return {
+      label: `${counts.WARNING} ${counts.WARNING === 1 ? 'warning' : 'warnings'}`,
+      tone: 'warning',
+    };
+  }
+
+  if (counts.INFO > 0) {
+    return { label: `${counts.INFO} informational`, tone: 'info' };
+  }
+
+  return { label: 'Clear', tone: 'success' };
+}
+
+function getDecisionSummary(status: ReviewDecisionStatus): {
+  description: string;
+  label: string;
+  tone: Tone;
+} {
+  switch (status) {
+    case 'ACCEPTED':
+      return {
+        description: 'The recommended mapping is approved and ready to export.',
+        label: 'Accepted by reviewer',
+        tone: 'success',
+      };
+    case 'EDITED':
+      return {
+        description: 'Human edits are saved and ready to export.',
+        label: 'Edited by reviewer',
+        tone: 'edited',
+      };
+    case 'PENDING':
+      return {
+        description: 'Accept, edit, or reject this mapping before export.',
+        label: 'Pending review',
+        tone: 'warning',
+      };
+    case 'REJECTED':
+      return {
+        description: 'The mapping was rejected and export is unavailable.',
+        label: 'Rejected by reviewer',
+        tone: 'danger',
+      };
+  }
+}
+
+function getExportGateSummary(status: ReviewDecisionStatus): { label: string; tone: Tone } {
+  switch (status) {
+    case 'ACCEPTED':
+    case 'EDITED':
+      return { label: 'Ready', tone: 'success' };
+    case 'REJECTED':
+      return { label: 'Locked', tone: 'danger' };
+    case 'PENDING':
+      return { label: 'Locked', tone: 'warning' };
+  }
 }
 
 interface ExportsPanelProps {
@@ -831,15 +1035,15 @@ function ExportsPanel({
           </div>
           <div className="grid grid-cols-3 gap-dr-xs">
             {EXPORT_FORMAT_OPTIONS.map((option) => (
-              <button
-                className="rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-xs py-dr-xs text-dr-caption font-semibold text-dr-muted focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
+              <Button
                 disabled={!canExport || mapping === null || isExporting}
                 key={option.format}
                 onClick={() => createMappingExport(option.format)}
-                type="button"
+                size="sm"
+                variant="secondary"
               >
-                {pendingExportFormat === option.format ? 'Exporting' : option.label}
-              </button>
+                {pendingExportFormat === option.format ? 'Exporting…' : option.label}
+              </Button>
             ))}
           </div>
           {exportErrorMessage !== null ? (
@@ -980,15 +1184,31 @@ function InlineAlert({ message, title }: InlineAlertProps): ReactElement {
 interface PanelProps {
   children: ReactNode;
   title: string;
+  className?: string;
+  density?: 'regular' | 'compact';
 }
 
-function Panel({ children, title }: PanelProps): ReactElement {
+function Panel({ children, title, className, density = 'regular' }: PanelProps): ReactElement {
+  const isCompact = density === 'compact';
+
   return (
-    <section className="min-w-0 rounded-dr-md border border-dr-border bg-dr-panel">
-      <div className="border-b border-dr-border px-dr-md py-dr-sm">
-        <h2 className="text-dr-section-title font-semibold text-dr-text">{title}</h2>
+    <section className={cx('min-w-0 rounded-dr-lg border border-dr-border bg-dr-panel', className)}>
+      <div
+        className={cx(
+          'border-b border-dr-border',
+          isCompact ? 'px-dr-sm py-dr-xs' : 'px-dr-md py-dr-sm',
+        )}
+      >
+        <h2
+          className={cx(
+            'font-semibold text-dr-text',
+            isCompact ? 'text-dr-small' : 'text-dr-section-title',
+          )}
+        >
+          {title}
+        </h2>
       </div>
-      <div className="p-dr-md">{children}</div>
+      <div className={isCompact ? 'p-dr-sm' : 'p-dr-md'}>{children}</div>
     </section>
   );
 }
@@ -1003,12 +1223,14 @@ interface TextFieldProps {
 
 function TextField({ disabled, id, label, onChange, value }: TextFieldProps): ReactElement {
   return (
-    <label className="grid gap-dr-xxs text-dr-caption font-semibold text-dr-subtle" htmlFor={id}>
+    <label className="grid gap-dr-xxs text-dr-caption font-medium text-dr-subtle" htmlFor={id}>
       {label}
       <input
+        autoComplete="off"
         className="rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs font-ui text-dr-small font-normal text-dr-text focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={disabled}
         id={id}
+        name={id}
         onChange={(event) => onChange(event.currentTarget.value)}
         value={value}
       />
@@ -1034,12 +1256,14 @@ function SelectField<TValue extends string>({
   value,
 }: SelectFieldProps<TValue>): ReactElement {
   return (
-    <label className="grid gap-dr-xxs text-dr-caption font-semibold text-dr-subtle" htmlFor={id}>
+    <label className="grid gap-dr-xxs text-dr-caption font-medium text-dr-subtle" htmlFor={id}>
       {label}
       <select
+        autoComplete="off"
         className="rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs font-ui text-dr-small font-normal text-dr-text focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={disabled}
         id={id}
+        name={id}
         onChange={(event) => onChange(event.currentTarget.value as TValue)}
         value={value}
       >
@@ -1063,12 +1287,14 @@ interface TextareaFieldProps {
 
 function TextareaField({ disabled, id, label, onChange, value }: TextareaFieldProps): ReactElement {
   return (
-    <label className="grid gap-dr-xxs text-dr-caption font-semibold text-dr-subtle" htmlFor={id}>
+    <label className="grid gap-dr-xxs text-dr-caption font-medium text-dr-subtle" htmlFor={id}>
       {label}
       <textarea
+        autoComplete="off"
         className="min-h-20 resize-y rounded-dr-sm border border-dr-border bg-dr-panel-raised px-dr-sm py-dr-xs font-ui text-dr-small font-normal text-dr-text focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={disabled}
         id={id}
+        name={id}
         onChange={(event) => onChange(event.currentTarget.value)}
         value={value}
       />
@@ -1085,7 +1311,7 @@ function DefinitionList({ items }: DefinitionListProps): ReactElement {
     <dl className="grid gap-dr-xs">
       {items.map(([label, value]) => (
         <div className="grid gap-dr-xxs sm:grid-cols-[9rem_minmax(0,1fr)]" key={label}>
-          <dt className="text-dr-caption font-semibold text-dr-subtle">{label}</dt>
+          <dt className="text-dr-caption font-medium text-dr-subtle">{label}</dt>
           <dd className="min-w-0 break-words font-mono text-dr-caption text-dr-muted">{value}</dd>
         </div>
       ))}
@@ -1101,11 +1327,11 @@ interface PillGroupProps {
 function PillGroup({ label, values }: PillGroupProps): ReactElement {
   return (
     <div>
-      <p className="text-dr-caption font-semibold text-dr-subtle">{label}</p>
+      <p className="text-dr-caption font-medium text-dr-subtle">{label}</p>
       <div className="mt-dr-xs flex flex-wrap gap-dr-xs">
         {values.map((value) => (
           <span
-            className="rounded-dr-xs border border-dr-border bg-dr-panel-raised px-dr-xs py-dr-xxs font-mono text-dr-caption text-dr-muted"
+            className="rounded-dr-xs bg-dr-panel-raised px-dr-xs py-dr-xxs font-mono text-dr-caption text-dr-muted"
             key={value}
           >
             {value}
@@ -1126,18 +1352,23 @@ function TokenList({ tokens }: TokenListProps): ReactElement {
   }
 
   return (
-    <div className="grid gap-dr-xs">
-      {tokens.map((token) => (
-        <div
-          className="rounded-dr-sm border border-dr-border bg-dr-panel-raised p-dr-sm"
-          key={token.name}
-        >
-          <p className="font-mono text-dr-caption text-dr-text">{token.name}</p>
-          <p className="mt-dr-xxs font-mono text-dr-caption text-dr-subtle">
-            {token.target ?? token.value ?? 'Unmapped'}
-          </p>
-        </div>
-      ))}
+    <div>
+      <p className="text-dr-caption font-medium text-dr-subtle">Tokens</p>
+      <ul className="mt-dr-xs divide-y divide-dr-border rounded-dr-sm border border-dr-border">
+        {tokens.map((token) => (
+          <li
+            className="flex items-center justify-between gap-dr-sm px-dr-sm py-dr-xs"
+            key={token.name}
+          >
+            <span className="min-w-0 break-words font-mono text-dr-caption text-dr-text">
+              {token.name}
+            </span>
+            <span className="font-mono text-dr-caption text-dr-subtle">
+              {token.target ?? token.value ?? 'Unmapped'}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -1155,6 +1386,24 @@ function CodeBlock({ label, value }: CodeBlockProps): ReactElement {
       </figcaption>
       <pre className="overflow-x-auto p-dr-sm font-mono text-dr-code text-dr-text">{value}</pre>
     </figure>
+  );
+}
+
+interface MetaTagProps {
+  label: string;
+  tone?: Tone;
+}
+
+function MetaTag({ label, tone = 'neutral' }: MetaTagProps): ReactElement {
+  return (
+    <span
+      className={cx(
+        'inline-flex shrink-0 items-center rounded-dr-xs border border-dr-border bg-dr-shell px-dr-xs py-dr-xxs text-dr-caption font-medium',
+        getToneTextClass(tone),
+      )}
+    >
+      {label}
+    </span>
   );
 }
 

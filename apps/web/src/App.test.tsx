@@ -176,6 +176,17 @@ describe('<App />', () => {
     expect(screen.getByText(buttonComplianceFindingsFixture[0]!.message)).toBeInTheDocument();
   });
 
+  it('keeps example rows independent from the selected review decision state', async () => {
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    const examplesRegion = screen.getByRole('region', { name: 'Examples' });
+
+    expect(within(examplesRegion).queryByText('PENDING')).not.toBeInTheDocument();
+    expect(within(examplesRegion).queryByText('Ready')).not.toBeInTheDocument();
+  });
+
   it('switches the workspace when another example is selected', async () => {
     const user = userEvent.setup();
     renderApp([
@@ -263,10 +274,12 @@ describe('<App />', () => {
 
     expect(await screen.findByText(inputComponentIntentFixture.summary)).toBeInTheDocument();
 
-    // The editor is rendered from the Input schema, which exposes a "Required" control Button lacks.
+    // Editing is disclosed on demand; the editor is rendered from the Input schema, which exposes a
+    // "Required" control that Button lacks.
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
     expect(screen.getByLabelText('Label')).toBeInTheDocument();
     await user.click(screen.getByLabelText('Required'));
-    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findAllByText('EDITED')).not.toHaveLength(0);
 
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
@@ -321,9 +334,8 @@ describe('<App />', () => {
     );
 
     expect(await screen.findByText(cardComponentIntentFixture.summary)).toBeInTheDocument();
-    expect(screen.getByLabelText('Content')).toHaveValue(
-      'Wireless headphones with 30-hour battery life.',
-    );
+    // The card's default slot is labeled "Content" in the recommended-mapping display.
+    expect(screen.getByText('Content')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Accept' }));
     expect(await screen.findAllByText('ACCEPTED')).not.toHaveLength(0);
@@ -506,17 +518,14 @@ describe('<App />', () => {
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
     await user.click(screen.getByRole('button', { name: 'HTML' }));
     expect(await screen.findByText(htmlExport.content)).toBeInTheDocument();
-    expect(screen.getByText('Exports 1')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'React' }));
     expect(await screen.findByText(reactExport.content)).toBeInTheDocument();
-    expect(screen.getByText('Exports 2')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Agent Brief' }));
     expect(
       await screen.findByText(/Mapping: mapping\.button\.primary\.shoelace/),
     ).toBeInTheDocument();
-    expect(screen.getByText('Exports 3')).toBeInTheDocument();
   });
 
   it('saves a rejected decision and keeps exports locked', async () => {
@@ -610,12 +619,13 @@ describe('<App />', () => {
 
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
     await user.clear(screen.getByLabelText('Label'));
     await user.type(screen.getByLabelText('Label'), 'Publish changes');
     await user.selectOptions(screen.getByLabelText('Variant'), 'warning');
     await user.selectOptions(screen.getByLabelText('Size'), 'large');
     await user.click(screen.getByLabelText('Disabled'));
-    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findAllByText('EDITED')).not.toHaveLength(0);
 
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
