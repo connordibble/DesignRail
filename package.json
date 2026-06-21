@@ -20,6 +20,7 @@
     "design:import": "bash -c 'if [ -f tools/figma-import/src/cli.ts ]; then tsx tools/figma-import/src/cli.ts examples/figma-input.button.json; else echo \"Design import tool not present; skipped.\"; fi'",
     "design:map": "bash -c 'if [ -f tools/component-mapper/src/cli.ts ]; then tsx tools/component-mapper/src/cli.ts; else echo \"Component mapper not present; skipped.\"; fi'",
     "compliance:review": "bash -c 'if [ -f tools/compliance-agent/src/cli.ts ]; then tsx tools/compliance-agent/src/cli.ts; else echo \"Compliance review tool not present; skipped.\"; fi'",
+    "design:verify": "bash scripts/design-verify.sh",
     "mock-mode:check": "bash hooks/mock-mode-check.sh",
     "secrets:check": "bash hooks/no-secrets.sh",
     "commit:check": "bash -c 'msg=${1:-}; if [ -z \"$msg\" ]; then echo \"Usage: pnpm commit:check .git/COMMIT_EDITMSG\" >&2; exit 1; fi; bash hooks/commit-msg.sh \"$msg\"' --",
