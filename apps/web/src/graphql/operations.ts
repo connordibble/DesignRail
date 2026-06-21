@@ -111,6 +111,10 @@ export interface ReviewWorkspace {
   exports: ExportResult[];
 }
 
+export interface ExamplesQuery {
+  examples: ExampleResult[];
+}
+
 export interface ReviewWorkspaceQuery {
   reviewWorkspace: ReviewWorkspace | null;
   dashboardMetrics: DashboardMetrics;
@@ -148,6 +152,19 @@ export interface ExportMappingMutation {
 export interface ExportMappingMutationVariables {
   input: ExportMappingInput;
 }
+
+export const EXAMPLES_QUERY: TypedDocumentNode<ExamplesQuery, Record<string, never>> = gql`
+  query Examples {
+    examples {
+      id
+      name
+      componentType
+      fixturePath
+      source
+      status
+    }
+  }
+`;
 
 export const REVIEW_WORKSPACE_QUERY: TypedDocumentNode<
   ReviewWorkspaceQuery,

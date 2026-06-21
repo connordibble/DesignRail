@@ -2,12 +2,17 @@ import type { MockedResponse } from '@apollo/client/testing';
 import { MockedProvider } from '@apollo/client/testing/react';
 import {
   BUTTON_EXAMPLE_ID,
+  buttonComplianceFindingsFixture,
   buttonComponentIntentFixture,
   buttonComponentMappingFixture,
-  buttonComplianceFindingFixture,
   buttonExampleFixture,
   createEmptyDashboardMetrics,
   htmlExportFixture,
+  INPUT_EXAMPLE_ID,
+  inputComplianceFindingsFixture,
+  inputComponentIntentFixture,
+  inputComponentMappingFixture,
+  inputExampleFixture,
 } from '@designrail/shared';
 import { render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
@@ -15,9 +20,15 @@ import { describe, expect, it } from 'vitest';
 
 import { App } from './App.js';
 import {
+  EXAMPLES_QUERY,
   EXPORT_MAPPING_MUTATION,
   REVIEW_WORKSPACE_QUERY,
   SAVE_REVIEW_DECISION_MUTATION,
+  type ComplianceFindingResult,
+  type ComponentIntentResult,
+  type ComponentMappingResult,
+  type ExampleResult,
+  type ExamplesQuery,
   type ExportMappingMutation,
   type ExportMappingMutationVariables,
   type ExportResult,
@@ -34,41 +45,65 @@ const REVIEW_WORKSPACE_VARIABLES = {
   exampleId: BUTTON_EXAMPLE_ID,
 };
 
-const POPULATED_WORKSPACE: ReviewWorkspace = {
-  example: buttonExampleFixture,
-  intent: {
-    ...buttonComponentIntentFixture,
-    sourceRefs: buttonComponentIntentFixture.sourceRefs.map((sourceRef) => ({
+const DEFAULT_EXAMPLES: ExampleResult[] = [buttonExampleFixture, inputExampleFixture];
+
+function toIntentResult(
+  intent: typeof buttonComponentIntentFixture | typeof inputComponentIntentFixture,
+): ComponentIntentResult {
+  return {
+    ...intent,
+    sourceRefs: intent.sourceRefs.map((sourceRef) => ({
       ...sourceRef,
       name: sourceRef.name ?? null,
     })),
-    tokenRefs: buttonComponentIntentFixture.tokenRefs.map((tokenRef) => ({
+    tokenRefs: intent.tokenRefs.map((tokenRef) => ({
       ...tokenRef,
       value: tokenRef.value ?? null,
       target: tokenRef.target ?? null,
     })),
     accessibility: {
-      label: buttonComponentIntentFixture.accessibility.label ?? null,
-      role: buttonComponentIntentFixture.accessibility.role ?? null,
-      description: buttonComponentIntentFixture.accessibility.description ?? null,
-      required: buttonComponentIntentFixture.accessibility.required,
+      label: intent.accessibility.label ?? null,
+      role: intent.accessibility.role ?? null,
+      description: intent.accessibility.description ?? null,
+      required: intent.accessibility.required,
     },
-  },
-  mapping: {
-    ...buttonComponentMappingFixture,
-    mappedTokens: buttonComponentMappingFixture.mappedTokens.map((tokenRef) => ({
+  };
+}
+
+function toMappingResult(
+  mapping: typeof buttonComponentMappingFixture | typeof inputComponentMappingFixture,
+): ComponentMappingResult {
+  return {
+    ...mapping,
+    mappedTokens: mapping.mappedTokens.map((tokenRef) => ({
       ...tokenRef,
       value: tokenRef.value ?? null,
       target: tokenRef.target ?? null,
     })),
-    fallbackNotes: buttonComponentMappingFixture.fallbackNotes ?? null,
-  },
-  complianceFindings: [
-    {
-      ...buttonComplianceFindingFixture,
-      path: buttonComplianceFindingFixture.path ?? null,
-    },
-  ],
+    fallbackNotes: mapping.fallbackNotes ?? null,
+  };
+}
+
+function toFindingResults(
+  findings: typeof buttonComplianceFindingsFixture,
+): ComplianceFindingResult[] {
+  return findings.map((finding) => ({ ...finding, path: finding.path ?? null }));
+}
+
+const POPULATED_WORKSPACE: ReviewWorkspace = {
+  example: buttonExampleFixture,
+  intent: toIntentResult(buttonComponentIntentFixture),
+  mapping: toMappingResult(buttonComponentMappingFixture),
+  complianceFindings: toFindingResults(buttonComplianceFindingsFixture),
+  latestDecision: null,
+  exports: [],
+};
+
+const INPUT_WORKSPACE: ReviewWorkspace = {
+  example: inputExampleFixture,
+  intent: toIntentResult(inputComponentIntentFixture),
+  mapping: toMappingResult(inputComponentMappingFixture),
+  complianceFindings: toFindingResults(inputComplianceFindingsFixture),
   latestDecision: null,
   exports: [],
 };
@@ -114,8 +149,107 @@ describe('<App />', () => {
 
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
     expect(screen.getAllByText(buttonComponentMappingFixture.targetComponent)).not.toHaveLength(0);
-    expect(screen.getByText(buttonComplianceFindingFixture.category)).toBeInTheDocument();
-    expect(screen.getByText(buttonComplianceFindingFixture.message)).toBeInTheDocument();
+    expect(screen.getByText(buttonComplianceFindingsFixture[0]!.category)).toBeInTheDocument();
+    expect(screen.getByText(buttonComplianceFindingsFixture[0]!.message)).toBeInTheDocument();
+  });
+
+  it('switches the workspace when another example is selected', async () => {
+    const user = userEvent.setup();
+    renderApp([
+      createWorkspaceMock(POPULATED_RESULT),
+      createWorkspaceMock(
+        {
+          reviewWorkspace: INPUT_WORKSPACE,
+          dashboardMetrics: createEmptyDashboardMetrics(),
+        },
+        { exampleId: INPUT_EXAMPLE_ID },
+      ),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    // Wait for the examples query to populate the selector before switching.
+    await user.click(await screen.findByRole('button', { name: /Input/ }));
+
+    expect(await screen.findByText(inputComponentIntentFixture.summary)).toBeInTheDocument();
+    expect(screen.getAllByText(inputComponentMappingFixture.targetComponent)).not.toHaveLength(0);
+  });
+
+  it('edits and exports the Input mapping through the schema-driven UI', async () => {
+    const user = userEvent.setup();
+    const editedInputMapping = {
+      mappedProps: {
+        type: 'email',
+        size: 'medium',
+        label: 'Email address',
+        placeholder: 'you@example.com',
+        disabled: false,
+        required: false,
+      },
+      confidence: 'MEDIUM' as const,
+      rationale: inputComponentMappingFixture.rationale,
+    };
+    const editedInputDecision: ReviewDecisionResult = {
+      id: 'decision.input.edited',
+      mappingId: inputComponentMappingFixture.id,
+      status: 'EDITED',
+      reviewerLabel: 'Local reviewer',
+      editedMapping: editedInputMapping,
+      notes: null,
+      createdAt: '2026-01-01T00:00:01.000Z',
+    };
+    const inputExport: ExportResult = {
+      id: 'export.input.edited.html',
+      mappingId: inputComponentMappingFixture.id,
+      format: 'HTML',
+      content:
+        '<sl-input type="email" size="medium" label="Email address" placeholder="you@example.com"></sl-input>',
+      createdAt: '2026-01-01T00:00:02.000Z',
+    };
+    const inputResult = (overrides: Partial<ReviewWorkspace> = {}): ReviewWorkspaceQuery => ({
+      reviewWorkspace: { ...INPUT_WORKSPACE, ...overrides },
+      dashboardMetrics: createEmptyDashboardMetrics(),
+    });
+
+    renderApp(
+      [
+        createWorkspaceMock(inputResult(), { exampleId: INPUT_EXAMPLE_ID }),
+        createSaveDecisionMock({
+          input: {
+            mappingId: inputComponentMappingFixture.id,
+            status: 'EDITED',
+            reviewerLabel: 'Local reviewer',
+            editedMapping: editedInputMapping,
+          },
+          decision: editedInputDecision,
+        }),
+        createWorkspaceMock(inputResult({ latestDecision: editedInputDecision }), {
+          exampleId: INPUT_EXAMPLE_ID,
+        }),
+        createExportMock({
+          input: { mappingId: inputComponentMappingFixture.id, format: 'HTML' },
+          result: inputExport,
+        }),
+        createWorkspaceMock(
+          inputResult({ latestDecision: editedInputDecision, exports: [inputExport] }),
+          { exampleId: INPUT_EXAMPLE_ID },
+        ),
+      ],
+      [inputExampleFixture],
+    );
+
+    expect(await screen.findByText(inputComponentIntentFixture.summary)).toBeInTheDocument();
+
+    // The editor is rendered from the Input schema, which exposes a "Required" control Button lacks.
+    expect(screen.getByLabelText('Label')).toBeInTheDocument();
+    await user.click(screen.getByLabelText('Required'));
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(await screen.findAllByText('EDITED')).not.toHaveLength(0);
+
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    await user.click(screen.getByRole('button', { name: 'HTML' }));
+
+    expect(await screen.findByText(inputExport.content)).toBeInTheDocument();
   });
 
   it('navigates between dashboard, review, exports, and schema tabs', async () => {
@@ -462,21 +596,33 @@ describe('<App />', () => {
   });
 });
 
-function renderApp(mocks: ReadonlyArray<MockedResponse>): void {
+function renderApp(
+  mocks: ReadonlyArray<MockedResponse>,
+  examples: ExampleResult[] = DEFAULT_EXAMPLES,
+): void {
   render(
-    <MockedProvider mocks={mocks} showWarnings={false}>
+    <MockedProvider mocks={[createExamplesMock(examples), ...mocks]} showWarnings={false}>
       <App />
     </MockedProvider>,
   );
 }
 
+function createExamplesMock(
+  examples: ExampleResult[],
+): MockedResponse<ExamplesQuery, Record<string, never>> {
+  return {
+    request: { query: EXAMPLES_QUERY, variables: {} },
+    result: { data: { examples } },
+  };
+}
+
 function createWorkspaceMock(
   resultOrError: ReviewWorkspaceQuery | Error,
-  options: { delay?: number } = {},
+  options: { delay?: number; exampleId?: string } = {},
 ): MockedResponse<ReviewWorkspaceQuery, ReviewWorkspaceQueryVariables> {
   const request = {
     query: REVIEW_WORKSPACE_QUERY,
-    variables: REVIEW_WORKSPACE_VARIABLES,
+    variables: { exampleId: options.exampleId ?? REVIEW_WORKSPACE_VARIABLES.exampleId },
   };
 
   if (resultOrError instanceof Error) {
