@@ -18,10 +18,10 @@ describe('@designrail/schema', () => {
     expect(PACKAGE_NAME).toBe('@designrail/schema');
   });
 
-  it('registers valid Button and Input schemas keyed by component type', () => {
+  it('registers valid Button, Input, and Card schemas keyed by component type', () => {
     const schemas = listComponentSchemas();
 
-    expect(schemas.map((schema) => schema.componentType)).toEqual(['Button', 'Input']);
+    expect(schemas.map((schema) => schema.componentType)).toEqual(['Button', 'Input', 'Card']);
 
     for (const schema of schemas) {
       expect(() => shoelaceComponentSchemaSchema.parse(schema)).not.toThrow();
@@ -32,7 +32,14 @@ describe('@designrail/schema', () => {
   it('resolves schemas by intent component type', () => {
     expect(getComponentSchema('Button')?.tag).toBe('sl-button');
     expect(getComponentSchema('Input')?.tag).toBe('sl-input');
+    expect(getComponentSchema('Card')?.tag).toBe('sl-card');
     expect(getComponentSchema('Unknown')).toBeNull();
+  });
+
+  it('marks interactive controls as requiring an accessible name and containers as not', () => {
+    expect(getComponentSchema('Button')?.requiresAccessibleName).toBe(true);
+    expect(getComponentSchema('Input')?.requiresAccessibleName).toBe(true);
+    expect(getComponentSchema('Card')?.requiresAccessibleName).toBe(false);
   });
 
   it('treats Button as having a default slot and Input as childless', () => {

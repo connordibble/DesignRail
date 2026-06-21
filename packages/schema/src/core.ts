@@ -58,6 +58,8 @@ export const shoelaceComponentSchemaSchema = z.object({
   slots: z.array(shoelaceSlotSchema),
   events: z.array(shoelaceEventSchema),
   parts: z.array(z.string().min(1)),
+  /** Whether this component must carry an accessible name (interactive controls) vs a container. */
+  requiresAccessibleName: z.boolean(),
 });
 
 export type ShoelacePropKind = z.infer<typeof shoelacePropKindSchema>;
@@ -107,6 +109,8 @@ export interface DefineComponentSchemaInput {
   }>;
   parts: string[];
   libraryVersion?: string;
+  /** Defaults to `true`; set `false` for container components that need no accessible name. */
+  requiresAccessibleName?: boolean;
 }
 
 export type ShoelaceEventKind = z.infer<typeof shoelaceEventKindSchema>;
@@ -128,6 +132,7 @@ export function defineComponentSchema(input: DefineComponentSchemaInput): Shoela
       ),
     ),
     parts: input.parts,
+    requiresAccessibleName: input.requiresAccessibleName ?? true,
   });
 }
 
