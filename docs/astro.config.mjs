@@ -9,6 +9,7 @@ export default defineConfig({
       sidebar: [
         { label: 'Overview', link: '/' },
         { label: 'Checkpoint 1 Contract', link: '/c1-contract/' },
+        { label: 'Checkpoint 2 Pipeline', link: '/c2-pipeline/' },
         {
           label: 'Architecture Decisions',
           autogenerate: { directory: 'decisions' },
