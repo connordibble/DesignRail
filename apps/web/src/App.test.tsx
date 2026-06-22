@@ -149,6 +149,18 @@ describe('<App />', () => {
     expect(screen.getByText(BUTTON_EXAMPLE_ID)).toBeInTheDocument();
   });
 
+  it('keeps the left navigation rail at least viewport height on desktop', () => {
+    renderApp([createWorkspaceMock(POPULATED_RESULT, { delay: 50 })]);
+
+    const leftRail = screen.getByRole('tablist', { name: 'Workspace areas' }).closest('aside');
+
+    if (leftRail === null) {
+      throw new Error('Expected workspace tabs to be rendered inside the left navigation rail.');
+    }
+
+    expect(leftRail).toHaveClass('lg:min-h-screen');
+  });
+
   it('renders the error workspace state', async () => {
     renderApp([createWorkspaceMock(new Error('GraphQL unavailable'))]);
 
@@ -526,6 +538,16 @@ describe('<App />', () => {
     expect(
       await screen.findByText(/Mapping: mapping\.button\.primary\.shoelace/),
     ).toBeInTheDocument();
+
+    const briefContent = screen.getByLabelText('AGENT_BRIEF export content');
+    const briefCard = briefContent.closest('article');
+
+    if (briefCard === null) {
+      throw new Error('Expected export content to be rendered inside an export history card.');
+    }
+
+    expect(briefCard).toHaveClass('min-w-0', 'overflow-hidden');
+    expect(briefContent).toHaveClass('max-w-full', 'overflow-x-auto', 'overscroll-x-contain');
   });
 
   it('saves a rejected decision and keeps exports locked', async () => {

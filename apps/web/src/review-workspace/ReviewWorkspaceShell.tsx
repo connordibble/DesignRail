@@ -156,7 +156,7 @@ export function ReviewWorkspaceShell({
   return (
     <main className="min-h-screen bg-dr-canvas font-ui text-dr-body text-dr-text">
       <div className="grid lg:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className="border-b border-dr-border bg-dr-shell lg:border-b-0 lg:border-r">
+        <aside className="border-b border-dr-border bg-dr-shell lg:min-h-screen lg:border-b-0 lg:border-r">
           <div className="flex h-full flex-col gap-dr-md p-dr-lg">
             <div className="flex items-start justify-between gap-dr-sm lg:block">
               <div className="flex min-w-0 items-start gap-dr-sm">
@@ -1059,19 +1059,23 @@ function ExportsPanel({
         {exports.length === 0 ? (
           <EmptyLine text="No exports have been generated." />
         ) : (
-          <div className="grid gap-dr-sm">
+          <div className="grid min-w-0 gap-dr-sm">
             {exports.map((exportResult) => (
               <article
-                className="rounded-dr-sm border border-dr-border bg-dr-panel-raised"
+                className="min-w-0 overflow-hidden rounded-dr-sm border border-dr-border bg-dr-panel-raised"
                 key={exportResult.id}
               >
-                <div className="flex items-center justify-between gap-dr-sm border-b border-dr-border px-dr-sm py-dr-xs">
+                <div className="grid min-w-0 gap-dr-xs border-b border-dr-border px-dr-sm py-dr-xs sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
                   <StatusBadge label={exportResult.format} tone="neutral" />
-                  <span className="font-mono text-dr-caption text-dr-subtle">
+                  <span className="min-w-0 break-all font-mono text-dr-caption text-dr-subtle sm:text-right">
                     {exportResult.createdAt}
                   </span>
                 </div>
-                <pre className="overflow-x-auto p-dr-sm font-mono text-dr-code text-dr-text">
+                <pre
+                  aria-label={`${exportResult.format} export content`}
+                  className="max-w-full overflow-x-auto overscroll-x-contain p-dr-sm font-mono text-dr-code text-dr-text"
+                  tabIndex={0}
+                >
                   {exportResult.content}
                 </pre>
               </article>
