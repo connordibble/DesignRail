@@ -538,6 +538,16 @@ describe('<App />', () => {
     expect(
       await screen.findByText(/Mapping: mapping\.button\.primary\.shoelace/),
     ).toBeInTheDocument();
+
+    const briefContent = screen.getByLabelText('AGENT_BRIEF export content');
+    const briefCard = briefContent.closest('article');
+
+    if (briefCard === null) {
+      throw new Error('Expected export content to be rendered inside an export history card.');
+    }
+
+    expect(briefCard).toHaveClass('min-w-0', 'overflow-hidden');
+    expect(briefContent).toHaveClass('max-w-full', 'overflow-x-auto', 'overscroll-x-contain');
   });
 
   it('saves a rejected decision and keeps exports locked', async () => {
