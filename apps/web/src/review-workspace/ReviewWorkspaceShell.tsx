@@ -159,11 +159,14 @@ export function ReviewWorkspaceShell({
         <aside className="border-b border-dr-border bg-dr-shell lg:border-b-0 lg:border-r">
           <div className="flex h-full flex-col gap-dr-md p-dr-lg">
             <div className="flex items-start justify-between gap-dr-sm lg:block">
-              <div>
-                <p className="text-dr-caption font-medium text-dr-subtle">DesignRail</p>
-                <p className="mt-dr-xxs text-dr-section-title font-semibold text-dr-text">
-                  Review Console
-                </p>
+              <div className="flex min-w-0 items-start gap-dr-sm">
+                <BrandMark />
+                <div className="min-w-0">
+                  <p className="text-dr-caption font-medium text-dr-subtle">DesignRail</p>
+                  <p className="mt-dr-xxs text-dr-section-title font-semibold text-dr-text">
+                    Review Console
+                  </p>
+                </div>
               </div>
               <span className="mt-dr-sm inline-flex lg:mt-dr-xs">
                 <MetaTag label="Mock mode" tone="info" />
@@ -1392,6 +1395,19 @@ function CodeBlock({ label, value }: CodeBlockProps): ReactElement {
 interface MetaTagProps {
   label: string;
   tone?: Tone;
+}
+
+function BrandMark(): ReactElement {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-8 w-8 shrink-0 items-center justify-center gap-1 rounded-dr-sm border border-dr-border bg-dr-panel-raised"
+    >
+      <span className="h-4 w-px rounded bg-dr-border-strong" />
+      <span className="size-1.5 rounded-full bg-dr-accent" />
+      <span className="h-4 w-px rounded bg-dr-border-strong" />
+    </span>
+  );
 }
 
 function MetaTag({ label, tone = 'neutral' }: MetaTagProps): ReactElement {

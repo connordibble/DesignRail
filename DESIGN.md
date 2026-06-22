@@ -1,29 +1,30 @@
 ---
 version: alpha
 name: DesignRail UI Direction
-description: 'A precise internal review interface for design-to-engineering handoff. The visual language is inspired by disciplined product tools, but is DesignRail-specific: graphite surfaces, crisp typography, sparse blue-violet accent, strong semantic status colors, dense review panels, and code-first affordances. The interface should feel like a serious platform senior engineers would use daily, not a marketing page or decorative demo.'
+description: 'A precise internal review interface for design-to-engineering handoff. The visual language is inspired by disciplined product tools, but is DesignRail-specific: instrument-charcoal surfaces, crisp typography, sparse signal-cyan accent, strong semantic status colors, dense review panels, and code-first affordances. The interface should feel like a serious platform senior engineers would use daily, not a marketing page or decorative demo.'
 
 colors:
-  accent: '#6f7dfb'
-  accent-hover: '#8490ff'
-  accent-soft: '#20264f'
-  canvas: '#08090b'
-  shell: '#0d0f12'
-  panel: '#12151a'
-  panel-raised: '#171b22'
-  panel-hover: '#1c212a'
-  border: '#252b35'
-  border-strong: '#343c49'
-  text: '#eef2f7'
-  text-muted: '#a8b0bd'
-  text-subtle: '#737c8b'
-  code-bg: '#0b0e13'
-  code-border: '#222936'
-  success: '#2fb56f'
-  warning: '#d7a53f'
-  danger: '#e15d5d'
-  info: '#63a4ff'
-  edited: '#b68cff'
+  accent: '#32d3c4'
+  accent-hover: '#63e5da'
+  accent-soft: '#0f3032'
+  on-accent: '#051716'
+  canvas: '#070a0b'
+  shell: '#0b1011'
+  panel: '#111719'
+  panel-raised: '#172023'
+  panel-hover: '#1c282b'
+  border: '#263338'
+  border-strong: '#35464d'
+  text: '#eef6f5'
+  text-muted: '#a6b5b4'
+  text-subtle: '#728584'
+  code-bg: '#081012'
+  code-border: '#213237'
+  success: '#35b779'
+  warning: '#e2ad3f'
+  danger: '#ef6464'
+  info: '#65aef7'
+  edited: '#c08cff'
   light-canvas: '#f7f8fb'
   light-panel: '#ffffff'
   light-border: '#dfe4ec'
@@ -31,7 +32,7 @@ colors:
 
 typography:
   ui:
-    fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+    fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
     letterSpacing: '0'
   mono:
     fontFamily: 'JetBrains Mono, Geist Mono, ui-monospace, SFMono-Regular, Menlo, monospace'
@@ -84,6 +85,20 @@ DesignRail is not:
 - A clone of another product's brand, fonts, logo, or exact palette.
 - A pile of cards pretending to be workflow.
 
+## Brand Differentiation
+
+DesignRail should read as a mapping console: routed signals, review gates, and auditable handoff.
+The brand should come from precise contrast, small signal marks, and workflow structure rather than
+decorative atmosphere.
+
+Avoid common dark-product and AI-generated UI tells:
+
+- Purple-blue gradient accents as the default brand move.
+- Glowing orbs, bokeh blobs, glass panels, or decorative background effects.
+- Badge-heavy status rows where a small dot and clear label would carry the same meaning.
+- Over-rounded cards or floating card stacks that make the app feel like a demo shell.
+- Copying another product's nav treatment, accent palette, typography, logo geometry, or empty-state style.
+
 ## Visual Principles
 
 ### Review First
@@ -113,7 +128,9 @@ Panel density should feel like an engineering console:
 
 ### Sparse Accent
 
-Use the accent color for primary actions, selected navigation, focus rings, and active review state. Do not flood large surfaces with accent color.
+Use the signal-cyan accent for primary actions, focus rings, small product marks, and active review
+state. Do not flood large surfaces with accent color. Selected navigation should stay quiet: a
+filled row, current text color, and subtle border/ring are enough.
 
 Semantic colors are more important than brand color:
 
@@ -165,7 +182,8 @@ Mobile and narrow tablet layouts can stack sections, but the desktop experience 
 
 ## Surface And Color
 
-Default UI uses a dark graphite shell because code, status, and dense review panels read well there. Avoid pure black. Keep contrast high and borders visible.
+Default UI uses a dark instrument-charcoal shell because code, status, and dense review panels read
+well there. Avoid pure black. Keep contrast high and borders visible.
 
 Use light surfaces only for code-export previews or documentation examples when that improves readability. If light mode is added later, it must be complete and tested, not an afterthought.
 
@@ -205,7 +223,7 @@ The nav rail should be compact and utilitarian:
 - Product mark and `Mock mode` badge at the top.
 - Main areas: Dashboard, Review, Exports, Schema, Docs.
 - Mock examples: Button, Card, Input, Badge, Dialog, Spinner.
-- Selected item uses subtle accent text and left border or inset rail.
+- Selected item uses a filled row, current text color, and subtle border/ring.
 
 Do not use oversized icons or marketing-style navigation.
 
