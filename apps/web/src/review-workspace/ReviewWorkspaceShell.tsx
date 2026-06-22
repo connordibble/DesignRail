@@ -156,7 +156,7 @@ export function ReviewWorkspaceShell({
   return (
     <main className="min-h-screen bg-dr-canvas font-ui text-dr-body text-dr-text">
       <div className="grid lg:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className="border-b border-dr-border bg-dr-shell lg:border-b-0 lg:border-r">
+        <aside className="border-b border-dr-border bg-dr-shell lg:min-h-screen lg:border-b-0 lg:border-r">
           <div className="flex h-full flex-col gap-dr-md p-dr-lg">
             <div className="flex items-start justify-between gap-dr-sm lg:block">
               <div className="flex min-w-0 items-start gap-dr-sm">
