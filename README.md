@@ -8,6 +8,12 @@ DesignRail is a design-system handoff control plane for AI-assisted implementati
 
 DesignRail does not try to replace coding agents, IDEs, or Figma Dev Mode. It sits between design intent and implementation as the governed review layer: designers and developers can inspect mapping recommendations, see compliance findings, accept, reject, or edit decisions, and export implementation-ready HTML, React examples, or agent-ready briefs. Review decisions are persisted and instrumented through a GraphQL API so mapping quality can be audited over time.
 
+## Problem / Why This Exists
+
+Design-to-code workflows can produce plausible implementation quickly, but the handoff still needs a trustworthy developer experience. Teams need to understand what changed, why a component mapping was proposed, whether it follows the design system, and what a human accepted or rejected before the result enters a codebase.
+
+DesignRail focuses on that review surface. It treats AI-assisted implementation as a workflow for designers and engineers, not just a generation step.
+
 ## What DesignRail Is For
 
 - Normalize Figma-style design data into reviewable component intent.
@@ -24,7 +30,7 @@ DesignRail does not try to replace coding agents, IDEs, or Figma Dev Mode. It si
 - A replacement for Figma, Dev Mode, or coding agents.
 - A place for proprietary design files, private employer references, or real credentials in the default path.
 
-## Quick start
+## Run Locally
 
 ```sh
 pnpm install
@@ -35,7 +41,9 @@ pnpm docs:dev # runs the Astro Starlight docs site
 
 Prerequisites: Node 20+ (`.nvmrc`), pnpm 10+, `ripgrep` on PATH for `hooks/no-secrets.sh` and `hooks/mock-mode-check.sh`.
 
-## Repository layout
+## Architecture
+
+DesignRail is a pnpm monorepo with a React review workspace, a Fastify/Apollo GraphQL API, shared schemas, deterministic mapping tools, compliance review, and an Astro Starlight docs site.
 
 ```
 apps/
@@ -82,6 +90,24 @@ pnpm design:verify
 
 The default workflow is credential-free and deterministic. Optional Figma API/MCP or AI-service integrations should be explicit additions, not requirements for local development.
 
+## What Is Implemented
+
+- Review workspace for inspecting source intent, proposed component mappings, compliance findings, and review decisions.
+- Shared Zod schemas for component intent, mapping results, compliance findings, review decisions, exports, and instrumentation.
+- GraphQL API backed by API-owned SQLite persistence through Drizzle.
+- Deterministic Button, Input, and Card fixture workflows, with additional components staged in examples.
+- Export paths for implementation-ready HTML, React examples, and agent-ready briefs.
+- Local quality gates for secrets, mock-mode safety, types, lint, format, tests, GraphQL, database drift, compliance review, and design verification.
+- Astro Starlight docs site with implementation notes and ADRs.
+
+## Roadmap
+
+- Expand schema coverage beyond the current Button, Input, and Card paths.
+- Deepen review analytics so repeated mapping edits become product feedback.
+- Add optional real Figma ingestion behind an explicit credentialed path.
+- Improve export quality for React and agent-assisted implementation workflows.
+- Continue documenting architectural decisions as the review contract evolves.
+
 ## Phase 1 Contract
 
 Checkpoint 1 defines the local review contract: shared Zod schemas, a GraphQL API, API-owned SQLite persistence through Drizzle, JSON tool-result envelopes, and persisted review decisions. The default database is local-only at `apps/api/.data/designrail.sqlite`. The API binds to localhost by default; set `HOST` and `DESIGNRAIL_ALLOW_NETWORK=true` only when intentionally exposing it beyond the local machine.
@@ -102,6 +128,11 @@ DesignRail uses layered instructions:
 - Hooks in `hooks/` run repeatable local checks for quality, secrets, and mock-mode safety.
 
 Instructions guide the agent. Deterministic checks enforce quality.
+
+## Design Decisions / ADRs
+
+- [Tailwind and Shoelace](docs/src/content/docs/decisions/0001-tailwind-and-shoelace.md)
+- [GraphQL and SQLite review contract](docs/src/content/docs/decisions/0002-graphql-and-sqlite-review-contract.md)
 
 ## Versioning
 
