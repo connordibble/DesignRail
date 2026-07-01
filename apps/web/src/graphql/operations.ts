@@ -116,6 +116,7 @@ export interface ReviewWorkspace {
   mapping: ComponentMappingResult | null;
   complianceFindings: ComplianceFindingResult[];
   latestDecision: ReviewDecisionResult | null;
+  decisionHistory: ReviewDecisionResult[];
   exports: ExportResult[];
 }
 
@@ -258,6 +259,15 @@ export const REVIEW_WORKSPACE_QUERY: TypedDocumentNode<
         createdAt
       }
       latestDecision {
+        id
+        mappingId
+        status
+        reviewerLabel
+        editedMapping
+        notes
+        createdAt
+      }
+      decisionHistory {
         id
         mappingId
         status
