@@ -17,7 +17,7 @@ The review UI is the product surface. Importers, mapping logic, validators, pers
 GraphQL is the contract between the UI, API, persistence layer, and pipeline outputs. The UI reads:
 
 - `examples` for the selector, decision status, and compliance summary.
-- `reviewWorkspace(exampleId)` for source intent, proposed mapping, findings, latest decision, and exports.
+- `reviewWorkspace(exampleId)` for source intent, proposed mapping, findings, the latest decision, full decision history, and exports.
 - `dashboardMetrics` for aggregate review state.
 
 The UI writes decisions and exports through mutations. It does not bypass GraphQL for persisted review decisions.
@@ -31,6 +31,8 @@ Mappings start as `PENDING`. A reviewer can save:
 - `EDITED`: save a human-adjusted mapping that can be exported.
 
 Only the latest accepted or edited decision unlocks new exports. Historical exports remain visible as audit history when a later decision locks the gate.
+
+Every saved decision is retained (never overwritten); the review UI's History tab surfaces the full per-mapping timeline, and EDITED entries can be expanded to diff the human-edited values against the originally recommended mapping.
 
 ## Deterministic Validator
 

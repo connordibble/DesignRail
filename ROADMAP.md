@@ -7,7 +7,6 @@ DesignRail is currently optimized for a credential-free mock demo of the review 
 - Live Figma MCP adapter behind explicit configuration, normalizing into the same `ComponentIntent` shape as mock fixtures.
 - More component mappings beyond Button, Input, and Card, starting with Badge, Dialog, and Spinner.
 - Stronger accessibility checks for names, roles, keyboard expectations, and missing details.
-- Review history and diffing so repeated accept/edit/reject decisions become visible product feedback.
 - CI validation mode for fixture import, mapping, compliance review, GraphQL, and export generation.
 - Hosted demo with mock data only, no external credentials, and resettable local review state.
 - Demo video and screenshot set covering input intent, review/compliance, and generated output.
