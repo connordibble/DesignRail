@@ -6,13 +6,25 @@ DesignRail is a design-system handoff control plane for AI-assisted implementati
 
 ![DesignRail review workspace — source intent, recommended Shoelace mapping, and the schema-driven decision editor](assets/review-workspace.png)
 
-DesignRail does not try to replace coding agents, IDEs, or Figma Dev Mode. It sits between design intent and implementation as the governed review layer: designers and developers can inspect mapping recommendations, see compliance findings, accept, reject, or edit decisions, and export implementation-ready HTML, React examples, or agent-ready briefs. Review decisions are persisted and instrumented through a GraphQL API so mapping quality can be audited over time.
+DesignRail does not try to replace coding agents, IDEs, or Figma Dev Mode. It sits between design intent and implementation as the governed review layer:
+
+```text
+Design intent -> component proposal -> deterministic checks -> human review -> generated code / agent brief
+```
+
+Designers and developers can inspect mapping recommendations, see compliance findings, accept, reject, or edit decisions, and export implementation-ready HTML, React examples, or agent-ready briefs. Review decisions are persisted and instrumented through a GraphQL API so mapping quality can be audited over time.
 
 ## Problem / Why This Exists
 
 Design-to-code workflows can produce plausible implementation quickly, but the handoff still needs a trustworthy developer experience. Teams need to understand what changed, why a component mapping was proposed, whether it follows the design system, and what a human accepted or rejected before the result enters a codebase.
 
 DesignRail focuses on that review surface. It treats AI-assisted implementation as a workflow for designers and engineers, not just a generation step.
+
+## Why This Matters
+
+- AI generation alone is not enough when design-system fit, accessibility, token usage, and implementation intent need review.
+- Teams need reviewable proposals, deterministic checks, and recorded human decisions before generated code enters a production codebase.
+- Design systems become the control plane for AI-assisted UI implementation: schemas, tokens, and review gates define what can be exported safely.
 
 ## What DesignRail Is For
 
@@ -41,6 +53,26 @@ pnpm docs:dev # runs the Astro Starlight docs site
 
 Prerequisites: Node 20+ (`.nvmrc`), pnpm 10+, `ripgrep` on PATH for `hooks/no-secrets.sh` and `hooks/mock-mode-check.sh`.
 
+## Demo Workflow
+
+Use `pnpm dev`, open `http://localhost:5173/`, then click **Load Button demo** in the review console.
+
+1. **Input / design intent**: Inspect the Source Intent panel for normalized mock Figma input, accessibility metadata, variants, states, and tokens.
+2. **Review / compliance surface**: Compare the recommended Shoelace mapping with deterministic findings and the visible decision gate.
+3. **Accepted mapping / generated output**: Accept or edit the proposal, open Exports, and generate HTML, React, or Agent Brief output.
+
+### Demo Video
+
+[Silent 90-second DesignRail demo](assets/designrail-demo.mov)
+
+### Screenshots
+
+![Demo input/design intent — normalized mock input, tokens, variants, and accessibility metadata](assets/demo-input-intent.png)
+
+![Review/compliance surface — Shoelace proposal, deterministic findings, and human decision gate](assets/demo-review-compliance.png)
+
+![Accepted mapping/generated output — export-ready HTML, React, and agent brief history](assets/demo-export-output.png)
+
 ## Architecture
 
 DesignRail is a pnpm monorepo with a React review workspace, a Fastify/Apollo GraphQL API, shared schemas, deterministic mapping tools, compliance review, and an Astro Starlight docs site.
@@ -62,6 +94,16 @@ docs/                 Astro + Starlight documentation site with ADRs
 agents/               DesignRail-specific skill files
 hooks/                Repeatable local quality, secrets, and mock-mode checks
 ```
+
+### Architecture Notes
+
+- **GraphQL contract**: The review UI reads examples, review workspaces, dashboard metrics, decisions, and exports through GraphQL. Persisted decisions and generated exports are mutations, not UI-local state.
+- **Validator / deterministic checks**: Shared Zod schemas validate mock input, normalized component intent, mappings, findings, decisions, and exports. The importer, mapper, compliance agent, and `pnpm design:verify` reproduce fixture-backed outputs deterministically.
+- **Review decisions**: Human accept, reject, and edit decisions are stored in the API-owned SQLite database with reviewer context and enough data to audit the latest state.
+- **Mock / Figma boundary**: Mock fixtures are the default. Optional real Figma or MCP input belongs behind explicit configuration and must normalize into the same `ComponentIntent` contract.
+- **Export path**: Only accepted or edited mappings can create new HTML, React, or Agent Brief exports. Rejected or pending mappings keep the export gate locked while historical exports remain audit history.
+
+See [docs/architecture.md](docs/architecture.md) for the concise system overview and production integration boundary.
 
 ## Commands
 
@@ -90,6 +132,22 @@ pnpm design:verify
 
 The default workflow is credential-free and deterministic. Optional Figma API/MCP or AI-service integrations should be explicit additions, not requirements for local development.
 
+## Mocked Today vs Production Integration
+
+Mocked today:
+
+- Button, Input, and Card design inputs are public-safe mock Figma-style JSON fixtures in `examples/`.
+- The mapper targets the current Shoelace schema coverage in `packages/schema`.
+- Compliance findings are deterministic local checks, not calls to an external AI service.
+- SQLite persistence is local by default at `apps/api/.data/designrail.sqlite`.
+
+Production integration would keep the same review contract while replacing the adapter boundary:
+
+- A live Figma MCP/API adapter would normalize real design nodes into `ComponentIntent`.
+- Additional component schemas would expand mapping coverage without bypassing review.
+- CI validation would run import, mapping, compliance, GraphQL, and export checks on fixture sets.
+- Hosted review environments would still require human accept/edit decisions before new generated output is export-ready.
+
 ## What Is Implemented
 
 - Review workspace for inspecting source intent, proposed component mappings, compliance findings, and review decisions.
@@ -102,11 +160,7 @@ The default workflow is credential-free and deterministic. Optional Figma API/MC
 
 ## Roadmap
 
-- Expand schema coverage beyond the current Button, Input, and Card paths.
-- Deepen review analytics so repeated mapping edits become product feedback.
-- Add optional real Figma ingestion behind an explicit credentialed path.
-- Improve export quality for React and agent-assisted implementation workflows.
-- Continue documenting architectural decisions as the review contract evolves.
+See [ROADMAP.md](ROADMAP.md) for the public demo roadmap. Near-term work focuses on the live Figma MCP adapter, broader component mappings, stronger accessibility checks, review history/diffing, CI validation mode, and a hosted demo.
 
 ## Phase 1 Contract
 

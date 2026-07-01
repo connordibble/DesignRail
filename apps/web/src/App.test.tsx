@@ -50,10 +50,22 @@ const REVIEW_WORKSPACE_VARIABLES = {
 };
 
 const DEFAULT_EXAMPLES: ExampleResult[] = [
-  buttonExampleFixture,
-  cardExampleFixture,
-  inputExampleFixture,
+  toExampleResult(buttonExampleFixture, 'PENDING', { blockers: 0, warnings: 0, info: 3 }),
+  toExampleResult(cardExampleFixture, 'PENDING', { blockers: 0, warnings: 0, info: 3 }),
+  toExampleResult(inputExampleFixture, 'PENDING', { blockers: 0, warnings: 1, info: 3 }),
 ];
+
+function toExampleResult(
+  example: Omit<ExampleResult, 'complianceSummary' | 'latestDecisionStatus'>,
+  latestDecisionStatus: ReviewDecisionResult['status'] = 'PENDING',
+  complianceSummary: ExampleResult['complianceSummary'] = { blockers: 0, warnings: 0, info: 0 },
+): ExampleResult {
+  return {
+    ...example,
+    latestDecisionStatus,
+    complianceSummary,
+  };
+}
 
 function toIntentResult(
   intent:
@@ -105,7 +117,7 @@ function toFindingResults(
 }
 
 const POPULATED_WORKSPACE: ReviewWorkspace = {
-  example: buttonExampleFixture,
+  example: toExampleResult(buttonExampleFixture, 'PENDING', { blockers: 0, warnings: 0, info: 3 }),
   intent: toIntentResult(buttonComponentIntentFixture),
   mapping: toMappingResult(buttonComponentMappingFixture),
   complianceFindings: toFindingResults(buttonComplianceFindingsFixture),
@@ -114,7 +126,7 @@ const POPULATED_WORKSPACE: ReviewWorkspace = {
 };
 
 const INPUT_WORKSPACE: ReviewWorkspace = {
-  example: inputExampleFixture,
+  example: toExampleResult(inputExampleFixture, 'PENDING', { blockers: 0, warnings: 1, info: 3 }),
   intent: toIntentResult(inputComponentIntentFixture),
   mapping: toMappingResult(inputComponentMappingFixture),
   complianceFindings: toFindingResults(inputComplianceFindingsFixture),
@@ -123,7 +135,7 @@ const INPUT_WORKSPACE: ReviewWorkspace = {
 };
 
 const CARD_WORKSPACE: ReviewWorkspace = {
-  example: cardExampleFixture,
+  example: toExampleResult(cardExampleFixture, 'PENDING', { blockers: 0, warnings: 0, info: 3 }),
   intent: toIntentResult(cardComponentIntentFixture),
   mapping: toMappingResult(cardComponentMappingFixture),
   complianceFindings: toFindingResults(cardComplianceFindingsFixture),
@@ -182,21 +194,59 @@ describe('<App />', () => {
   it('renders Button intent, mapping, and compliance content from GraphQL data', async () => {
     renderApp([createWorkspaceMock(POPULATED_RESULT)]);
 
+    expect(
+      await screen.findByText('Review implementation proposals before export'),
+    ).toBeInTheDocument();
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
     expect(screen.getAllByText(buttonComponentMappingFixture.targetComponent)).not.toHaveLength(0);
     expect(screen.getByText(buttonComplianceFindingsFixture[0]!.category)).toBeInTheDocument();
     expect(screen.getByText(buttonComplianceFindingsFixture[0]!.message)).toBeInTheDocument();
   });
 
-  it('keeps example rows independent from the selected review decision state', async () => {
-    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+  it('provides a reliable demo scenario action that returns to Button review', async () => {
+    const user = userEvent.setup();
+    renderApp([
+      createWorkspaceMock(POPULATED_RESULT),
+      createWorkspaceMock(
+        {
+          reviewWorkspace: INPUT_WORKSPACE,
+          dashboardMetrics: createEmptyDashboardMetrics(),
+        },
+        { exampleId: INPUT_EXAMPLE_ID },
+      ),
+      createWorkspaceMock(POPULATED_RESULT),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: /Input/ }));
+    expect(await screen.findByText(inputComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    await user.click(screen.getByRole('button', { name: 'Load Button demo' }));
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Review' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('renders example rows with decision state and compliance summary', async () => {
+    renderApp(
+      [createWorkspaceMock(POPULATED_RESULT)],
+      [
+        toExampleResult(buttonExampleFixture, 'ACCEPTED', { blockers: 0, warnings: 0, info: 3 }),
+        toExampleResult(cardExampleFixture, 'EDITED', { blockers: 0, warnings: 0, info: 3 }),
+        toExampleResult(inputExampleFixture, 'REJECTED', { blockers: 0, warnings: 1, info: 3 }),
+      ],
+    );
 
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
 
     const examplesRegion = screen.getByRole('region', { name: 'Examples' });
 
-    expect(within(examplesRegion).queryByText('PENDING')).not.toBeInTheDocument();
-    expect(within(examplesRegion).queryByText('Ready')).not.toBeInTheDocument();
+    expect(await within(examplesRegion).findByText('ACCEPTED')).toBeInTheDocument();
+    expect(within(examplesRegion).getByText('EDITED')).toBeInTheDocument();
+    expect(within(examplesRegion).getByText('REJECTED')).toBeInTheDocument();
+    expect(within(examplesRegion).getByText('1 warning')).toBeInTheDocument();
   });
 
   it('switches the workspace when another example is selected', async () => {
@@ -281,7 +331,7 @@ describe('<App />', () => {
           { exampleId: INPUT_EXAMPLE_ID },
         ),
       ],
-      [inputExampleFixture],
+      [toExampleResult(inputExampleFixture, 'PENDING', { blockers: 0, warnings: 1, info: 3 })],
     );
 
     expect(await screen.findByText(inputComponentIntentFixture.summary)).toBeInTheDocument();
@@ -342,7 +392,7 @@ describe('<App />', () => {
           { exampleId: cardExampleFixture.id },
         ),
       ],
-      [cardExampleFixture],
+      [toExampleResult(cardExampleFixture, 'PENDING', { blockers: 0, warnings: 0, info: 3 })],
     );
 
     expect(await screen.findByText(cardComponentIntentFixture.summary)).toBeInTheDocument();
@@ -566,8 +616,9 @@ describe('<App />', () => {
       }),
       createWorkspaceMock(
         createWorkspaceResult({
+          exports: [htmlExportFixture],
           latestDecision: rejectedDecision,
-          metrics: { rejectedMappings: 1 },
+          metrics: { exportsCreated: 1, rejectedMappings: 1 },
         }),
       ),
     ]);
@@ -581,6 +632,7 @@ describe('<App />', () => {
 
     expect(screen.getByRole('button', { name: 'HTML' })).toBeDisabled();
     expect(screen.getByText('LOCKED')).toBeInTheDocument();
+    expect(screen.getByText('Historical exports retained')).toBeInTheDocument();
   });
 
   it('saves edited Button controls and exports edited output', async () => {
