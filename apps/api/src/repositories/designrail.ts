@@ -82,6 +82,12 @@ export interface CreateExportInput {
   createdAt?: string;
 }
 
+export interface ComplianceSeverityCounts {
+  blockers: number;
+  warnings: number;
+  info: number;
+}
+
 export interface ReviewWorkspace {
   example: Example;
   intent: ComponentIntent | null;
@@ -414,6 +420,38 @@ export function listComplianceFindingsByMappingId(
       .all()
       .map(toComplianceFinding)
   );
+}
+
+export function countComplianceFindingsBySeverity(
+  client: DatabaseClient,
+  mappingId: string,
+): ComplianceSeverityCounts {
+  const rows = client.db
+    .select({
+      severity: complianceFindings.severity,
+      total: count(),
+    })
+    .from(complianceFindings)
+    .where(eq(complianceFindings.mappingId, mappingId))
+    .groupBy(complianceFindings.severity)
+    .all();
+  const summary: ComplianceSeverityCounts = { blockers: 0, warnings: 0, info: 0 };
+
+  for (const row of rows) {
+    switch (row.severity) {
+      case 'BLOCKER':
+        summary.blockers = row.total;
+        break;
+      case 'WARNING':
+        summary.warnings = row.total;
+        break;
+      case 'INFO':
+        summary.info = row.total;
+        break;
+    }
+  }
+
+  return summary;
 }
 
 export function listReviewDecisions(
