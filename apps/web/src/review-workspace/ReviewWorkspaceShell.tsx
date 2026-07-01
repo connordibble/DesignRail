@@ -21,8 +21,9 @@ import {
   EXPORT_MAPPING_MUTATION,
   REVIEW_WORKSPACE_QUERY,
   SAVE_REVIEW_DECISION_MUTATION,
-  type ComponentMappingResult,
   type ComplianceFindingResult,
+  type ComplianceLedgerEntryResult,
+  type ComponentMappingResult,
   type ExampleResult,
   type ExportMappingMutation,
   type ExportMappingMutationVariables,
@@ -45,12 +46,13 @@ import {
   type MappingEditDraft,
 } from './mapping-edit.js';
 
-const TABS = ['Dashboard', 'Review', 'History', 'Exports', 'Schema'] as const;
+const TABS = ['Dashboard', 'Compliance', 'Review', 'History', 'Exports', 'Schema'] as const;
 
 type WorkspaceTab = (typeof TABS)[number];
 type Tone = 'success' | 'warning' | 'danger' | 'info' | 'edited' | 'neutral';
 
 const EMPTY_METRICS = createEmptyDashboardMetrics();
+const EMPTY_COMPLIANCE_LEDGER: ComplianceLedgerEntryResult[] = [];
 
 const STATUS_TONES: Record<ReviewDecisionStatus, Tone> = {
   ACCEPTED: 'success',
@@ -83,8 +85,9 @@ const METRIC_ITEMS = [
 ] as const;
 
 const TAB_KEYBOARD_TARGETS: Record<WorkspaceTab, { previous: WorkspaceTab; next: WorkspaceTab }> = {
-  Dashboard: { previous: 'Schema', next: 'Review' },
-  Review: { previous: 'Dashboard', next: 'History' },
+  Dashboard: { previous: 'Schema', next: 'Compliance' },
+  Compliance: { previous: 'Dashboard', next: 'Review' },
+  Review: { previous: 'Compliance', next: 'History' },
   History: { previous: 'Review', next: 'Exports' },
   Exports: { previous: 'History', next: 'Schema' },
   Schema: { previous: 'Exports', next: 'Dashboard' },
@@ -112,6 +115,7 @@ export function ReviewWorkspaceShell({
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('Review');
   const tabButtonRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
     Dashboard: null,
+    Compliance: null,
     Review: null,
     History: null,
     Exports: null,
@@ -126,6 +130,7 @@ export function ReviewWorkspaceShell({
 
   const workspace = data?.reviewWorkspace ?? null;
   const metrics = data?.dashboardMetrics ?? EMPTY_METRICS;
+  const complianceLedger = data?.complianceLedger ?? EMPTY_COMPLIANCE_LEDGER;
   const decisionStatus = workspace === null ? null : getDecisionStatus(workspace.latestDecision);
   const decisionTone = decisionStatus === null ? 'neutral' : STATUS_TONES[decisionStatus];
   const decisionLabel = decisionStatus ?? (loading ? 'Loading' : 'Unavailable');
@@ -134,6 +139,7 @@ export function ReviewWorkspaceShell({
   const tabPanelId = getTabPanelId(activeTab);
   const workspaceBody = renderWorkspaceBody({
     activeTab,
+    complianceLedger,
     errorMessage: error?.message,
     exampleId,
     loading,
@@ -344,6 +350,7 @@ function DemoOrientation({ onLoadDemoScenario }: DemoOrientationProps): ReactEle
 
 interface WorkspaceTabPanelProps {
   activeTab: WorkspaceTab;
+  complianceLedger: ComplianceLedgerEntryResult[];
   exampleId: string;
   metrics: DashboardMetrics;
   workspace: ReviewWorkspace;
@@ -351,6 +358,7 @@ interface WorkspaceTabPanelProps {
 
 interface RenderWorkspaceBodyInput {
   activeTab: WorkspaceTab;
+  complianceLedger: ComplianceLedgerEntryResult[];
   errorMessage: string | undefined;
   exampleId: string;
   loading: boolean;
@@ -360,6 +368,7 @@ interface RenderWorkspaceBodyInput {
 
 function renderWorkspaceBody({
   activeTab,
+  complianceLedger,
   errorMessage,
   exampleId,
   loading,
@@ -381,6 +390,7 @@ function renderWorkspaceBody({
   return (
     <WorkspaceTabPanel
       activeTab={activeTab}
+      complianceLedger={complianceLedger}
       exampleId={exampleId}
       metrics={metrics}
       workspace={workspace}
@@ -390,6 +400,7 @@ function renderWorkspaceBody({
 
 function WorkspaceTabPanel({
   activeTab,
+  complianceLedger,
   exampleId,
   metrics,
   workspace,
@@ -397,6 +408,8 @@ function WorkspaceTabPanel({
   switch (activeTab) {
     case 'Dashboard':
       return <DashboardPanel metrics={metrics} workspace={workspace} />;
+    case 'Compliance':
+      return <ComplianceTimelinePanel entries={complianceLedger} />;
     case 'Review':
       // Remount the edit form whenever the underlying decision or mapping changes so
       // the draft re-initializes from server state without a state-syncing effect.
@@ -865,6 +878,75 @@ function MappingPropField({
   );
 }
 
+interface ComplianceTimelinePanelProps {
+  entries: ComplianceLedgerEntryResult[];
+}
+
+interface ComplianceLedgerGroup {
+  example: ComplianceLedgerEntryResult['example'];
+  findings: ComplianceFindingResult[];
+}
+
+function ComplianceTimelinePanel({ entries }: ComplianceTimelinePanelProps): ReactElement {
+  if (entries.length === 0) {
+    return (
+      <Panel title="Compliance Timeline">
+        <EmptyLine text="No compliance findings recorded across any component." />
+      </Panel>
+    );
+  }
+
+  const groups = groupLedgerByExample(entries);
+
+  return (
+    <Panel title="Compliance Timeline">
+      <p className="text-dr-caption text-dr-subtle">
+        {summarizeFindings(entries.map((entry) => entry.finding))} across {groups.length}{' '}
+        {groups.length === 1 ? 'component' : 'components'}
+      </p>
+      <div className="mt-dr-md grid gap-dr-md">
+        {groups.map((group) => {
+          const groupSummary = getComplianceSummary(group.findings);
+
+          return (
+            <section className="grid gap-dr-xs" key={group.example.id}>
+              <div className="flex flex-wrap items-center gap-dr-sm">
+                <span className="text-dr-section-title font-semibold text-dr-text">
+                  {group.example.name}
+                </span>
+                <StatusBadge label={groupSummary.label} tone={groupSummary.tone} />
+              </div>
+              <ul className="divide-y divide-dr-border">
+                {group.findings.map((finding) => (
+                  <ComplianceFindingRow finding={finding} key={finding.id} />
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+}
+
+/** Groups ledger entries by example, preserving the server's severity-first ordering: the first
+ * example to appear (via its most severe finding) is the first group. */
+function groupLedgerByExample(entries: ComplianceLedgerEntryResult[]): ComplianceLedgerGroup[] {
+  const groups = new Map<string, ComplianceLedgerGroup>();
+
+  for (const entry of entries) {
+    const existing = groups.get(entry.example.id);
+
+    if (existing === undefined) {
+      groups.set(entry.example.id, { example: entry.example, findings: [entry.finding] });
+    } else {
+      existing.findings.push(entry.finding);
+    }
+  }
+
+  return [...groups.values()];
+}
+
 interface ComplianceBandProps {
   findings: ComplianceFindingResult[];
 }
@@ -874,6 +956,38 @@ const SEVERITY_ORDER: Record<ComplianceFindingResult['severity'], number> = {
   WARNING: 1,
   INFO: 2,
 };
+
+function ComplianceFindingRow({ finding }: { finding: ComplianceFindingResult }): ReactElement {
+  return (
+    <li className="flex flex-col gap-dr-xxs py-dr-sm sm:flex-row sm:items-start sm:gap-dr-md">
+      <span className="flex flex-col gap-dr-xxs sm:w-48 sm:shrink-0">
+        <span className="flex items-center gap-dr-xs">
+          <StatusDot tone={SEVERITY_TONES[finding.severity]} />
+          <span
+            className={cx(
+              'text-dr-caption font-semibold',
+              getToneTextClass(SEVERITY_TONES[finding.severity]),
+            )}
+          >
+            {finding.severity}
+          </span>
+        </span>
+        <span className="break-words font-mono text-dr-caption text-dr-subtle">
+          {finding.category}
+        </span>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-dr-small text-dr-text">{finding.message}</span>
+        <span className="mt-dr-xxs block text-dr-small text-dr-muted">{finding.remediation}</span>
+      </span>
+      {finding.path ? (
+        <span className="font-mono text-dr-caption text-dr-subtle sm:text-right">
+          {finding.path}
+        </span>
+      ) : null}
+    </li>
+  );
+}
 
 function ComplianceBand({ findings }: ComplianceBandProps): ReactElement {
   if (findings.length === 0) {
@@ -895,38 +1009,7 @@ function ComplianceBand({ findings }: ComplianceBandProps): ReactElement {
       <p className="text-dr-caption text-dr-subtle">{summarizeFindings(findings)}</p>
       <ul className="mt-dr-sm divide-y divide-dr-border">
         {ordered.map((finding) => (
-          <li
-            className="flex flex-col gap-dr-xxs py-dr-sm sm:flex-row sm:items-start sm:gap-dr-md"
-            key={finding.id}
-          >
-            <span className="flex flex-col gap-dr-xxs sm:w-48 sm:shrink-0">
-              <span className="flex items-center gap-dr-xs">
-                <StatusDot tone={SEVERITY_TONES[finding.severity]} />
-                <span
-                  className={cx(
-                    'text-dr-caption font-semibold',
-                    getToneTextClass(SEVERITY_TONES[finding.severity]),
-                  )}
-                >
-                  {finding.severity}
-                </span>
-              </span>
-              <span className="break-words font-mono text-dr-caption text-dr-subtle">
-                {finding.category}
-              </span>
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-dr-small text-dr-text">{finding.message}</span>
-              <span className="mt-dr-xxs block text-dr-small text-dr-muted">
-                {finding.remediation}
-              </span>
-            </span>
-            {finding.path ? (
-              <span className="font-mono text-dr-caption text-dr-subtle sm:text-right">
-                {finding.path}
-              </span>
-            ) : null}
-          </li>
+          <ComplianceFindingRow finding={finding} key={finding.id} />
         ))}
       </ul>
     </Panel>
