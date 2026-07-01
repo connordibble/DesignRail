@@ -60,7 +60,7 @@ Exports are generated from the effective mapping selected by the latest review d
 - Edited mappings export the reviewer-adjusted mapping.
 - Rejected or pending mappings cannot create new exports.
 
-The current demo supports HTML, React, and Agent Brief output. Agent briefs give AI coding tools structured context without letting them skip the human review gate.
+The current demo supports HTML, React, and Agent Brief output. Agent briefs give AI coding tools structured context without letting them skip the human review gate: each brief carries the mapping's props and slot, the authorizing review decision (status, reviewer, timestamp), a compliance summary, any blocking findings, and an explicit directive not to change the mapping without a new human review decision.
 
 ## Keeping Humans In Control
 
