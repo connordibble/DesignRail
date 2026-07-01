@@ -47,7 +47,7 @@ import {
   type DatabaseClient,
 } from '../db/index.js';
 
-import { renderExportContent } from './export-renderer.js';
+import { renderExportContent, type AgentBriefContext } from './export-renderer.js';
 
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_LIST_LIMIT = 200;
@@ -657,10 +657,18 @@ export function createExport(
       ? applyMappingEdit(mapping, latestDecision.editedMapping)
       : mapping;
 
+  const agentBriefContext: AgentBriefContext | undefined =
+    input.format === 'AGENT_BRIEF'
+      ? {
+          decision: latestDecision,
+          findings: listComplianceFindingsByMappingId(client, mapping.id),
+        }
+      : undefined;
+
   let content: string;
 
   try {
-    content = renderExportContent(effectiveMapping, input.format);
+    content = renderExportContent(effectiveMapping, input.format, agentBriefContext);
   } catch (error) {
     return {
       ok: false,

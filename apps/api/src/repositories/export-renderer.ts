@@ -4,9 +4,25 @@ import {
   type ShoelaceComponentSchema,
   type ShoelaceProp,
 } from '@designrail/schema';
-import type { ComponentMapping, ExportFormat, JsonValue, Metadata } from '@designrail/shared';
+import type {
+  ComplianceFinding,
+  ComponentMapping,
+  ExportFormat,
+  JsonValue,
+  Metadata,
+  ReviewDecision,
+} from '@designrail/shared';
 
-export function renderExportContent(mapping: ComponentMapping, format: ExportFormat): string {
+export interface AgentBriefContext {
+  decision: ReviewDecision;
+  findings: ComplianceFinding[];
+}
+
+export function renderExportContent(
+  mapping: ComponentMapping,
+  format: ExportFormat,
+  agentBriefContext?: AgentBriefContext,
+): string {
   const schema = resolveSchema(mapping);
 
   if (format === 'HTML') {
@@ -17,7 +33,11 @@ export function renderExportContent(mapping: ComponentMapping, format: ExportFor
     return renderReact(mapping, schema);
   }
 
-  return renderAgentBrief(mapping);
+  if (agentBriefContext === undefined) {
+    throw new Error('Agent Brief export requires the authorizing review decision and findings.');
+  }
+
+  return renderAgentBrief(mapping, agentBriefContext);
 }
 
 function resolveSchema(mapping: ComponentMapping): ShoelaceComponentSchema {
@@ -55,13 +75,67 @@ function renderReact(mapping: ComponentMapping, schema: ShoelaceComponentSchema)
   return `<${componentName}${props}>${escapeJsxText(getDefaultSlotText(mapping, schema))}</${componentName}>`;
 }
 
-function renderAgentBrief(mapping: ComponentMapping): string {
-  return [
+function renderAgentBrief(mapping: ComponentMapping, context: AgentBriefContext): string {
+  const { decision, findings } = context;
+  const blockingFindings = findings.filter((finding) => finding.blocking);
+
+  const lines = [
     `Mapping: ${mapping.id}`,
     `Target: ${mapping.targetLibrary} ${mapping.targetComponent}`,
     `Confidence: ${mapping.confidence}`,
     `Rationale: ${mapping.rationale}`,
-  ].join('\n');
+    '',
+    `Review: ${decision.status} by ${decision.reviewerLabel} on ${decision.createdAt}`,
+    `Compliance: ${summarizeFindingCounts(findings)}`,
+  ];
+
+  if (blockingFindings.length > 0) {
+    lines.push('Blocking findings:');
+    for (const finding of blockingFindings) {
+      lines.push(`  - [${finding.category}] ${finding.message}`);
+    }
+  }
+
+  lines.push('', 'Props:');
+  for (const [name, value] of Object.entries(mapping.mappedProps)) {
+    lines.push(`  ${name}: ${formatBriefValue(value)}`);
+  }
+
+  const defaultSlot = mapping.mappedSlots['default'];
+  if (typeof defaultSlot === 'string') {
+    lines.push('', `Slot (default): ${defaultSlot}`);
+  }
+
+  lines.push(
+    '',
+    'This mapping is human-reviewed and export-ready. Do not change props, slots, the target component, or the rationale without a new human review decision.',
+  );
+
+  return lines.join('\n');
+}
+
+function summarizeFindingCounts(findings: ComplianceFinding[]): string {
+  const blockers = findings.filter((finding) => finding.severity === 'BLOCKER').length;
+  const warnings = findings.filter((finding) => finding.severity === 'WARNING').length;
+  const info = findings.filter((finding) => finding.severity === 'INFO').length;
+
+  return `${blockers} blocker${blockers === 1 ? '' : 's'}, ${warnings} warning${warnings === 1 ? '' : 's'}, ${info} info`;
+}
+
+function formatBriefValue(value: JsonValue): string {
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
+
+  if (value === null) {
+    return 'null';
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
 }
 
 type ExportTarget = 'html' | 'react';
