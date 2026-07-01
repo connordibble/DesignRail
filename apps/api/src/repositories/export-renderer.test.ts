@@ -2,10 +2,42 @@ import {
   buttonComponentMappingFixture,
   cardComponentMappingFixture,
   inputComponentMappingFixture,
+  type ComplianceFinding,
+  type ReviewDecision,
 } from '@designrail/shared';
 import { describe, expect, it } from 'vitest';
 
 import { renderExportContent } from './export-renderer.js';
+
+const acceptedDecision: ReviewDecision = {
+  id: 'decision.test.accepted',
+  mappingId: buttonComponentMappingFixture.id,
+  status: 'ACCEPTED',
+  reviewerLabel: 'Repository test',
+  createdAt: '2026-01-01T00:00:01.000Z',
+};
+
+const infoFinding: ComplianceFinding = {
+  id: 'finding.test.info',
+  mappingId: buttonComponentMappingFixture.id,
+  category: 'ACCESSIBILITY',
+  severity: 'INFO',
+  message: 'Accessible name resolved from design intent.',
+  remediation: 'Keep the accessible name in sync.',
+  blocking: false,
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
+
+const blockerFinding: ComplianceFinding = {
+  id: 'finding.test.blocker',
+  mappingId: buttonComponentMappingFixture.id,
+  category: 'TOKEN_USAGE',
+  severity: 'BLOCKER',
+  message: 'Design token missing a Shoelace target.',
+  remediation: 'Map the token before export.',
+  blocking: true,
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
 
 describe('export renderer', () => {
   it('renders deterministic Shoelace HTML and React examples', () => {
@@ -89,5 +121,62 @@ describe('export renderer', () => {
         'HTML',
       ),
     ).toBe('<sl-button variant="primary">Save changes</sl-button>');
+  });
+
+  describe('agent brief', () => {
+    it('requires an authorizing decision and findings context', () => {
+      expect(() => renderExportContent(buttonComponentMappingFixture, 'AGENT_BRIEF')).toThrow(
+        /requires the authorizing review decision/,
+      );
+    });
+
+    it('includes the review decision, compliance summary, props, and slot', () => {
+      const content = renderExportContent(buttonComponentMappingFixture, 'AGENT_BRIEF', {
+        decision: acceptedDecision,
+        findings: [infoFinding],
+      });
+
+      expect(content).toBe(
+        [
+          `Mapping: ${buttonComponentMappingFixture.id}`,
+          'Target: SHOELACE sl-button',
+          'Confidence: HIGH',
+          `Rationale: ${buttonComponentMappingFixture.rationale}`,
+          '',
+          'Review: ACCEPTED by Repository test on 2026-01-01T00:00:01.000Z',
+          'Compliance: 0 blockers, 0 warnings, 1 info',
+          '',
+          'Props:',
+          '  variant: primary',
+          '  size: medium',
+          '  disabled: false',
+          '',
+          'Slot (default): Save changes',
+          '',
+          'This mapping is human-reviewed and export-ready. Do not change props, slots, the target component, or the rationale without a new human review decision.',
+        ].join('\n'),
+      );
+    });
+
+    it('lists blocking findings explicitly', () => {
+      const content = renderExportContent(buttonComponentMappingFixture, 'AGENT_BRIEF', {
+        decision: acceptedDecision,
+        findings: [infoFinding, blockerFinding],
+      });
+
+      expect(content).toContain('Compliance: 1 blocker, 0 warnings, 1 info');
+      expect(content).toContain('Blocking findings:');
+      expect(content).toContain('  - [TOKEN_USAGE] Design token missing a Shoelace target.');
+    });
+
+    it('omits the slot line for childless components', () => {
+      const content = renderExportContent(inputComponentMappingFixture, 'AGENT_BRIEF', {
+        decision: { ...acceptedDecision, mappingId: inputComponentMappingFixture.id },
+        findings: [],
+      });
+
+      expect(content).not.toContain('Slot (default):');
+      expect(content).toContain('Compliance: 0 blockers, 0 warnings, 0 info');
+    });
   });
 });

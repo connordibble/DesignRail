@@ -20,7 +20,7 @@ import {
 } from '@designrail/shared';
 import { render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { App } from './App.js';
 import {
@@ -645,6 +645,51 @@ describe('<App />', () => {
 
     expect(briefCard).toHaveClass('min-w-0', 'overflow-hidden');
     expect(briefContent).toHaveClass('max-w-full', 'overflow-x-auto', 'overscroll-x-contain');
+
+    const withinBriefCard = within(briefCard);
+    expect(
+      withinBriefCard.getByText(/Structured, human-reviewed context for AI coding agents/),
+    ).toBeInTheDocument();
+
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    await user.click(
+      withinBriefCard.getByRole('button', { name: 'Copy AGENT_BRIEF export content' }),
+    );
+
+    expect(writeText).toHaveBeenCalledWith(briefExport.content);
+    expect(await withinBriefCard.findByText('Copied')).toBeInTheDocument();
+  });
+
+  it('shows a failure state when copying an export is denied', async () => {
+    const user = userEvent.setup();
+    const acceptedDecision = createDecision('ACCEPTED');
+
+    renderApp([
+      createWorkspaceMock(
+        createWorkspaceResult({
+          exports: [htmlExportFixture],
+          latestDecision: acceptedDecision,
+          metrics: { acceptedMappings: 1, exportsCreated: 1 },
+        }),
+      ),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error('Permission denied')) },
+    });
+
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    await user.click(screen.getByRole('button', { name: 'Copy HTML export content' }));
+
+    expect(await screen.findByText('Copy failed')).toBeInTheDocument();
   });
 
   it('saves a rejected decision and keeps exports locked', async () => {

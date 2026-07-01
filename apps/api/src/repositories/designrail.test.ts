@@ -347,6 +347,33 @@ describe('DesignRail repositories', () => {
     });
   });
 
+  it('exports an agent brief carrying the authorizing decision and compliance findings', () => {
+    saveReviewDecision(client, {
+      id: 'decision.test.accepted-for-brief',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'ACCEPTED',
+      reviewerLabel: 'Repository test',
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+
+    const outcome = createExport(client, {
+      id: 'export.test.agent-brief',
+      mappingId: buttonComponentMappingFixture.id,
+      format: 'AGENT_BRIEF',
+      createdAt: '2026-01-01T00:00:02.000Z',
+    });
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) {
+      return;
+    }
+
+    expect(outcome.exportResult.content).toContain(
+      'Review: ACCEPTED by Repository test on 2026-01-01T00:00:01.000Z',
+    );
+    expect(outcome.exportResult.content).toContain('Compliance: 0 blockers, 0 warnings, 3 info');
+  });
+
   it('records instrumentation events', () => {
     const event = recordInstrumentationEvent(client, {
       id: 'event.test.review-saved',
