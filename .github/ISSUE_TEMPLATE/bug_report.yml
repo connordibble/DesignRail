@@ -1,0 +1,51 @@
+name: Bug report
+description: Report something that does not work as documented in the default mock-mode path.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The default DesignRail workflow is credential-free and
+        deterministic, so please reproduce against the documented mock-mode path before filing.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: A minimal, ordered list. Include the exact commands you ran.
+      placeholder: |
+        1. pnpm install
+        2. pnpm dev
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the project? (web, api, schema, pipeline tool, docs)
+      placeholder: apps/web
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version (`node -v`), and pnpm version (`pnpm -v`).
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I reproduced this on the credential-free mock-mode path.
+          required: true
+        - label: I confirmed `pnpm check` reflects the problem, or explained why it does not.
+          required: false
