@@ -120,6 +120,17 @@ export interface ReviewWorkspace {
   exports: ExportResult[];
 }
 
+export interface ComplianceLedgerEntryResult {
+  // Only the identifying fields are fetched — latestDecisionStatus/complianceSummary are resolved
+  // per-Example server-side, and the UI already derives an equivalent summary from `finding`
+  // across all of an example's ledger entries, so selecting them here would be redundant work.
+  example: Pick<
+    ExampleResult,
+    'id' | 'name' | 'componentType' | 'fixturePath' | 'source' | 'status'
+  >;
+  finding: ComplianceFindingResult;
+}
+
 export interface ExamplesQuery {
   examples: ExampleResult[];
 }
@@ -127,6 +138,7 @@ export interface ExamplesQuery {
 export interface ReviewWorkspaceQuery {
   reviewWorkspace: ReviewWorkspace | null;
   dashboardMetrics: DashboardMetrics;
+  complianceLedger: ComplianceLedgerEntryResult[];
 }
 
 export interface ReviewWorkspaceQueryVariables {
@@ -293,6 +305,27 @@ export const REVIEW_WORKSPACE_QUERY: TypedDocumentNode<
       commonComplianceWarnings {
         message
         count
+      }
+    }
+    complianceLedger {
+      example {
+        id
+        name
+        componentType
+        fixturePath
+        source
+        status
+      }
+      finding {
+        id
+        mappingId
+        category
+        severity
+        message
+        remediation
+        path
+        blocking
+        createdAt
       }
     }
   }
