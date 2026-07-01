@@ -19,6 +19,7 @@ GraphQL is the contract between the UI, API, persistence layer, and pipeline out
 - `examples` for the selector, decision status, and compliance summary.
 - `reviewWorkspace(exampleId)` for source intent, proposed mapping, findings, the latest decision, full decision history, and exports.
 - `dashboardMetrics` for aggregate review state.
+- `complianceLedger` for every compliance finding across every example, most severe first, powering the Compliance Timeline tab's cross-component audit view.
 
 The UI writes decisions and exports through mutations. It does not bypass GraphQL for persisted review decisions.
 
