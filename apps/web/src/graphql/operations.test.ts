@@ -5,8 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   EXPORT_MAPPING_MUTATION,
+  EXAMPLES_QUERY,
   REVIEW_WORKSPACE_QUERY,
   SAVE_REVIEW_DECISION_MUTATION,
+  type ExamplesQuery,
   type ExportMappingMutation,
   type ExportMappingMutationVariables,
   type ReviewWorkspaceQuery,
@@ -23,6 +25,10 @@ describe('GraphQL operation documents', () => {
       ReviewWorkspaceQuery,
       ReviewWorkspaceQueryVariables
     > = REVIEW_WORKSPACE_QUERY;
+    const examplesDocument: TypedDocumentNode<
+      ExamplesQuery,
+      Record<string, never>
+    > = EXAMPLES_QUERY;
     const saveDecisionDocument: TypedDocumentNode<
       SaveReviewDecisionMutation,
       SaveReviewDecisionMutationVariables
@@ -33,12 +39,14 @@ describe('GraphQL operation documents', () => {
     > = EXPORT_MAPPING_MUTATION;
 
     expect(reviewWorkspaceDocument.kind).toBe('Document');
+    expect(examplesDocument.kind).toBe('Document');
     expect(saveDecisionDocument.kind).toBe('Document');
     expect(exportMappingDocument.kind).toBe('Document');
   });
 
   it('validates web operations against the API schema', () => {
     const operationDocuments = [
+      EXAMPLES_QUERY,
       REVIEW_WORKSPACE_QUERY,
       SAVE_REVIEW_DECISION_MUTATION,
       EXPORT_MAPPING_MUTATION,
