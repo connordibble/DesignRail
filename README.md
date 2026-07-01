@@ -67,11 +67,24 @@ Use `pnpm dev`, open `http://localhost:5173/`, then click **Load Button demo** i
 
 ### Screenshots
 
-![Demo input/design intent — normalized mock input, tokens, variants, and accessibility metadata](assets/demo-input-intent.png)
-
-![Review/compliance surface — Shoelace proposal, deterministic findings, and human decision gate](assets/demo-review-compliance.png)
-
-![Accepted mapping/generated output — export-ready HTML, React, and agent brief history](assets/demo-export-output.png)
+<table>
+  <tr>
+    <th scope="col">Input / design intent</th>
+    <th scope="col">Review / compliance</th>
+    <th scope="col">Accepted export</th>
+  </tr>
+  <tr>
+    <td>
+      <img src="assets/demo-input-intent.png" alt="Demo input and design intent with normalized mock input, variants, states, tokens, and accessibility metadata" width="300" />
+    </td>
+    <td>
+      <img src="assets/demo-review-compliance.png" alt="Review and compliance surface with a Shoelace input proposal, warning finding, and rejected decision gate" width="300" />
+    </td>
+    <td>
+      <img src="assets/demo-export-output.png" alt="Accepted mapping export output with HTML, React, and agent brief history" width="300" />
+    </td>
+  </tr>
+</table>
 
 ## Architecture
 
