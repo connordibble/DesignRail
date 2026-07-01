@@ -122,6 +122,7 @@ const POPULATED_WORKSPACE: ReviewWorkspace = {
   mapping: toMappingResult(buttonComponentMappingFixture),
   complianceFindings: toFindingResults(buttonComplianceFindingsFixture),
   latestDecision: null,
+  decisionHistory: [],
   exports: [],
 };
 
@@ -131,6 +132,7 @@ const INPUT_WORKSPACE: ReviewWorkspace = {
   mapping: toMappingResult(inputComponentMappingFixture),
   complianceFindings: toFindingResults(inputComplianceFindingsFixture),
   latestDecision: null,
+  decisionHistory: [],
   exports: [],
 };
 
@@ -140,6 +142,7 @@ const CARD_WORKSPACE: ReviewWorkspace = {
   mapping: toMappingResult(cardComponentMappingFixture),
   complianceFindings: toFindingResults(cardComplianceFindingsFixture),
   latestDecision: null,
+  decisionHistory: [],
   exports: [],
 };
 
@@ -445,6 +448,19 @@ describe('<App />', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Accepted')).toBeInTheDocument();
 
+    reviewTab.focus();
+    await user.keyboard('{ArrowRight}');
+    const historyTab = screen.getByRole('tab', { name: 'History' });
+    expect(historyTab).toHaveAttribute('aria-selected', 'true');
+    expect(historyTab).toHaveFocus();
+    expect(
+      within(screen.getByRole('tabpanel')).getByRole('heading', { name: 'Decision History' }),
+    ).toBeInTheDocument();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Exports' })).toHaveAttribute('aria-selected', 'true');
+    await user.keyboard('{ArrowLeft}');
+    expect(historyTab).toHaveAttribute('aria-selected', 'true');
+
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
     expect(
       within(screen.getByRole('tabpanel')).getByRole('heading', { name: 'Export History' }),
@@ -708,6 +724,66 @@ describe('<App />', () => {
     expect(await screen.findByText(editedExport.content)).toBeInTheDocument();
   });
 
+  it('shows an empty history state when no decisions have been recorded', async () => {
+    const user = userEvent.setup();
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'History' }));
+
+    expect(
+      screen.getByText('No review decisions have been recorded for this mapping yet.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows decision history with an expandable diff for an edited entry', async () => {
+    const user = userEvent.setup();
+    const editedMapping = {
+      mappedProps: {
+        variant: 'warning',
+        size: 'large',
+        disabled: true,
+      },
+      mappedSlots: {
+        default: 'Publish changes',
+      },
+      confidence: 'HIGH' as const,
+      rationale: buttonComponentMappingFixture.rationale,
+    };
+    const earlierDecision = createDecision('ACCEPTED', {
+      id: 'decision.button.accepted-earlier',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    const editedDecision = createDecision('EDITED', {
+      id: 'decision.button.edited-later',
+      editedMapping,
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+
+    renderApp([
+      createWorkspaceMock(
+        createWorkspaceResult({
+          decisionHistory: [editedDecision, earlierDecision],
+          latestDecision: editedDecision,
+          metrics: { editedMappings: 1 },
+        }),
+      ),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'History' }));
+
+    expect(await screen.findAllByText('EDITED')).not.toHaveLength(0);
+    expect(screen.getByText('ACCEPTED')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'View diff' }));
+
+    expect(screen.getByText('primary')).toBeInTheDocument();
+    expect(screen.getByText('warning')).toBeInTheDocument();
+  });
+
   it('shows export errors and allows retry', async () => {
     const user = userEvent.setup();
     const acceptedDecision = createDecision('ACCEPTED');
@@ -807,10 +883,12 @@ function createWorkspaceMock(
 }
 
 function createWorkspaceResult({
+  decisionHistory = [],
   exports = [],
   latestDecision = null,
   metrics = {},
 }: {
+  decisionHistory?: ReviewDecisionResult[];
   exports?: ExportResult[];
   latestDecision?: ReviewDecisionResult | null;
   metrics?: Partial<ReviewWorkspaceQuery['dashboardMetrics']>;
@@ -818,6 +896,7 @@ function createWorkspaceResult({
   return {
     reviewWorkspace: {
       ...POPULATED_WORKSPACE,
+      decisionHistory,
       exports,
       latestDecision,
     },

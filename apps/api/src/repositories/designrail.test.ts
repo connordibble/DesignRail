@@ -31,6 +31,7 @@ import {
   listComplianceFindingsByMappingId,
   listExamples,
   listReviewDecisions,
+  listReviewDecisionsByMappingId,
   recordInstrumentationEvent,
   saveReviewDecision,
   seedDesignRailData,
@@ -156,6 +157,42 @@ describe('DesignRail repositories', () => {
       id: 'decision.test.rejected',
       status: 'REJECTED',
     });
+  });
+
+  it('returns full decision history for a mapping in most-recent-first order', () => {
+    saveReviewDecision(client, {
+      id: 'decision.test.accepted',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'ACCEPTED',
+      reviewerLabel: 'Repository test',
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+    saveReviewDecision(client, {
+      id: 'decision.test.edited',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'EDITED',
+      reviewerLabel: 'Repository test',
+      editedMapping: {
+        mappedSlots: {
+          default: 'Publish',
+        },
+      },
+      createdAt: '2026-01-01T00:00:02.000Z',
+    });
+    saveReviewDecision(client, {
+      id: 'decision.test.rejected',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'REJECTED',
+      reviewerLabel: 'Repository test',
+      createdAt: '2026-01-01T00:00:03.000Z',
+    });
+
+    expect(
+      listReviewDecisionsByMappingId(client, buttonComponentMappingFixture.id).map((d) => d.id),
+    ).toEqual(['decision.test.rejected', 'decision.test.edited', 'decision.test.accepted']);
+    expect(
+      getReviewWorkspace(client, buttonExampleFixture.id)?.decisionHistory.map((d) => d.status),
+    ).toEqual(['REJECTED', 'EDITED', 'ACCEPTED']);
   });
 
   it('blocks exports until the latest decision is accepted or edited', () => {

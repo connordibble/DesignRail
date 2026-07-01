@@ -226,6 +226,7 @@ describe('DesignRail GraphQL API', () => {
         mapping: { id: string; targetComponent: string } | null;
         complianceFindings: Array<{ mappingId: string; severity: string }>;
         latestDecision: { status: string } | null;
+        decisionHistory: Array<{ status: string }>;
         exports: Array<{ id: string }>;
       } | null;
     }>(
@@ -248,6 +249,9 @@ describe('DesignRail GraphQL API', () => {
               severity
             }
             latestDecision {
+              status
+            }
+            decisionHistory {
               status
             }
             exports {
@@ -287,7 +291,71 @@ describe('DesignRail GraphQL API', () => {
         },
       ],
       latestDecision: null,
+      decisionHistory: [],
       exports: [],
+    });
+  });
+
+  it('returns decision history alongside the latest decision', async () => {
+    await graphql(
+      `
+        mutation SaveReviewDecision($input: SaveReviewDecisionInput!) {
+          saveReviewDecision(input: $input) {
+            id
+          }
+        }
+      `,
+      {
+        input: {
+          mappingId: buttonComponentMappingFixture.id,
+          status: 'ACCEPTED',
+          reviewerLabel: 'GraphQL test',
+        },
+      },
+    );
+    await graphql(
+      `
+        mutation SaveReviewDecision($input: SaveReviewDecisionInput!) {
+          saveReviewDecision(input: $input) {
+            id
+          }
+        }
+      `,
+      {
+        input: {
+          mappingId: buttonComponentMappingFixture.id,
+          status: 'EDITED',
+          reviewerLabel: 'GraphQL test',
+          editedMapping: { mappedProps: { variant: 'neutral' } },
+        },
+      },
+    );
+
+    const body = await graphql<{
+      reviewWorkspace: {
+        decisionHistory: Array<{ status: string }>;
+        latestDecision: { status: string } | null;
+      } | null;
+    }>(
+      `
+        query ReviewWorkspace($exampleId: ID!) {
+          reviewWorkspace(exampleId: $exampleId) {
+            decisionHistory {
+              status
+            }
+            latestDecision {
+              status
+            }
+          }
+        }
+      `,
+      { exampleId: buttonExampleFixture.id },
+    );
+
+    expect(body.errors).toBeUndefined();
+    expect(body.data?.reviewWorkspace).toMatchObject({
+      decisionHistory: [{ status: 'EDITED' }, { status: 'ACCEPTED' }],
+      latestDecision: { status: 'EDITED' },
     });
   });
 
