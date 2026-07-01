@@ -29,6 +29,7 @@ import {
   getReviewWorkspace,
   listExportsByMappingId,
   listComplianceFindingsByMappingId,
+  listComplianceLedger,
   listExamples,
   listReviewDecisions,
   listReviewDecisionsByMappingId,
@@ -76,6 +77,30 @@ describe('DesignRail repositories', () => {
     expect(
       listComplianceFindingsByMappingId(client, buttonComponentMappingFixture.id),
     ).toHaveLength(3);
+  });
+
+  it('returns every compliance finding across all examples, most severe first', () => {
+    const ledger = listComplianceLedger(client);
+
+    expect(ledger).toHaveLength(10);
+    // Input's token-usage warning is the only non-info finding in the seed data, so it sorts first.
+    expect(ledger[0]).toMatchObject({
+      example: { name: 'Input' },
+      finding: { id: 'finding.input.email.token-usage', severity: 'WARNING' },
+    });
+    expect(ledger.slice(1).every((entry) => entry.finding.severity === 'INFO')).toBe(true);
+    // Remaining info findings group by example name alphabetically: Button, Card, Input.
+    expect(ledger.slice(1).map((entry) => entry.example.name)).toEqual([
+      'Button',
+      'Button',
+      'Button',
+      'Card',
+      'Card',
+      'Card',
+      'Input',
+      'Input',
+      'Input',
+    ]);
   });
 
   it('returns a review workspace for the seeded Button example', () => {

@@ -29,6 +29,7 @@ import {
   REVIEW_WORKSPACE_QUERY,
   SAVE_REVIEW_DECISION_MUTATION,
   type ComplianceFindingResult,
+  type ComplianceLedgerEntryResult,
   type ComponentIntentResult,
   type ComponentMappingResult,
   type ExampleResult,
@@ -146,12 +147,29 @@ const CARD_WORKSPACE: ReviewWorkspace = {
   exports: [],
 };
 
+function toLedgerEntries(
+  example: ExampleResult,
+  findings: ComplianceFindingResult[],
+): ComplianceLedgerEntryResult[] {
+  return findings.map((finding) => ({ example, finding }));
+}
+
+const COMPLIANCE_LEDGER: ComplianceLedgerEntryResult[] = [
+  ...toLedgerEntries(
+    POPULATED_WORKSPACE.example,
+    toFindingResults(buttonComplianceFindingsFixture),
+  ),
+  ...toLedgerEntries(INPUT_WORKSPACE.example, toFindingResults(inputComplianceFindingsFixture)),
+  ...toLedgerEntries(CARD_WORKSPACE.example, toFindingResults(cardComplianceFindingsFixture)),
+];
+
 const POPULATED_RESULT: ReviewWorkspaceQuery = {
   reviewWorkspace: POPULATED_WORKSPACE,
   dashboardMetrics: {
     ...createEmptyDashboardMetrics(),
     commonComplianceWarnings: [{ message: 'Token alias missing', count: 2 }],
   },
+  complianceLedger: COMPLIANCE_LEDGER,
 };
 
 describe('<App />', () => {
@@ -187,6 +205,7 @@ describe('<App />', () => {
       createWorkspaceMock({
         reviewWorkspace: null,
         dashboardMetrics: createEmptyDashboardMetrics(),
+        complianceLedger: [],
       }),
     ]);
 
@@ -214,6 +233,7 @@ describe('<App />', () => {
         {
           reviewWorkspace: INPUT_WORKSPACE,
           dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: COMPLIANCE_LEDGER,
         },
         { exampleId: INPUT_EXAMPLE_ID },
       ),
@@ -260,6 +280,7 @@ describe('<App />', () => {
         {
           reviewWorkspace: INPUT_WORKSPACE,
           dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: COMPLIANCE_LEDGER,
         },
         { exampleId: INPUT_EXAMPLE_ID },
       ),
@@ -308,6 +329,7 @@ describe('<App />', () => {
     const inputResult = (overrides: Partial<ReviewWorkspace> = {}): ReviewWorkspaceQuery => ({
       reviewWorkspace: { ...INPUT_WORKSPACE, ...overrides },
       dashboardMetrics: createEmptyDashboardMetrics(),
+      complianceLedger: COMPLIANCE_LEDGER,
     });
 
     renderApp(
@@ -369,6 +391,7 @@ describe('<App />', () => {
     const cardResult = (overrides: Partial<ReviewWorkspace> = {}): ReviewWorkspaceQuery => ({
       reviewWorkspace: { ...CARD_WORKSPACE, ...overrides },
       dashboardMetrics: createEmptyDashboardMetrics(),
+      complianceLedger: COMPLIANCE_LEDGER,
     });
 
     renderApp(
@@ -424,6 +447,7 @@ describe('<App />', () => {
           acceptedMappings: 1,
           exportsCreated: 1,
         },
+        complianceLedger: COMPLIANCE_LEDGER,
       }),
     ]);
 
@@ -436,6 +460,13 @@ describe('<App />', () => {
     expect(dashboardTab).not.toHaveAttribute('aria-controls');
 
     reviewTab.focus();
+    await user.keyboard('{ArrowLeft}');
+    const complianceTab = screen.getByRole('tab', { name: 'Compliance' });
+    expect(complianceTab).toHaveAttribute('aria-selected', 'true');
+    expect(complianceTab).toHaveFocus();
+    expect(
+      within(screen.getByRole('tabpanel')).getByRole('heading', { name: 'Compliance Timeline' }),
+    ).toBeInTheDocument();
     await user.keyboard('{ArrowLeft}');
     expect(dashboardTab).toHaveAttribute('aria-selected', 'true');
     expect(dashboardTab).toHaveFocus();
@@ -784,6 +815,39 @@ describe('<App />', () => {
     expect(screen.getByText('warning')).toBeInTheDocument();
   });
 
+  it('shows an empty compliance timeline when no findings exist', async () => {
+    const user = userEvent.setup();
+    renderApp([createWorkspaceMock(createWorkspaceResult({ complianceLedger: [] }))]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Compliance' }));
+
+    expect(
+      screen.getByText('No compliance findings recorded across any component.'),
+    ).toBeInTheDocument();
+  });
+
+  it('groups the compliance timeline by component with a per-component summary', async () => {
+    const user = userEvent.setup();
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Compliance' }));
+
+    const timelinePanel = within(screen.getByRole('tabpanel'));
+
+    expect(timelinePanel.getByRole('heading', { name: 'Compliance Timeline' })).toBeInTheDocument();
+    expect(
+      timelinePanel.getByText('1 warning · 9 informational across 3 components'),
+    ).toBeInTheDocument();
+    expect(timelinePanel.getByText('Button')).toBeInTheDocument();
+    expect(timelinePanel.getByText('Card')).toBeInTheDocument();
+    expect(timelinePanel.getByText('Input')).toBeInTheDocument();
+    expect(timelinePanel.getByText(inputComplianceFindingsFixture[1]!.message)).toBeInTheDocument();
+  });
+
   it('shows export errors and allows retry', async () => {
     const user = userEvent.setup();
     const acceptedDecision = createDecision('ACCEPTED');
@@ -883,11 +947,13 @@ function createWorkspaceMock(
 }
 
 function createWorkspaceResult({
+  complianceLedger = COMPLIANCE_LEDGER,
   decisionHistory = [],
   exports = [],
   latestDecision = null,
   metrics = {},
 }: {
+  complianceLedger?: ComplianceLedgerEntryResult[];
   decisionHistory?: ReviewDecisionResult[];
   exports?: ExportResult[];
   latestDecision?: ReviewDecisionResult | null;
@@ -904,6 +970,7 @@ function createWorkspaceResult({
       ...createEmptyDashboardMetrics(),
       ...metrics,
     },
+    complianceLedger,
   };
 }
 

@@ -169,6 +169,35 @@ describe('DesignRail GraphQL API', () => {
     });
   });
 
+  it('resolves the compliance ledger across every example', async () => {
+    const body = await graphql<{
+      complianceLedger: Array<{
+        example: { id: string; name: string };
+        finding: { id: string; severity: string };
+      }>;
+    }>(`
+      query ComplianceLedger {
+        complianceLedger {
+          example {
+            id
+            name
+          }
+          finding {
+            id
+            severity
+          }
+        }
+      }
+    `);
+
+    expect(body.errors).toBeUndefined();
+    expect(body.data?.complianceLedger).toHaveLength(10);
+    expect(body.data?.complianceLedger[0]).toMatchObject({
+      example: { name: 'Input' },
+      finding: { id: 'finding.input.email.token-usage', severity: 'WARNING' },
+    });
+  });
+
   it('resolves component intent by example id', async () => {
     const body = await graphql<{
       componentIntent: { id: string; componentType: string; variants: string[] } | null;
