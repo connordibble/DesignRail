@@ -166,6 +166,7 @@ export const DESIGNRAIL_GRAPHQL_SCHEMA = String.raw`
     mapping: ComponentMapping
     complianceFindings: [ComplianceFinding!]!
     latestDecision: ReviewDecision
+    decisionHistory: [ReviewDecision!]!
     exports: [ExportResult!]!
   }
 
