@@ -94,6 +94,7 @@ export interface ReviewWorkspace {
   mapping: ComponentMapping | null;
   complianceFindings: ComplianceFinding[];
   latestDecision: ReviewDecision | null;
+  decisionHistory: ReviewDecision[];
   exports: ExportResult[];
 }
 
@@ -482,6 +483,21 @@ export function getLatestReviewDecisionByMappingId(
   return row === undefined ? null : toReviewDecision(row);
 }
 
+export function listReviewDecisionsByMappingId(
+  client: DatabaseClient,
+  mappingId: string,
+  input: PaginationInput = {},
+): ReviewDecision[] {
+  return client.db
+    .select()
+    .from(reviewDecisions)
+    .where(eq(reviewDecisions.mappingId, mappingId))
+    .orderBy(desc(reviewDecisions.createdAt), desc(reviewDecisions.id))
+    .limit(normalizeLimit(input.limit, 100))
+    .all()
+    .map(toReviewDecision);
+}
+
 export function saveReviewDecision(
   client: DatabaseClient,
   input: SaveReviewDecisionInput,
@@ -680,6 +696,10 @@ export function getReviewWorkspace(
 
   const intent = getComponentIntentByExampleId(client, exampleId);
   const mapping = getMappingByExampleId(client, exampleId);
+  // decisionHistory is already ordered latest-first (same predicate and tiebreak as
+  // getLatestReviewDecisionByMappingId), so its head is the latest decision — avoids a second query.
+  const decisionHistory =
+    mapping === null ? [] : listReviewDecisionsByMappingId(client, mapping.id);
 
   return {
     example,
@@ -687,8 +707,8 @@ export function getReviewWorkspace(
     mapping,
     complianceFindings:
       mapping === null ? [] : listComplianceFindingsByMappingId(client, mapping.id),
-    latestDecision:
-      mapping === null ? null : getLatestReviewDecisionByMappingId(client, mapping.id),
+    latestDecision: decisionHistory[0] ?? null,
+    decisionHistory,
     exports: mapping === null ? [] : listExportsByMappingId(client, mapping.id),
   };
 }
