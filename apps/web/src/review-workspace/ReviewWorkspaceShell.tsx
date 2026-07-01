@@ -7,6 +7,7 @@ import {
   type ShoelaceProp,
 } from '@designrail/schema';
 import {
+  BUTTON_EXAMPLE_ID,
   createEmptyDashboardMetrics,
   type DashboardMetrics,
   type ExportFormat,
@@ -153,6 +154,11 @@ export function ReviewWorkspaceShell({
     selectTab(nextTab);
   }
 
+  function loadDemoScenario(): void {
+    onSelectExample?.(BUTTON_EXAMPLE_ID);
+    setActiveTab('Review');
+  }
+
   return (
     <main className="min-h-screen bg-dr-canvas font-ui text-dr-body text-dr-text">
       <div className="grid lg:grid-cols-[17rem_minmax(0,1fr)]">
@@ -234,9 +240,20 @@ export function ReviewWorkspaceShell({
                               <span>{example.source}</span>
                             </span>
                           </span>
-                          {example.status === 'DISABLED' ? (
-                            <MetaTag label="Disabled" tone="neutral" />
-                          ) : null}
+                          <span className="flex flex-col items-end gap-dr-xxs">
+                            {example.status === 'DISABLED' ? (
+                              <MetaTag label="Disabled" tone="neutral" />
+                            ) : (
+                              <StatusBadge
+                                label={example.latestDecisionStatus}
+                                tone={STATUS_TONES[example.latestDecisionStatus]}
+                              />
+                            )}
+                            <MetaTag
+                              label={summarizeExampleCompliance(example.complianceSummary)}
+                              tone={getExampleComplianceTone(example.complianceSummary)}
+                            />
+                          </span>
                         </button>
                       </li>
                     );
@@ -271,18 +288,54 @@ export function ReviewWorkspaceShell({
             </div>
           </header>
 
-          <div
-            aria-labelledby={getTabId(activeTab)}
-            className="p-dr-lg"
-            id={tabPanelId}
-            role="tabpanel"
-            tabIndex={0}
-          >
-            {workspaceBody}
+          <div className="grid gap-dr-md p-dr-lg">
+            <DemoOrientation
+              onLoadDemoScenario={onSelectExample === undefined ? undefined : loadDemoScenario}
+            />
+            <div aria-labelledby={getTabId(activeTab)} id={tabPanelId} role="tabpanel" tabIndex={0}>
+              {workspaceBody}
+            </div>
           </div>
         </section>
       </div>
     </main>
+  );
+}
+
+interface DemoOrientationProps {
+  onLoadDemoScenario: (() => void) | undefined;
+}
+
+function DemoOrientation({ onLoadDemoScenario }: DemoOrientationProps): ReactElement {
+  return (
+    <section
+      aria-label="Demo path"
+      className="grid gap-dr-sm rounded-dr-lg border border-dr-border bg-dr-panel px-dr-md py-dr-sm xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center"
+    >
+      <div className="min-w-0">
+        <p className="text-dr-caption font-medium text-dr-subtle">Demo path</p>
+        <p className="mt-dr-xxs text-dr-section-title font-semibold text-dr-text">
+          Review implementation proposals before export
+        </p>
+        <p className="mt-dr-xxs max-w-4xl text-dr-small text-dr-muted">
+          Mock input becomes component intent, a Shoelace mapping, deterministic findings, and a
+          human decision record. New exports unlock only after a reviewer accepts or edits the
+          mapping.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-dr-xs">
+        <MetaTag label="Mock fixtures" tone="info" />
+        <Button
+          className="shrink-0"
+          disabled={onLoadDemoScenario === undefined}
+          onClick={onLoadDemoScenario}
+          size="sm"
+          variant="primary"
+        >
+          Load Button demo
+        </Button>
+      </div>
+    </section>
   );
 }
 
@@ -927,6 +980,38 @@ function getComplianceSummary(findings: ComplianceFindingResult[]): { label: str
   return { label: 'Clear', tone: 'success' };
 }
 
+function summarizeExampleCompliance(summary: ExampleResult['complianceSummary']): string {
+  if (summary.blockers > 0) {
+    return `${summary.blockers} ${summary.blockers === 1 ? 'blocker' : 'blockers'}`;
+  }
+
+  if (summary.warnings > 0) {
+    return `${summary.warnings} ${summary.warnings === 1 ? 'warning' : 'warnings'}`;
+  }
+
+  if (summary.info > 0) {
+    return `${summary.info} info`;
+  }
+
+  return 'Clear';
+}
+
+function getExampleComplianceTone(summary: ExampleResult['complianceSummary']): Tone {
+  if (summary.blockers > 0) {
+    return 'danger';
+  }
+
+  if (summary.warnings > 0) {
+    return 'warning';
+  }
+
+  if (summary.info > 0) {
+    return 'info';
+  }
+
+  return 'success';
+}
+
 function getDecisionSummary(status: ReviewDecisionStatus): {
   description: string;
   label: string;
@@ -987,6 +1072,7 @@ function ExportsPanel({
 }: ExportsPanelProps): ReactElement {
   const status = getDecisionStatus(latestDecision);
   const canExport = status === 'ACCEPTED' || status === 'EDITED';
+  const hasHistoricalExports = !canExport && exports.length > 0;
   const [pendingExportFormat, setPendingExportFormat] = useState<ExportFormat | null>(null);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
   const [exportMapping, exportMappingState] = useMutation<
@@ -1060,6 +1146,13 @@ function ExportsPanel({
           <EmptyLine text="No exports have been generated." />
         ) : (
           <div className="grid min-w-0 gap-dr-sm">
+            {hasHistoricalExports ? (
+              <InlineNotice
+                message="The latest decision locks new exports. Existing output is retained for audit history and should not be treated as export-ready."
+                title="Historical exports retained"
+                tone="warning"
+              />
+            ) : null}
             {exports.map((exportResult) => (
               <article
                 className="min-w-0 overflow-hidden rounded-dr-sm border border-dr-border bg-dr-panel-raised"
@@ -1183,6 +1276,21 @@ function InlineAlert({ message, title }: InlineAlertProps): ReactElement {
   return (
     <div className="rounded-dr-sm border border-dr-danger bg-dr-panel-raised p-dr-sm" role="alert">
       <p className="text-dr-caption font-semibold text-dr-danger">{title}</p>
+      <p className="mt-dr-xxs text-dr-small text-dr-muted">{message}</p>
+    </div>
+  );
+}
+
+interface InlineNoticeProps {
+  message: string;
+  title: string;
+  tone: Tone;
+}
+
+function InlineNotice({ message, title, tone }: InlineNoticeProps): ReactElement {
+  return (
+    <div className="rounded-dr-sm border border-dr-border bg-dr-panel-raised p-dr-sm">
+      <p className={cx('text-dr-caption font-semibold', getToneTextClass(tone))}>{title}</p>
       <p className="mt-dr-xxs text-dr-small text-dr-muted">{message}</p>
     </div>
   );

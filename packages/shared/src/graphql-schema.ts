@@ -56,6 +56,14 @@ export const DESIGNRAIL_GRAPHQL_SCHEMA = String.raw`
     fixturePath: String!
     source: ComponentSource!
     status: ExampleStatus!
+    latestDecisionStatus: ReviewDecisionStatus!
+    complianceSummary: ComplianceSeverityCounts!
+  }
+
+  type ComplianceSeverityCounts {
+    blockers: Int!
+    warnings: Int!
+    info: Int!
   }
 
   type SourceReference {

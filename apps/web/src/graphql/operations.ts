@@ -20,6 +20,14 @@ export interface ExampleResult {
   fixturePath: string;
   source: ComponentSource;
   status: ExampleStatus;
+  latestDecisionStatus: ReviewDecisionStatus;
+  complianceSummary: ComplianceSeverityCountsResult;
+}
+
+export interface ComplianceSeverityCountsResult {
+  blockers: number;
+  warnings: number;
+  info: number;
 }
 
 export interface SourceReferenceResult {
@@ -162,6 +170,12 @@ export const EXAMPLES_QUERY: TypedDocumentNode<ExamplesQuery, Record<string, nev
       fixturePath
       source
       status
+      latestDecisionStatus
+      complianceSummary {
+        blockers
+        warnings
+        info
+      }
     }
   }
 `;
@@ -179,6 +193,12 @@ export const REVIEW_WORKSPACE_QUERY: TypedDocumentNode<
         fixturePath
         source
         status
+        latestDecisionStatus
+        complianceSummary {
+          blockers
+          warnings
+          info
+        }
       }
       intent {
         id

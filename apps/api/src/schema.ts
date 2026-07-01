@@ -15,9 +15,11 @@ import { gql } from 'graphql-tag';
 
 import type { DatabaseClient } from './db/index.js';
 import {
+  countComplianceFindingsBySeverity,
   createExport,
   getComponentIntentByExampleId,
   getDashboardMetrics,
+  getLatestReviewDecisionByMappingId,
   getMappingByExampleId,
   getReviewWorkspace,
   listComplianceFindingsByMappingId,
@@ -40,6 +42,10 @@ interface MappingIdArgs {
 
 interface LimitArgs {
   limit?: number;
+}
+
+interface ExampleParent {
+  id: string;
 }
 
 interface ReviewWorkspaceArgs {
@@ -101,6 +107,10 @@ function parseJsonObjectLiteral(ast: ObjectValueNode): Record<string, unknown> {
 export function createResolvers(client: DatabaseClient) {
   return {
     JSON: jsonScalar,
+    Example: {
+      latestDecisionStatus: (parent: ExampleParent) => getExampleDecisionStatus(client, parent.id),
+      complianceSummary: (parent: ExampleParent) => getExampleComplianceSummary(client, parent.id),
+    },
     Query: {
       examples: (_parent: unknown, args: LimitArgs) => listExamples(client, args),
       componentIntent: (_parent: unknown, args: ExampleIdArgs) =>
@@ -155,4 +165,27 @@ export function createResolvers(client: DatabaseClient) {
       },
     },
   };
+}
+
+function getExampleDecisionStatus(client: DatabaseClient, exampleId: string): ReviewDecisionStatus {
+  const mapping = getMappingByExampleId(client, exampleId);
+
+  if (mapping === null) {
+    return 'PENDING';
+  }
+
+  return getLatestReviewDecisionByMappingId(client, mapping.id)?.status ?? 'PENDING';
+}
+
+function getExampleComplianceSummary(
+  client: DatabaseClient,
+  exampleId: string,
+): { blockers: number; info: number; warnings: number } {
+  const mapping = getMappingByExampleId(client, exampleId);
+
+  if (mapping === null) {
+    return { blockers: 0, warnings: 0, info: 0 };
+  }
+
+  return countComplianceFindingsBySeverity(client, mapping.id);
 }
