@@ -10,7 +10,12 @@ import {
 } from '@designrail/shared';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { closeDatabaseClient, createDatabaseClient, type DatabaseClient } from './db/index.js';
+import {
+  closeDatabaseClient,
+  complianceFindings,
+  createDatabaseClient,
+  type DatabaseClient,
+} from './db/index.js';
 import { buildServer, isLocalOrigin, resolveServerHost } from './server.js';
 
 interface GraphQlResponse<TData> {
@@ -56,12 +61,25 @@ describe('DesignRail GraphQL API', () => {
     return response.json() as GraphQlResponse<TData>;
   }
 
-  it('resolves examples', async () => {
-    const body = await graphql<{ examples: Array<{ id: string; name: string }> }>(`
+  it('resolves examples with review summaries', async () => {
+    const body = await graphql<{
+      examples: Array<{
+        complianceSummary: { blockers: number; info: number; warnings: number };
+        id: string;
+        latestDecisionStatus: string;
+        name: string;
+      }>;
+    }>(`
       query Examples {
         examples {
           id
           name
+          latestDecisionStatus
+          complianceSummary {
+            blockers
+            warnings
+            info
+          }
         }
       }
     `);
@@ -69,18 +87,86 @@ describe('DesignRail GraphQL API', () => {
     expect(body.errors).toBeUndefined();
     expect(body.data?.examples).toEqual([
       {
+        complianceSummary: {
+          blockers: 0,
+          info: 3,
+          warnings: 0,
+        },
         id: buttonExampleFixture.id,
+        latestDecisionStatus: 'PENDING',
         name: buttonExampleFixture.name,
       },
       {
+        complianceSummary: {
+          blockers: 0,
+          info: 3,
+          warnings: 0,
+        },
         id: cardExampleFixture.id,
+        latestDecisionStatus: 'PENDING',
         name: cardExampleFixture.name,
       },
       {
+        complianceSummary: {
+          blockers: 0,
+          info: 3,
+          warnings: 1,
+        },
         id: inputExampleFixture.id,
+        latestDecisionStatus: 'PENDING',
         name: inputExampleFixture.name,
       },
     ]);
+  });
+
+  it('counts every compliance finding in example summaries', async () => {
+    const warningCount = 205;
+
+    for (let index = 0; index < warningCount; index += 1) {
+      client.db
+        .insert(complianceFindings)
+        .values({
+          id: `finding.button.pagination-warning.${index}`,
+          mappingId: buttonComponentMappingFixture.id,
+          category: 'TOKEN_USAGE',
+          severity: 'WARNING',
+          message: 'Synthetic pagination warning',
+          remediation: 'Count all findings when summarizing an example.',
+          path: `synthetic.${index}`,
+          blocking: false,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        })
+        .run();
+    }
+
+    const body = await graphql<{
+      examples: Array<{
+        complianceSummary: { blockers: number; info: number; warnings: number };
+        id: string;
+      }>;
+    }>(`
+      query Examples {
+        examples {
+          id
+          complianceSummary {
+            blockers
+            warnings
+            info
+          }
+        }
+      }
+    `);
+
+    const buttonExample = body.data?.examples.find(
+      (example) => example.id === buttonExampleFixture.id,
+    );
+
+    expect(body.errors).toBeUndefined();
+    expect(buttonExample?.complianceSummary).toEqual({
+      blockers: 0,
+      info: 3,
+      warnings: warningCount,
+    });
   });
 
   it('resolves component intent by example id', async () => {
