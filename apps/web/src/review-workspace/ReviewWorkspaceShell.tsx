@@ -15,7 +15,7 @@ import {
   type ReviewDecisionStatus,
 } from '@designrail/shared';
 import type { KeyboardEvent, ReactElement, ReactNode } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   EXPORT_MAPPING_MUTATION,
@@ -98,6 +98,13 @@ const EXPORT_FORMAT_OPTIONS: Array<{ format: ExportFormat; label: string }> = [
   { format: 'REACT', label: 'React' },
   { format: 'AGENT_BRIEF', label: 'Agent Brief' },
 ];
+
+const EXPORT_FORMAT_DESCRIPTIONS: Record<ExportFormat, string> = {
+  HTML: 'Static markup for direct embedding.',
+  REACT: 'JSX for a React implementation.',
+  AGENT_BRIEF:
+    'Structured, human-reviewed context for AI coding agents — carries the review decision and compliance findings so agents cannot bypass the human gate.',
+};
 
 export interface ReviewWorkspaceShellProps {
   exampleId: string;
@@ -1145,6 +1152,48 @@ function getExportGateSummary(status: ReviewDecisionStatus): { label: string; to
   }
 }
 
+interface CopyButtonProps {
+  label: string;
+  value: string;
+}
+
+type CopyStatus = 'idle' | 'copied' | 'failed';
+
+function CopyButton({ label, value }: CopyButtonProps): ReactElement {
+  const [status, setStatus] = useState<CopyStatus>('idle');
+
+  useEffect(() => {
+    if (status === 'idle') {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => setStatus('idle'), 2000);
+
+    return () => clearTimeout(timeoutId);
+  }, [status]);
+
+  async function handleCopy(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(value);
+      setStatus('copied');
+    } catch {
+      // Clipboard access can be denied by the browser; content remains manually selectable.
+      setStatus('failed');
+    }
+  }
+
+  return (
+    <button
+      aria-label={label}
+      className="shrink-0 text-dr-caption font-medium text-dr-accent"
+      onClick={handleCopy}
+      type="button"
+    >
+      {status === 'copied' ? 'Copied' : status === 'failed' ? 'Copy failed' : 'Copy'}
+    </button>
+  );
+}
+
 interface ExportsPanelProps {
   exampleId: string;
   exports: ExportResult[];
@@ -1246,12 +1295,19 @@ function ExportsPanel({
                 className="min-w-0 overflow-hidden rounded-dr-sm border border-dr-border bg-dr-panel-raised"
                 key={exportResult.id}
               >
-                <div className="grid min-w-0 gap-dr-xs border-b border-dr-border px-dr-sm py-dr-xs sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+                <div className="grid min-w-0 gap-dr-xs border-b border-dr-border px-dr-sm py-dr-xs sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
                   <StatusBadge label={exportResult.format} tone="neutral" />
                   <span className="min-w-0 break-all font-mono text-dr-caption text-dr-subtle sm:text-right">
                     {exportResult.createdAt}
                   </span>
+                  <CopyButton
+                    label={`Copy ${exportResult.format} export content`}
+                    value={exportResult.content}
+                  />
                 </div>
+                <p className="border-b border-dr-border px-dr-sm py-dr-xs text-dr-caption text-dr-subtle">
+                  {EXPORT_FORMAT_DESCRIPTIONS[exportResult.format]}
+                </p>
                 <pre
                   aria-label={`${exportResult.format} export content`}
                   className="max-w-full overflow-x-auto overscroll-x-contain p-dr-sm font-mono text-dr-code text-dr-text"
