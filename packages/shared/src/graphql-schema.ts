@@ -128,6 +128,11 @@ export const DESIGNRAIL_GRAPHQL_SCHEMA = String.raw`
     createdAt: String!
   }
 
+  type ComplianceLedgerEntry {
+    example: Example!
+    finding: ComplianceFinding!
+  }
+
   type ReviewDecision {
     id: ID!
     mappingId: ID!
@@ -206,6 +211,7 @@ export const DESIGNRAIL_GRAPHQL_SCHEMA = String.raw`
     mapping(exampleId: ID!): ComponentMapping
     compliance(mappingId: ID!, limit: Int = 50): [ComplianceFinding!]!
     reviewDecisions(limit: Int = 100): [ReviewDecision!]!
+    complianceLedger(limit: Int = 200): [ComplianceLedgerEntry!]!
     dashboardMetrics: DashboardMetrics!
     reviewWorkspace(exampleId: ID!): ReviewWorkspace
   }
