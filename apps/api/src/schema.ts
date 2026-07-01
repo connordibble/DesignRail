@@ -23,6 +23,7 @@ import {
   getMappingByExampleId,
   getReviewWorkspace,
   listComplianceFindingsByMappingId,
+  listComplianceLedger,
   listExamples,
   listReviewDecisions,
   recordInstrumentationEvent,
@@ -120,6 +121,7 @@ export function createResolvers(client: DatabaseClient) {
       compliance: (_parent: unknown, args: MappingIdArgs) =>
         listComplianceFindingsByMappingId(client, args.mappingId, args),
       reviewDecisions: (_parent: unknown, args: LimitArgs) => listReviewDecisions(client, args),
+      complianceLedger: (_parent: unknown, args: LimitArgs) => listComplianceLedger(client, args),
       dashboardMetrics: () => getDashboardMetrics(client),
       reviewWorkspace: (_parent: unknown, args: ReviewWorkspaceArgs) =>
         getReviewWorkspace(client, args.exampleId),

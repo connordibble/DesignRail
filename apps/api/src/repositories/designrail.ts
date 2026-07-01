@@ -88,6 +88,11 @@ export interface ComplianceSeverityCounts {
   info: number;
 }
 
+export interface ComplianceLedgerEntry {
+  example: Example;
+  finding: ComplianceFinding;
+}
+
 export interface ReviewWorkspace {
   example: Example;
   intent: ComponentIntent | null;
@@ -453,6 +458,54 @@ export function countComplianceFindingsBySeverity(
   }
 
   return summary;
+}
+
+const SEVERITY_RANK: Record<ComplianceFinding['severity'], number> = {
+  BLOCKER: 0,
+  WARNING: 1,
+  INFO: 2,
+};
+
+/**
+ * Every compliance finding across every example, most severe first. Examples with a blocker or
+ * warning naturally group earliest since findings are pre-sorted by severity before grouping.
+ */
+export function listComplianceLedger(
+  client: DatabaseClient,
+  input: PaginationInput = {},
+): ComplianceLedgerEntry[] {
+  const entries: ComplianceLedgerEntry[] = [];
+
+  for (const example of listExamples(client, { limit: MAX_LIST_LIMIT })) {
+    const mapping = getMappingByExampleId(client, example.id);
+
+    if (mapping === null) {
+      continue;
+    }
+
+    for (const finding of listComplianceFindingsByMappingId(client, mapping.id, {
+      limit: MAX_LIST_LIMIT,
+    })) {
+      entries.push({ example, finding });
+    }
+  }
+
+  entries.sort((left, right) => {
+    const severityDiff =
+      SEVERITY_RANK[left.finding.severity] - SEVERITY_RANK[right.finding.severity];
+    if (severityDiff !== 0) {
+      return severityDiff;
+    }
+
+    const nameDiff = left.example.name.localeCompare(right.example.name);
+    if (nameDiff !== 0) {
+      return nameDiff;
+    }
+
+    return left.finding.id.localeCompare(right.finding.id);
+  });
+
+  return entries.slice(0, normalizeLimit(input.limit, 200));
 }
 
 export function listReviewDecisions(
