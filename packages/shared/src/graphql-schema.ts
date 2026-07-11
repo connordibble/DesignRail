@@ -205,6 +205,21 @@ export const DESIGNRAIL_GRAPHQL_SCHEMA = String.raw`
     format: ExportFormat!
   }
 
+  type InstrumentationEvent {
+    id: ID!
+    name: String!
+    entityType: String!
+    entityId: String!
+    timestamp: String!
+    metadata: JSON!
+  }
+
+  input RecordUiEventInput {
+    name: String!
+    exampleId: ID
+    metadata: JSON
+  }
+
   type Query {
     examples(limit: Int = 50): [Example!]!
     componentIntent(exampleId: ID!): ComponentIntent
@@ -219,5 +234,6 @@ export const DESIGNRAIL_GRAPHQL_SCHEMA = String.raw`
   type Mutation {
     saveReviewDecision(input: SaveReviewDecisionInput!): ReviewDecision!
     exportMapping(input: ExportMappingInput!): ExportResult!
+    recordUiEvent(input: RecordUiEventInput!): InstrumentationEvent!
   }
 `;
