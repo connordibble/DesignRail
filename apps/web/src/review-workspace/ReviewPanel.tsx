@@ -107,46 +107,50 @@ export function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactEl
 
   return (
     <div className="grid gap-dr-lg">
-      <div className="grid gap-dr-md xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_20rem]">
-        <Panel title="Source Intent">
-          {intent === null ? (
-            <EmptyLine text="No normalized component intent is available." />
-          ) : (
-            <div className="grid gap-dr-md">
-              <p className="text-dr-body text-dr-text">{intent.summary}</p>
-              <DefinitionList
-                items={[
-                  ['Component', intent.componentName],
-                  ['Type', intent.componentType],
-                  ['Source', intent.source],
-                  ['Accessibility', intent.accessibility.label ?? 'No accessible label'],
-                ]}
-              />
-              <PillGroup label="Variants" values={intent.variants} />
-              <PillGroup label="States" values={intent.states} />
-              <TokenList tokens={intent.tokenRefs} />
-            </div>
-          )}
-        </Panel>
-
-        <Panel title="Recommended Mapping">
-          {mapping === null ? (
-            <EmptyLine text="No Shoelace mapping is available." />
-          ) : (
-            <div className="grid gap-dr-md">
-              <div className="flex flex-wrap items-center gap-dr-sm">
-                <span className="font-mono text-dr-section-title text-dr-text">
-                  {mapping.targetComponent}
-                </span>
-                <StatusBadge label={mapping.targetLibrary} tone="neutral" />
-                <StatusBadge label={`${mapping.confidence} confidence`} tone="success" />
+      {/* 1280–1535px: intent and mapping stack beside the sticky decision rail; the full
+          three-column comparison needs ≥1536px to keep both panels readable. */}
+      <div className="grid gap-dr-md xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="grid min-w-0 gap-dr-md 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+          <Panel title="Source Intent">
+            {intent === null ? (
+              <EmptyLine text="No normalized component intent is available." />
+            ) : (
+              <div className="grid gap-dr-md">
+                <p className="text-dr-body text-dr-text">{intent.summary}</p>
+                <DefinitionList
+                  items={[
+                    ['Component', intent.componentName],
+                    ['Type', intent.componentType],
+                    ['Source', intent.source],
+                    ['Accessibility', intent.accessibility.label ?? 'No accessible label'],
+                  ]}
+                />
+                <PillGroup label="Variants" values={intent.variants} />
+                <PillGroup label="States" values={intent.states} />
+                <TokenList tokens={intent.tokenRefs} />
               </div>
-              <DefinitionList items={buildMappingDisplayItems(mapping, schema)} />
-              <CodeBlock label="mappedProps" value={formatJson(mapping.mappedProps)} />
-              <p className="text-dr-small text-dr-muted">{mapping.rationale}</p>
-            </div>
-          )}
-        </Panel>
+            )}
+          </Panel>
+
+          <Panel title="Recommended Mapping">
+            {mapping === null ? (
+              <EmptyLine text="No Shoelace mapping is available." />
+            ) : (
+              <div className="grid gap-dr-md">
+                <div className="flex flex-wrap items-center gap-dr-sm">
+                  <span className="font-mono text-dr-section-title text-dr-text">
+                    {mapping.targetComponent}
+                  </span>
+                  <StatusBadge label={mapping.targetLibrary} tone="neutral" />
+                  <StatusBadge label={`${mapping.confidence} confidence`} tone="success" />
+                </div>
+                <DefinitionList items={buildMappingDisplayItems(mapping, schema)} />
+                <CodeBlock label="mappedProps" value={formatJson(mapping.mappedProps)} />
+                <p className="text-dr-small text-dr-muted">{mapping.rationale}</p>
+              </div>
+            )}
+          </Panel>
+        </div>
 
         <aside className="xl:sticky xl:top-dr-lg xl:self-start">
           <Panel className="shadow-dr-sm" density="compact" title="Decision">

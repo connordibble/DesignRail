@@ -194,6 +194,39 @@ describe('<App />', () => {
     expect(leftRail).toHaveClass('lg:min-h-screen');
   });
 
+  it('collapses navigation behind a menu disclosure that closes after tab activation', async () => {
+    const user = userEvent.setup();
+    renderApp([
+      createWorkspaceMock(POPULATED_RESULT),
+      createWorkspaceMock(POPULATED_RESULT),
+      createWorkspaceMock(POPULATED_RESULT),
+    ]);
+
+    await screen.findByRole('heading', { level: 1, name: 'Button' });
+
+    const menuButton = screen.getByRole('button', { name: 'Menu' });
+    const navContainer = document.getElementById('workspace-navigation');
+
+    if (navContainer === null) {
+      throw new Error('Expected the collapsible navigation container to be rendered.');
+    }
+
+    // Collapsed by default on mobile; the persistent rail re-appears via lg:flex on desktop.
+    expect(menuButton).toHaveAttribute('aria-controls', 'workspace-navigation');
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+    expect(navContainer).toHaveClass('hidden', 'lg:flex');
+
+    await user.click(menuButton);
+    expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+    expect(navContainer).not.toHaveClass('hidden');
+
+    // Activating a tab from the open menu closes it and hands focus to the panel.
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+    expect(navContainer).toHaveClass('hidden');
+    expect(screen.getByRole('tabpanel')).toHaveFocus();
+  });
+
   it('renders the error workspace state', async () => {
     renderApp([createWorkspaceMock(new Error('GraphQL unavailable'))]);
 

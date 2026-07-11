@@ -62,6 +62,7 @@ export function ReviewWorkspaceShell({
   onSelectExample,
 }: ReviewWorkspaceShellProps): ReactElement {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('Review');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const tabButtonRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
     Dashboard: null,
     Compliance: null,
@@ -70,6 +71,7 @@ export function ReviewWorkspaceShell({
     Exports: null,
     Schema: null,
   });
+  const tabPanelRef = useRef<HTMLDivElement | null>(null);
   const { data, error, loading } = useQuery<ReviewWorkspaceQuery, ReviewWorkspaceQueryVariables>(
     REVIEW_WORKSPACE_QUERY,
     {
@@ -101,6 +103,25 @@ export function ReviewWorkspaceShell({
     tabButtonRefs.current[tab]?.focus();
   }
 
+  // Activating a tab from the open mobile menu hides the tab button itself, so the menu
+  // closes and focus moves to the panel instead of being dropped on <body>. On desktop the
+  // rail is persistent and standard tab focus behavior applies.
+  function activateTab(tab: WorkspaceTab): void {
+    if (isMobileNavOpen) {
+      setActiveTab(tab);
+      setIsMobileNavOpen(false);
+      tabPanelRef.current?.focus();
+      return;
+    }
+
+    selectTab(tab);
+  }
+
+  function selectExample(nextExampleId: string): void {
+    onSelectExample?.(nextExampleId);
+    setIsMobileNavOpen(false);
+  }
+
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, tab: WorkspaceTab): void {
     const nextTab = getKeyboardTargetTab(event.key, tab);
 
@@ -121,104 +142,116 @@ export function ReviewWorkspaceShell({
     <main className="min-h-screen bg-dr-canvas font-ui text-dr-body text-dr-text">
       <div className="grid lg:grid-cols-[17rem_minmax(0,1fr)]">
         <aside className="border-b border-dr-border bg-dr-shell lg:min-h-screen lg:border-b-0 lg:border-r">
-          <div className="flex h-full flex-col gap-dr-md p-dr-lg">
-            <div className="flex items-start justify-between gap-dr-sm lg:block">
-              <div className="flex min-w-0 items-start gap-dr-sm">
+          <div className="flex flex-col gap-dr-md p-dr-md lg:h-full lg:p-dr-lg">
+            <div className="flex items-center justify-between gap-dr-sm">
+              <div className="flex min-w-0 items-center gap-dr-sm">
                 <BrandMark />
                 <div className="min-w-0">
                   <p className="text-dr-caption font-medium text-dr-subtle">DesignRail</p>
-                  <p className="mt-dr-xxs text-dr-section-title font-semibold text-dr-text">
-                    Review Console
-                  </p>
+                  <p className="text-dr-section-title font-semibold text-dr-text">Review Console</p>
                 </div>
               </div>
-              <span className="mt-dr-sm inline-flex lg:mt-dr-xs">
+              <div className="flex shrink-0 items-center gap-dr-xs">
                 <MetaTag label="Mock mode" tone="info" />
-              </span>
-            </div>
-
-            <nav aria-label="Workspace areas" className="grid gap-dr-xxs" role="tablist">
-              {TABS.map((tab) => (
                 <button
-                  aria-controls={activeTab === tab ? getTabPanelId(tab) : undefined}
-                  aria-selected={activeTab === tab}
-                  className={cx(
-                    'rounded-dr-xs px-dr-sm py-dr-xs text-left text-dr-small font-medium transition-colors focus-visible:outline focus-visible:outline-2',
-                    activeTab === tab
-                      ? 'bg-dr-panel text-dr-text ring-1 ring-inset ring-dr-border'
-                      : 'text-dr-muted hover:bg-dr-panel hover:text-dr-text',
-                  )}
-                  id={getTabId(tab)}
-                  key={tab}
-                  onClick={() => selectTab(tab)}
-                  onKeyDown={(event) => handleTabKeyDown(event, tab)}
-                  ref={(element) => {
-                    tabButtonRefs.current[tab] = element;
-                  }}
-                  role="tab"
-                  tabIndex={activeTab === tab ? 0 : -1}
+                  aria-controls="workspace-navigation"
+                  aria-expanded={isMobileNavOpen}
+                  className="rounded-dr-xs border border-dr-border px-dr-sm py-dr-xs text-dr-caption font-medium text-dr-muted transition-colors hover:bg-dr-panel hover:text-dr-text focus-visible:outline focus-visible:outline-2 active:bg-dr-panel-hover lg:hidden"
+                  onClick={() => setIsMobileNavOpen((open) => !open)}
                   type="button"
                 >
-                  {tab}
+                  Menu
                 </button>
-              ))}
-            </nav>
+              </div>
+            </div>
 
-            <section aria-label="Examples" className="grid gap-dr-xs">
-              <p className="text-dr-caption font-medium text-dr-subtle">Examples</p>
-              {examples.length === 0 ? (
-                <EmptyLine text="No examples available." />
-              ) : (
-                <ul className="grid gap-dr-xxs">
-                  {examples.map((example) => {
-                    const isSelected = example.id === selectedExampleId;
+            <div
+              className={cx('flex-col gap-dr-md', isMobileNavOpen ? 'flex' : 'hidden lg:flex')}
+              id="workspace-navigation"
+            >
+              <nav aria-label="Workspace areas" className="grid gap-dr-xxs" role="tablist">
+                {TABS.map((tab) => (
+                  <button
+                    aria-controls={activeTab === tab ? getTabPanelId(tab) : undefined}
+                    aria-selected={activeTab === tab}
+                    className={cx(
+                      'rounded-dr-xs px-dr-sm py-dr-xs text-left text-dr-small font-medium transition-colors focus-visible:outline focus-visible:outline-2',
+                      activeTab === tab
+                        ? 'bg-dr-panel text-dr-text ring-1 ring-inset ring-dr-border'
+                        : 'text-dr-muted hover:bg-dr-panel hover:text-dr-text',
+                    )}
+                    id={getTabId(tab)}
+                    key={tab}
+                    onClick={() => activateTab(tab)}
+                    onKeyDown={(event) => handleTabKeyDown(event, tab)}
+                    ref={(element) => {
+                      tabButtonRefs.current[tab] = element;
+                    }}
+                    role="tab"
+                    tabIndex={activeTab === tab ? 0 : -1}
+                    type="button"
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </nav>
 
-                    return (
-                      <li key={example.id}>
-                        <button
-                          aria-current={isSelected}
-                          className={cx(
-                            'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-dr-sm rounded-dr-xs px-dr-sm py-dr-xs text-left transition-colors focus-visible:outline focus-visible:outline-2',
-                            isSelected
-                              ? 'bg-dr-panel text-dr-text ring-1 ring-inset ring-dr-border'
-                              : 'text-dr-muted hover:bg-dr-panel-hover hover:text-dr-text',
-                            example.status === 'READY' ? '' : 'opacity-60',
-                          )}
-                          disabled={onSelectExample === undefined || example.status !== 'READY'}
-                          onClick={() => onSelectExample?.(example.id)}
-                          type="button"
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate text-dr-small font-semibold text-dr-text">
-                              {example.name}
-                            </span>
-                            <span className="mt-dr-xxs flex min-w-0 items-center gap-dr-xs text-dr-caption text-dr-subtle">
-                              <span className="truncate font-mono">{example.componentType}</span>
-                              <span aria-hidden="true">·</span>
-                              <span>{example.source}</span>
-                            </span>
-                          </span>
-                          <span className="flex flex-col items-end gap-dr-xxs">
-                            {example.status === 'DISABLED' ? (
-                              <MetaTag label="Disabled" tone="neutral" />
-                            ) : (
-                              <StatusBadge
-                                label={example.latestDecisionStatus}
-                                tone={STATUS_TONES[example.latestDecisionStatus]}
-                              />
+              <section aria-label="Examples" className="grid gap-dr-xs">
+                <p className="text-dr-caption font-medium text-dr-subtle">Examples</p>
+                {examples.length === 0 ? (
+                  <EmptyLine text="No examples available." />
+                ) : (
+                  <ul className="grid gap-dr-xxs">
+                    {examples.map((example) => {
+                      const isSelected = example.id === selectedExampleId;
+
+                      return (
+                        <li key={example.id}>
+                          <button
+                            aria-current={isSelected}
+                            className={cx(
+                              'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-dr-sm rounded-dr-xs px-dr-sm py-dr-xs text-left transition-colors focus-visible:outline focus-visible:outline-2',
+                              isSelected
+                                ? 'bg-dr-panel text-dr-text ring-1 ring-inset ring-dr-border'
+                                : 'text-dr-muted hover:bg-dr-panel-hover hover:text-dr-text',
+                              example.status === 'READY' ? '' : 'opacity-60',
                             )}
-                            <MetaTag
-                              label={summarizeExampleCompliance(example.complianceSummary)}
-                              tone={getExampleComplianceTone(example.complianceSummary)}
-                            />
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
+                            disabled={onSelectExample === undefined || example.status !== 'READY'}
+                            onClick={() => selectExample(example.id)}
+                            type="button"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate text-dr-small font-semibold text-dr-text">
+                                {example.name}
+                              </span>
+                              <span className="mt-dr-xxs flex min-w-0 items-center gap-dr-xs text-dr-caption text-dr-subtle">
+                                <span className="truncate font-mono">{example.componentType}</span>
+                                <span aria-hidden="true">·</span>
+                                <span>{example.source}</span>
+                              </span>
+                            </span>
+                            <span className="flex flex-col items-end gap-dr-xxs">
+                              {example.status === 'DISABLED' ? (
+                                <MetaTag label="Disabled" tone="neutral" />
+                              ) : (
+                                <StatusBadge
+                                  label={example.latestDecisionStatus}
+                                  tone={STATUS_TONES[example.latestDecisionStatus]}
+                                />
+                              )}
+                              <MetaTag
+                                label={summarizeExampleCompliance(example.complianceSummary)}
+                                tone={getExampleComplianceTone(example.complianceSummary)}
+                              />
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+            </div>
           </div>
         </aside>
 
@@ -250,7 +283,13 @@ export function ReviewWorkspaceShell({
             <DemoOrientation
               onLoadDemoScenario={onSelectExample === undefined ? undefined : loadDemoScenario}
             />
-            <div aria-labelledby={getTabId(activeTab)} id={tabPanelId} role="tabpanel" tabIndex={0}>
+            <div
+              aria-labelledby={getTabId(activeTab)}
+              id={tabPanelId}
+              ref={tabPanelRef}
+              role="tabpanel"
+              tabIndex={0}
+            >
               {workspaceBody}
             </div>
           </div>
