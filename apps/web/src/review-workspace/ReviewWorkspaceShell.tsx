@@ -19,17 +19,13 @@ import { Button } from '../ui/Button.js';
 
 import { ComplianceTimelinePanel } from './CompliancePanels.js';
 import { DashboardPanel } from './DashboardPanel.js';
-import {
-  getDecisionStatus,
-  getExampleComplianceTone,
-  summarizeExampleCompliance,
-} from './decision-presentation.js';
+import { getDecisionStatus, summarizeExampleCompliance } from './decision-presentation.js';
 import { ExportsPanel } from './ExportsPanel.js';
 import { HistoryPanel } from './HistoryPanel.js';
-import { BrandMark, EmptyLine, MetaTag, StatusBadge } from './primitives.js';
+import { BrandMark, EmptyLine, MetaTag, StatusBadge, StatusDot } from './primitives.js';
 import { ReviewPanel } from './ReviewPanel.js';
 import { SchemaPanel } from './SchemaPanel.js';
-import { STATUS_TONES, cx } from './workspace-tones.js';
+import { STATUS_TONES, cx, getToneTextClass } from './workspace-tones.js';
 import { EmptyWorkspace, ErrorWorkspace, LoadingWorkspace } from './WorkspaceStates.js';
 
 const TABS = ['Dashboard', 'Compliance', 'Review', 'History', 'Exports', 'Schema'] as const;
@@ -230,19 +226,29 @@ export function ReviewWorkspaceShell({
                                 <span>{example.source}</span>
                               </span>
                             </span>
-                            <span className="flex flex-col items-end gap-dr-xxs">
+                            <span className="flex flex-col items-end gap-dr-xxs text-dr-caption">
                               {example.status === 'DISABLED' ? (
-                                <MetaTag label="Disabled" tone="neutral" />
+                                <span className="font-medium text-dr-subtle">Disabled</span>
                               ) : (
-                                <StatusBadge
-                                  label={example.latestDecisionStatus}
-                                  tone={STATUS_TONES[example.latestDecisionStatus]}
-                                />
+                                <span
+                                  className={cx(
+                                    'flex items-center gap-dr-xs font-medium',
+                                    getToneTextClass(STATUS_TONES[example.latestDecisionStatus]),
+                                  )}
+                                >
+                                  <StatusDot tone={STATUS_TONES[example.latestDecisionStatus]} />
+                                  {example.latestDecisionStatus}
+                                </span>
                               )}
-                              <MetaTag
-                                label={summarizeExampleCompliance(example.complianceSummary)}
-                                tone={getExampleComplianceTone(example.complianceSummary)}
-                              />
+                              <span
+                                className={
+                                  example.complianceSummary.blockers > 0
+                                    ? 'text-dr-danger'
+                                    : 'text-dr-subtle'
+                                }
+                              >
+                                {summarizeExampleCompliance(example.complianceSummary)}
+                              </span>
                             </span>
                           </button>
                         </li>
@@ -279,10 +285,11 @@ export function ReviewWorkspaceShell({
             </div>
           </header>
 
+          <DemoRibbon
+            onLoadDemoScenario={onSelectExample === undefined ? undefined : loadDemoScenario}
+          />
+
           <div className="grid gap-dr-md p-dr-lg">
-            <DemoOrientation
-              onLoadDemoScenario={onSelectExample === undefined ? undefined : loadDemoScenario}
-            />
             <div
               aria-labelledby={getTabId(activeTab)}
               id={tabPanelId}
@@ -299,39 +306,41 @@ export function ReviewWorkspaceShell({
   );
 }
 
-interface DemoOrientationProps {
+const PIPELINE_STAGES = [
+  'Mock Figma input',
+  'Component intent',
+  'Shoelace mapping',
+  'Reviewer decision',
+  'Gated export',
+] as const;
+
+interface DemoRibbonProps {
   onLoadDemoScenario: (() => void) | undefined;
 }
 
-function DemoOrientation({ onLoadDemoScenario }: DemoOrientationProps): ReactElement {
+function DemoRibbon({ onLoadDemoScenario }: DemoRibbonProps): ReactElement {
   return (
     <section
       aria-label="Demo path"
-      className="grid gap-dr-sm rounded-dr-lg border border-dr-border bg-dr-panel px-dr-md py-dr-sm xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center"
+      className="flex flex-wrap items-center justify-between gap-x-dr-md gap-y-dr-xs border-b border-dr-border bg-dr-shell px-dr-lg py-dr-xs"
     >
-      <div className="min-w-0">
-        <p className="text-dr-caption font-medium text-dr-subtle">Demo path</p>
-        <p className="mt-dr-xxs text-dr-section-title font-semibold text-dr-text">
-          Review implementation proposals before export
-        </p>
-        <p className="mt-dr-xxs max-w-4xl text-dr-small text-dr-muted">
-          Mock input becomes component intent, a Shoelace mapping, deterministic findings, and a
-          human decision record. New exports unlock only after a reviewer accepts or edits the
-          mapping.
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-dr-xs">
-        <MetaTag label="Mock fixtures" tone="info" />
-        <Button
-          className="shrink-0"
-          disabled={onLoadDemoScenario === undefined}
-          onClick={onLoadDemoScenario}
-          size="sm"
-          variant="primary"
-        >
-          Load Button demo
-        </Button>
-      </div>
+      <p className="flex min-w-0 flex-wrap items-center gap-dr-xs text-dr-caption text-dr-subtle">
+        {PIPELINE_STAGES.map((stage, index) => (
+          <span className="flex items-center gap-dr-xs" key={stage}>
+            {index > 0 ? <span aria-hidden="true">→</span> : null}
+            <span>{stage}</span>
+          </span>
+        ))}
+      </p>
+      <Button
+        className="shrink-0"
+        disabled={onLoadDemoScenario === undefined}
+        onClick={onLoadDemoScenario}
+        size="sm"
+        variant="ghost"
+      >
+        Load Button demo
+      </Button>
     </section>
   );
 }

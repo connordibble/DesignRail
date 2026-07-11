@@ -249,10 +249,12 @@ describe('<App />', () => {
   it('renders Button intent, mapping, and compliance content from GraphQL data', async () => {
     renderApp([createWorkspaceMock(POPULATED_RESULT)]);
 
-    expect(
-      await screen.findByText('Review implementation proposals before export'),
-    ).toBeInTheDocument();
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    const demoRibbon = screen.getByRole('region', { name: 'Demo path' });
+    expect(within(demoRibbon).getByText('Mock Figma input')).toBeInTheDocument();
+    expect(within(demoRibbon).getByText('Gated export')).toBeInTheDocument();
+    expect(within(demoRibbon).getByRole('button', { name: 'Load Button demo' })).toBeEnabled();
     expect(screen.getAllByText(buttonComponentMappingFixture.targetComponent)).not.toHaveLength(0);
     expect(screen.getByText(buttonComplianceFindingsFixture[0]!.category)).toBeInTheDocument();
     expect(screen.getByText(buttonComplianceFindingsFixture[0]!.message)).toBeInTheDocument();

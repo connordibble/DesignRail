@@ -141,7 +141,9 @@ export function ExportsPanel({
                 key={exportResult.id}
               >
                 <div className="grid min-w-0 gap-dr-xs border-b border-dr-border px-dr-sm py-dr-xs sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
-                  <StatusBadge label={exportResult.format} tone="neutral" />
+                  <span className="font-mono text-dr-caption font-semibold text-dr-text">
+                    {exportResult.format}
+                  </span>
                   <span className="min-w-0 break-all font-mono text-dr-caption text-dr-subtle sm:text-right">
                     {exportResult.createdAt}
                   </span>

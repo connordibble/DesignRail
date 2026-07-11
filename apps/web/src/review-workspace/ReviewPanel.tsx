@@ -44,7 +44,6 @@ import {
   Panel,
   PillGroup,
   SelectField,
-  StatusBadge,
   StatusDot,
   TextField,
   TextareaField,
@@ -137,12 +136,13 @@ export function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactEl
               <EmptyLine text="No Shoelace mapping is available." />
             ) : (
               <div className="grid gap-dr-md">
-                <div className="flex flex-wrap items-center gap-dr-sm">
+                <div className="flex flex-wrap items-baseline gap-x-dr-sm gap-y-dr-xxs">
                   <span className="font-mono text-dr-section-title text-dr-text">
                     {mapping.targetComponent}
                   </span>
-                  <StatusBadge label={mapping.targetLibrary} tone="neutral" />
-                  <StatusBadge label={`${mapping.confidence} confidence`} tone="success" />
+                  <span className="text-dr-caption text-dr-subtle">
+                    {mapping.targetLibrary} · {mapping.confidence} confidence
+                  </span>
                 </div>
                 <DefinitionList items={buildMappingDisplayItems(mapping, schema)} />
                 <CodeBlock label="mappedProps" value={formatJson(mapping.mappedProps)} />
