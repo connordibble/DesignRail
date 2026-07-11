@@ -5,7 +5,7 @@ import {
   type DashboardMetrics,
 } from '@designrail/shared';
 import type { KeyboardEvent, ReactElement } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   REVIEW_WORKSPACE_QUERY,
@@ -50,6 +50,7 @@ export interface ReviewWorkspaceShellProps {
   examples?: ExampleResult[];
   selectedExampleId?: string;
   onSelectExample?: (exampleId: string) => void;
+  onLoadDemoScenario?: () => void;
   /** Controlled active tab (e.g. mirrored from the URL); omit for internal tab state. */
   activeTab?: WorkspaceTab;
   onSelectTab?: (tab: WorkspaceTab) => void;
@@ -60,6 +61,7 @@ export function ReviewWorkspaceShell({
   examples = [],
   selectedExampleId = exampleId,
   onSelectExample,
+  onLoadDemoScenario,
   activeTab: controlledTab,
   onSelectTab,
 }: ReviewWorkspaceShellProps): ReactElement {
@@ -75,6 +77,7 @@ export function ReviewWorkspaceShell({
     Schema: null,
   });
   const tabPanelRef = useRef<HTMLDivElement | null>(null);
+  const pendingMobileFocusHandoffRef = useRef(false);
   const trackUiEvent = useTrackUiEvent();
   const { data, error, loading, refetch } = useQuery<
     ReviewWorkspaceQuery,
@@ -106,6 +109,19 @@ export function ReviewWorkspaceShell({
     workspace,
   });
 
+  useEffect(() => {
+    if (isMobileNavOpen || !pendingMobileFocusHandoffRef.current) {
+      return;
+    }
+
+    pendingMobileFocusHandoffRef.current = false;
+    tabPanelRef.current?.focus({ preventScroll: true });
+    document.getElementById('workspace-content')?.scrollIntoView({
+      behavior: 'auto',
+      block: 'start',
+    });
+  }, [activeTab, isMobileNavOpen, selectedExampleId]);
+
   function setActiveTab(tab: WorkspaceTab): void {
     onSelectTab?.(tab);
 
@@ -124,9 +140,9 @@ export function ReviewWorkspaceShell({
   // rail is persistent and standard tab focus behavior applies.
   function activateTab(tab: WorkspaceTab): void {
     if (isMobileNavOpen) {
+      pendingMobileFocusHandoffRef.current = true;
       setActiveTab(tab);
       setIsMobileNavOpen(false);
-      tabPanelRef.current?.focus();
       return;
     }
 
@@ -134,6 +150,10 @@ export function ReviewWorkspaceShell({
   }
 
   function selectExample(nextExampleId: string): void {
+    if (isMobileNavOpen) {
+      pendingMobileFocusHandoffRef.current = true;
+    }
+
     onSelectExample?.(nextExampleId);
     setIsMobileNavOpen(false);
   }
@@ -150,6 +170,11 @@ export function ReviewWorkspaceShell({
   }
 
   function loadDemoScenario(): void {
+    if (onLoadDemoScenario !== undefined) {
+      onLoadDemoScenario();
+      return;
+    }
+
     onSelectExample?.(BUTTON_EXAMPLE_ID);
     setActiveTab('Review');
   }
@@ -178,7 +203,7 @@ export function ReviewWorkspaceShell({
                 <button
                   aria-controls="workspace-navigation"
                   aria-expanded={isMobileNavOpen}
-                  className="rounded-dr-xs border border-dr-border px-dr-sm py-dr-xs text-dr-caption font-medium text-dr-muted transition-colors hover:bg-dr-panel hover:text-dr-text focus-visible:outline focus-visible:outline-2 active:bg-dr-panel-hover lg:hidden"
+                  className="min-h-11 rounded-dr-xs border border-dr-border px-dr-sm py-dr-xs text-dr-caption font-medium text-dr-muted transition-colors hover:bg-dr-panel hover:text-dr-text focus-visible:outline focus-visible:outline-2 active:bg-dr-panel-hover lg:hidden"
                   onClick={() => setIsMobileNavOpen((open) => !open)}
                   type="button"
                 >
@@ -312,7 +337,11 @@ export function ReviewWorkspaceShell({
           </header>
 
           <DemoRibbon
-            onLoadDemoScenario={onSelectExample === undefined ? undefined : loadDemoScenario}
+            onLoadDemoScenario={
+              onLoadDemoScenario === undefined && onSelectExample === undefined
+                ? undefined
+                : loadDemoScenario
+            }
           />
 
           <div className="grid gap-dr-md p-dr-lg" id="workspace-content" tabIndex={-1}>
@@ -340,6 +369,8 @@ const PIPELINE_STAGES = [
   'Gated export',
 ] as const;
 
+const COMPACT_PIPELINE_STAGES = ['Mock input', 'Review', 'Export'] as const;
+
 interface DemoRibbonProps {
   onLoadDemoScenario: (() => void) | undefined;
 }
@@ -350,7 +381,7 @@ function DemoRibbon({ onLoadDemoScenario }: DemoRibbonProps): ReactElement {
       aria-label="Demo path"
       className="flex flex-wrap items-center justify-between gap-x-dr-md gap-y-dr-xs border-b border-dr-border bg-dr-shell px-dr-lg py-dr-xs"
     >
-      <p className="flex min-w-0 flex-wrap items-center gap-dr-xs text-dr-caption text-dr-subtle">
+      <p className="hidden min-w-0 flex-wrap items-center gap-dr-xs text-dr-caption text-dr-subtle sm:flex">
         {PIPELINE_STAGES.map((stage, index) => (
           <span className="flex items-center gap-dr-xs" key={stage}>
             {index > 0 ? <span aria-hidden="true">→</span> : null}
@@ -358,8 +389,16 @@ function DemoRibbon({ onLoadDemoScenario }: DemoRibbonProps): ReactElement {
           </span>
         ))}
       </p>
+      <p className="flex min-w-0 items-center gap-dr-xs text-dr-caption text-dr-subtle sm:hidden">
+        {COMPACT_PIPELINE_STAGES.map((stage, index) => (
+          <span className="flex items-center gap-dr-xs" key={stage}>
+            {index > 0 ? <span aria-hidden="true">→</span> : null}
+            <span>{stage}</span>
+          </span>
+        ))}
+      </p>
       <Button
-        className="shrink-0"
+        className="min-h-11 shrink-0 sm:min-h-0"
         disabled={onLoadDemoScenario === undefined}
         onClick={onLoadDemoScenario}
         size="sm"

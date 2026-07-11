@@ -16,7 +16,7 @@ import { Button } from '../ui/Button.js';
 import { useTrackUiEvent } from '../use-track-ui-event.js';
 
 import { getDecisionStatus } from './decision-presentation.js';
-import { formatTimestamp, getErrorMessage } from './format.js';
+import { getErrorMessage } from './format.js';
 import {
   CopyButton,
   EmptyLine,
@@ -24,6 +24,7 @@ import {
   InlineNotice,
   Panel,
   StatusBadge,
+  Timestamp,
 } from './primitives.js';
 import { STATUS_TONES } from './workspace-tones.js';
 
@@ -146,12 +147,10 @@ export function ExportsPanel({
                   <span className="font-mono text-dr-caption font-semibold text-dr-text">
                     {exportResult.format}
                   </span>
-                  <time
+                  <Timestamp
                     className="min-w-0 font-mono text-dr-caption tabular-nums text-dr-subtle sm:text-right"
-                    dateTime={exportResult.createdAt}
-                  >
-                    {formatTimestamp(exportResult.createdAt)}
-                  </time>
+                    value={exportResult.createdAt}
+                  />
                   <CopyButton
                     label={`Copy ${exportResult.format} export content`}
                     onResult={(status) =>

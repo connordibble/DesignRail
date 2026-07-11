@@ -10,9 +10,8 @@ import type {
 } from '../graphql/operations.js';
 
 import { getDecisionSummary } from './decision-presentation.js';
-import { formatTimestamp } from './format.js';
 import { computeMappingDiff } from './mapping-diff.js';
-import { EmptyLine, Panel, StatusBadge, StatusDot } from './primitives.js';
+import { EmptyLine, Panel, StatusBadge, StatusDot, Timestamp } from './primitives.js';
 import { STATUS_TONES, cx, getToneTextClass } from './workspace-tones.js';
 
 interface HistoryPanelProps {
@@ -56,12 +55,10 @@ function HistoryEntry({ decision, mapping, schema }: HistoryEntryProps): ReactEl
       <div className="flex flex-wrap items-center gap-dr-sm">
         <StatusBadge label={decision.status} tone={STATUS_TONES[decision.status]} />
         <span className="text-dr-small text-dr-text">{decision.reviewerLabel}</span>
-        <time
+        <Timestamp
           className="ml-auto font-mono text-dr-caption tabular-nums text-dr-subtle"
-          dateTime={decision.createdAt}
-        >
-          {formatTimestamp(decision.createdAt)}
-        </time>
+          value={decision.createdAt}
+        />
       </div>
       <p className="text-dr-small text-dr-muted">{summary.description}</p>
       {decision.notes === null ? null : (

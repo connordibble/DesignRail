@@ -12,6 +12,8 @@ interface UseWorkspaceUrlStateResult {
   exampleId: string | null;
   selectView: (view: WorkspaceView) => void;
   selectExample: (exampleId: string) => void;
+  /** Change the view and example as one browser-history transition. */
+  selectWorkspace: (next: WorkspaceUrlState) => void;
   /** Correct an invalid example without adding a history entry. */
   replaceExample: (exampleId: string | null) => void;
 }
@@ -74,6 +76,17 @@ export function useWorkspaceUrlState(): UseWorkspaceUrlStateResult {
     setState(next);
   }, []);
 
+  const selectWorkspace = useCallback((next: WorkspaceUrlState) => {
+    const current = parseWorkspaceSearch(window.location.search);
+
+    if (next.view === current.view && next.exampleId === current.exampleId) {
+      return;
+    }
+
+    commit(next, 'push');
+    setState(next);
+  }, []);
+
   const replaceExample = useCallback((exampleId: string | null) => {
     const current = parseWorkspaceSearch(window.location.search);
 
@@ -91,6 +104,7 @@ export function useWorkspaceUrlState(): UseWorkspaceUrlStateResult {
     exampleId: state.exampleId,
     selectView,
     selectExample,
+    selectWorkspace,
     replaceExample,
   };
 }

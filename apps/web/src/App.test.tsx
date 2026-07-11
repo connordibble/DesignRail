@@ -18,9 +18,9 @@ import {
   inputComponentMappingFixture,
   inputExampleFixture,
 } from '@designrail/shared';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App.js';
 import {
@@ -174,7 +174,17 @@ const POPULATED_RESULT: ReviewWorkspaceQuery = {
   complianceLedger: COMPLIANCE_LEDGER,
 };
 
+const scrollIntoViewMock = vi.fn();
+
 describe('<App />', () => {
+  beforeEach(() => {
+    scrollIntoViewMock.mockReset();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoViewMock,
+    });
+  });
+
   afterEach(() => {
     // URL state persists on the shared jsdom window; reset it between tests.
     window.history.replaceState(null, '', '/');
@@ -231,7 +241,32 @@ describe('<App />', () => {
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
     expect(menuButton).toHaveAttribute('aria-expanded', 'false');
     expect(navContainer).toHaveClass('hidden');
-    expect(screen.getByRole('tabpanel')).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('tabpanel')).toHaveFocus());
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
+  });
+
+  it('hands mobile example focus to the new panel after collapsing navigation', async () => {
+    const user = userEvent.setup();
+    renderApp([
+      createWorkspaceMock(POPULATED_RESULT),
+      createWorkspaceMock(
+        {
+          reviewWorkspace: INPUT_WORKSPACE,
+          dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: COMPLIANCE_LEDGER,
+        },
+        { exampleId: INPUT_EXAMPLE_ID },
+      ),
+    ]);
+
+    await screen.findByRole('heading', { level: 1, name: 'Button' });
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
+    await user.click(screen.getByRole('button', { name: /Input/ }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Input' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('tabpanel')).toHaveFocus());
+    expect(screen.getByRole('button', { name: 'Menu' })).toHaveAttribute('aria-expanded', 'false');
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
   });
 
   it('renders the error workspace state', async () => {
@@ -288,10 +323,13 @@ describe('<App />', () => {
     expect(await screen.findByText(inputComponentIntentFixture.summary)).toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    const pushStateSpy = vi.spyOn(window.history, 'pushState');
+    pushStateSpy.mockClear();
     await user.click(screen.getByRole('button', { name: 'Load Button demo' }));
 
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Review' })).toHaveAttribute('aria-selected', 'true');
+    expect(pushStateSpy).toHaveBeenCalledTimes(1);
   });
 
   it('renders example rows with decision state and compliance summary', async () => {
@@ -819,7 +857,9 @@ describe('<App />', () => {
     expect(screen.getByText(formatTimestamp(acceptedDecision.createdAt))).toBeInTheDocument();
     expect(screen.queryByText(acceptedDecision.createdAt)).not.toBeInTheDocument();
 
-    // History and export timestamps render as <time> elements keeping the ISO value.
+    // Decision, history, and export timestamps render as <time> elements keeping the ISO value.
+    const decisionTime = document.querySelector(`time[datetime="${acceptedDecision.createdAt}"]`);
+    expect(decisionTime).not.toBeNull();
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
     const exportTime = document.querySelector(`time[datetime="${htmlExportFixture.createdAt}"]`);
     expect(exportTime).not.toBeNull();
@@ -974,8 +1014,10 @@ describe('<App />', () => {
     expect(window.location.search).toBe('?view=compliance');
 
     // Simulate the browser's back navigation deterministically.
-    window.history.replaceState(null, '', '/?view=review');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    act(() => {
+      window.history.replaceState(null, '', '/?view=review');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
 
     await waitFor(() =>
       expect(screen.getByRole('tab', { name: 'Review' })).toHaveAttribute('aria-selected', 'true'),

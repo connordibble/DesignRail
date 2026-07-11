@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
+import { formatTimestamp } from './format.js';
 import { cx, getToneBackgroundClass, getToneTextClass, type Tone } from './workspace-tones.js';
 
 interface PanelProps {
@@ -193,7 +194,7 @@ export function CopyButton({ label, value, onResult }: CopyButtonProps): ReactEl
 }
 
 interface DefinitionListProps {
-  items: Array<[string, string]>;
+  items: Array<[string, ReactNode]>;
 }
 
 export function DefinitionList({ items }: DefinitionListProps): ReactElement {
@@ -206,6 +207,19 @@ export function DefinitionList({ items }: DefinitionListProps): ReactElement {
         </div>
       ))}
     </dl>
+  );
+}
+
+interface TimestampProps {
+  value: string;
+  className?: string;
+}
+
+export function Timestamp({ value, className }: TimestampProps): ReactElement {
+  return (
+    <time className={cx('tabular-nums', className)} dateTime={value}>
+      {formatTimestamp(value)}
+    </time>
   );
 }
 

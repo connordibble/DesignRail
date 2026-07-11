@@ -28,13 +28,7 @@ import {
   getDecisionSummary,
   getExportGateSummary,
 } from './decision-presentation.js';
-import {
-  formatJson,
-  formatMappedValue,
-  formatTimestamp,
-  getErrorMessage,
-  humanizeLabel,
-} from './format.js';
+import { formatJson, formatMappedValue, getErrorMessage, humanizeLabel } from './format.js';
 import {
   MAPPING_CONFIDENCE_OPTIONS,
   canSaveMappingEdit,
@@ -51,6 +45,7 @@ import {
   PillGroup,
   SelectField,
   StatusDot,
+  Timestamp,
   TextField,
   TextareaField,
   TokenList,
@@ -221,7 +216,7 @@ export function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactEl
                 <DefinitionList
                   items={[
                     ['Reviewer', workspace.latestDecision.reviewerLabel],
-                    ['Saved', formatTimestamp(workspace.latestDecision.createdAt)],
+                    ['Saved', <Timestamp value={workspace.latestDecision.createdAt} />],
                     ['Notes', workspace.latestDecision.notes ?? 'No notes'],
                   ]}
                 />

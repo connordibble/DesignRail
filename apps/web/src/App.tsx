@@ -15,7 +15,8 @@ import { useTrackUiEvent } from './use-track-ui-event.js';
 export function App(): ReactElement {
   const { data } = useQuery<ExamplesQuery, Record<string, never>>(EXAMPLES_QUERY);
   const examples = useMemo(() => data?.examples ?? [], [data]);
-  const { view, exampleId, selectView, selectExample, replaceExample } = useWorkspaceUrlState();
+  const { view, exampleId, selectView, selectExample, selectWorkspace, replaceExample } =
+    useWorkspaceUrlState();
   const trackUiEvent = useTrackUiEvent();
 
   // Default to the first ready example; fall back to Button so the workspace loads before the
@@ -59,11 +60,27 @@ export function App(): ReactElement {
     selectExample(nextExampleId);
   }
 
+  function handleLoadDemoScenario(): void {
+    if (activeExampleId !== BUTTON_EXAMPLE_ID) {
+      trackUiEvent('ui.example_selected', { exampleId: BUTTON_EXAMPLE_ID });
+    }
+
+    if (view !== 'review') {
+      trackUiEvent('ui.view_changed', {
+        exampleId: BUTTON_EXAMPLE_ID,
+        metadata: { view: 'review' },
+      });
+    }
+
+    selectWorkspace({ view: 'review', exampleId: BUTTON_EXAMPLE_ID });
+  }
+
   return (
     <ReviewWorkspaceShell
       activeTab={workspaceViewToTab(view)}
       exampleId={activeExampleId}
       examples={examples}
+      onLoadDemoScenario={handleLoadDemoScenario}
       onSelectExample={handleSelectExample}
       onSelectTab={handleSelectTab}
       selectedExampleId={activeExampleId}
