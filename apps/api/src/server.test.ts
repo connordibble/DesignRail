@@ -418,6 +418,53 @@ describe('DesignRail GraphQL API', () => {
     });
   });
 
+  it('records client UI instrumentation events with a UI entity type', async () => {
+    const body = await graphql<{
+      recordUiEvent: { id: string; name: string; entityType: string; entityId: string };
+    }>(
+      `
+        mutation RecordUiEvent($input: RecordUiEventInput!) {
+          recordUiEvent(input: $input) {
+            id
+            name
+            entityType
+            entityId
+          }
+        }
+      `,
+      {
+        input: {
+          name: 'ui.view_changed',
+          exampleId: buttonExampleFixture.id,
+          metadata: { view: 'exports' },
+        },
+      },
+    );
+
+    expect(body.errors).toBeUndefined();
+    expect(body.data?.recordUiEvent).toMatchObject({
+      name: 'ui.view_changed',
+      entityType: 'UI',
+      entityId: buttonExampleFixture.id,
+    });
+  });
+
+  it('rejects UI instrumentation events outside the ui.* namespace', async () => {
+    const body = await graphql<{ recordUiEvent: { id: string } }>(
+      `
+        mutation RecordUiEvent($input: RecordUiEventInput!) {
+          recordUiEvent(input: $input) {
+            id
+          }
+        }
+      `,
+      { input: { name: 'review_decision.saved' } },
+    );
+
+    expect(body.data ?? undefined).toBeUndefined();
+    expect(body.errors?.[0]?.extensions?.['code']).toBe('BAD_USER_INPUT');
+  });
+
   it('blocks export when no accepted or edited decision exists', async () => {
     const body = await graphql<{ exportMapping?: { id: string } }>(
       `

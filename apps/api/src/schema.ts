@@ -1,7 +1,9 @@
 import {
   DESIGNRAIL_GRAPHQL_SCHEMA,
+  recordUiEventInputSchema,
   type ExportFormat,
   type MappingEdit,
+  type Metadata,
   type ReviewDecisionStatus,
 } from '@designrail/shared';
 import {
@@ -67,6 +69,14 @@ interface ExportMappingArgs {
   input: {
     mappingId: string;
     format: ExportFormat;
+  };
+}
+
+interface RecordUiEventArgs {
+  input: {
+    name: string;
+    exampleId?: string | null;
+    metadata?: Metadata | null;
   };
 }
 
@@ -164,6 +174,25 @@ export function createResolvers(client: DatabaseClient) {
         });
 
         return outcome.exportResult;
+      },
+      recordUiEvent: (_parent: unknown, args: RecordUiEventArgs) => {
+        const parsed = recordUiEventInputSchema.safeParse(args.input);
+
+        if (!parsed.success) {
+          throw new GraphQLError('Invalid UI instrumentation event.', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              issues: parsed.error.issues.map((issue) => issue.message),
+            },
+          });
+        }
+
+        return recordInstrumentationEvent(client, {
+          name: parsed.data.name,
+          entityType: 'UI',
+          entityId: parsed.data.exampleId ?? 'web-client',
+          metadata: parsed.data.metadata,
+        });
       },
     },
   };
