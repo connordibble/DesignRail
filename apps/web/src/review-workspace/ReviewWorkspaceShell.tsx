@@ -30,7 +30,7 @@ import { EmptyWorkspace, ErrorWorkspace, LoadingWorkspace } from './WorkspaceSta
 
 const TABS = ['Dashboard', 'Compliance', 'Review', 'History', 'Exports', 'Schema'] as const;
 
-type WorkspaceTab = (typeof TABS)[number];
+export type WorkspaceTab = (typeof TABS)[number];
 
 const EMPTY_METRICS = createEmptyDashboardMetrics();
 const EMPTY_COMPLIANCE_LEDGER: ComplianceLedgerEntryResult[] = [];
@@ -49,6 +49,9 @@ export interface ReviewWorkspaceShellProps {
   examples?: ExampleResult[];
   selectedExampleId?: string;
   onSelectExample?: (exampleId: string) => void;
+  /** Controlled active tab (e.g. mirrored from the URL); omit for internal tab state. */
+  activeTab?: WorkspaceTab;
+  onSelectTab?: (tab: WorkspaceTab) => void;
 }
 
 export function ReviewWorkspaceShell({
@@ -56,8 +59,11 @@ export function ReviewWorkspaceShell({
   examples = [],
   selectedExampleId = exampleId,
   onSelectExample,
+  activeTab: controlledTab,
+  onSelectTab,
 }: ReviewWorkspaceShellProps): ReactElement {
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('Review');
+  const [internalTab, setInternalTab] = useState<WorkspaceTab>('Review');
+  const activeTab = controlledTab ?? internalTab;
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const tabButtonRefs = useRef<Record<WorkspaceTab, HTMLButtonElement | null>>({
     Dashboard: null,
@@ -96,6 +102,14 @@ export function ReviewWorkspaceShell({
     },
     workspace,
   });
+
+  function setActiveTab(tab: WorkspaceTab): void {
+    onSelectTab?.(tab);
+
+    if (controlledTab === undefined) {
+      setInternalTab(tab);
+    }
+  }
 
   function selectTab(tab: WorkspaceTab): void {
     setActiveTab(tab);

@@ -18,9 +18,9 @@ import {
   inputComponentMappingFixture,
   inputExampleFixture,
 } from '@designrail/shared';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App.js';
 import {
@@ -174,6 +174,11 @@ const POPULATED_RESULT: ReviewWorkspaceQuery = {
 };
 
 describe('<App />', () => {
+  afterEach(() => {
+    // URL state persists on the shared jsdom window; reset it between tests.
+    window.history.replaceState(null, '', '/');
+  });
+
   it('renders the loading workspace state', () => {
     renderApp([createWorkspaceMock(POPULATED_RESULT, { delay: 50 })]);
 
@@ -840,6 +845,100 @@ describe('<App />', () => {
 
     const skipLink = screen.getByRole('link', { name: 'Skip to review content' });
     expect(skipLink).toHaveAttribute('href', '#workspace-content');
+  });
+
+  it('persists the selected view and example in the URL', async () => {
+    const user = userEvent.setup();
+    renderApp([
+      createWorkspaceMock(POPULATED_RESULT),
+      createWorkspaceMock(
+        {
+          reviewWorkspace: INPUT_WORKSPACE,
+          dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: COMPLIANCE_LEDGER,
+        },
+        { exampleId: INPUT_EXAMPLE_ID },
+      ),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    expect(window.location.search).toBe('?view=exports');
+
+    await user.click(await screen.findByRole('button', { name: /Input/ }));
+    expect(window.location.search).toBe(
+      `?view=exports&example=${encodeURIComponent(INPUT_EXAMPLE_ID).replace(/%2E/g, '.')}`,
+    );
+  });
+
+  it('restores the view and example from the URL on load', async () => {
+    window.history.replaceState(null, '', `/?view=history&example=${INPUT_EXAMPLE_ID}`);
+
+    renderApp([
+      createWorkspaceMock(
+        {
+          reviewWorkspace: INPUT_WORKSPACE,
+          dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: COMPLIANCE_LEDGER,
+        },
+        { exampleId: INPUT_EXAMPLE_ID },
+      ),
+    ]);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Input' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'History' })).toHaveAttribute('aria-selected', 'true');
+    expect(
+      within(screen.getByRole('tabpanel')).getByRole('heading', { name: 'Decision History' }),
+    ).toBeInTheDocument();
+  });
+
+  it('falls back to the review view for an unknown view parameter', async () => {
+    window.history.replaceState(null, '', '/?view=nonsense');
+
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Review' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('corrects an unknown example from the URL once examples load', async () => {
+    window.history.replaceState(null, '', '/?view=review&example=example.missing');
+
+    renderApp([
+      createWorkspaceMock(
+        {
+          reviewWorkspace: null,
+          dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: [],
+        },
+        { exampleId: 'example.missing' },
+      ),
+      createWorkspaceMock(POPULATED_RESULT),
+    ]);
+
+    // Once the example list resolves, the invalid id is replaced (no history entry) and the
+    // default example loads.
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+    expect(window.location.search).toBe('?view=review');
+  });
+
+  it('restores the previous view when navigating browser history', async () => {
+    const user = userEvent.setup();
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Compliance' }));
+    expect(window.location.search).toBe('?view=compliance');
+
+    // Simulate the browser's back navigation deterministically.
+    window.history.replaceState(null, '', '/?view=review');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: 'Review' })).toHaveAttribute('aria-selected', 'true'),
+    );
   });
 
   it('saves edited Button controls and exports edited output', async () => {
