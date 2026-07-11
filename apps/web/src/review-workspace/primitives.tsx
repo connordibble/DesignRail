@@ -140,11 +140,13 @@ export function BrandMark(): ReactElement {
 interface CopyButtonProps {
   label: string;
   value: string;
+  /** Reports the copy outcome (e.g. for instrumentation); rendering is unaffected. */
+  onResult?: (status: 'copied' | 'failed') => void;
 }
 
 type CopyStatus = 'idle' | 'copied' | 'failed';
 
-export function CopyButton({ label, value }: CopyButtonProps): ReactElement {
+export function CopyButton({ label, value, onResult }: CopyButtonProps): ReactElement {
   const [status, setStatus] = useState<CopyStatus>('idle');
 
   useEffect(() => {
@@ -161,9 +163,11 @@ export function CopyButton({ label, value }: CopyButtonProps): ReactElement {
     try {
       await navigator.clipboard.writeText(value);
       setStatus('copied');
+      onResult?.('copied');
     } catch {
       // Clipboard access can be denied by the browser; content remains manually selectable.
       setStatus('failed');
+      onResult?.('failed');
     }
   }
 

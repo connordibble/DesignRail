@@ -174,6 +174,28 @@ export interface ExportMappingMutationVariables {
   input: ExportMappingInput;
 }
 
+export interface RecordUiEventInput {
+  name: string;
+  exampleId?: string;
+  metadata?: Metadata;
+}
+
+export interface InstrumentationEventResult {
+  id: string;
+  name: string;
+  entityType: string;
+  entityId: string;
+  timestamp: string;
+}
+
+export interface RecordUiEventMutation {
+  recordUiEvent: InstrumentationEventResult;
+}
+
+export interface RecordUiEventMutationVariables {
+  input: RecordUiEventInput;
+}
+
 export const EXAMPLES_QUERY: TypedDocumentNode<ExamplesQuery, Record<string, never>> = gql`
   query Examples {
     examples {
@@ -359,6 +381,21 @@ export const EXPORT_MAPPING_MUTATION: TypedDocumentNode<
       format
       content
       createdAt
+    }
+  }
+`;
+
+export const RECORD_UI_EVENT_MUTATION: TypedDocumentNode<
+  RecordUiEventMutation,
+  RecordUiEventMutationVariables
+> = gql`
+  mutation RecordUiEvent($input: RecordUiEventInput!) {
+    recordUiEvent(input: $input) {
+      id
+      name
+      entityType
+      entityId
+      timestamp
     }
   }
 `;

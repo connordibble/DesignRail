@@ -16,6 +16,7 @@ import {
   type ReviewWorkspaceQueryVariables,
 } from '../graphql/operations.js';
 import { Button } from '../ui/Button.js';
+import { useTrackUiEvent } from '../use-track-ui-event.js';
 
 import { ComplianceTimelinePanel } from './CompliancePanels.js';
 import { DashboardPanel } from './DashboardPanel.js';
@@ -74,6 +75,7 @@ export function ReviewWorkspaceShell({
     Schema: null,
   });
   const tabPanelRef = useRef<HTMLDivElement | null>(null);
+  const trackUiEvent = useTrackUiEvent();
   const { data, error, loading, refetch } = useQuery<
     ReviewWorkspaceQuery,
     ReviewWorkspaceQueryVariables
@@ -98,6 +100,7 @@ export function ReviewWorkspaceShell({
     loading,
     metrics,
     onRetry: () => {
+      trackUiEvent('ui.workspace_retried', { exampleId });
       void refetch();
     },
     workspace,

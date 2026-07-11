@@ -4,14 +4,19 @@ import type { ReactElement } from 'react';
 import { useEffect, useMemo } from 'react';
 
 import { EXAMPLES_QUERY, type ExamplesQuery } from './graphql/operations.js';
-import { ReviewWorkspaceShell } from './review-workspace/ReviewWorkspaceShell.js';
+import {
+  ReviewWorkspaceShell,
+  type WorkspaceTab,
+} from './review-workspace/ReviewWorkspaceShell.js';
 import { workspaceTabToView, workspaceViewToTab } from './review-workspace/url-state.js';
 import { useWorkspaceUrlState } from './review-workspace/use-workspace-url-state.js';
+import { useTrackUiEvent } from './use-track-ui-event.js';
 
 export function App(): ReactElement {
   const { data } = useQuery<ExamplesQuery, Record<string, never>>(EXAMPLES_QUERY);
   const examples = useMemo(() => data?.examples ?? [], [data]);
   const { view, exampleId, selectView, selectExample, replaceExample } = useWorkspaceUrlState();
+  const trackUiEvent = useTrackUiEvent();
 
   // Default to the first ready example; fall back to Button so the workspace loads before the
   // example list resolves.
@@ -33,13 +38,34 @@ export function App(): ReactElement {
     }
   }, [examples, exampleId, replaceExample]);
 
+  function handleSelectTab(tab: WorkspaceTab): void {
+    const nextView = workspaceTabToView(tab);
+
+    if (nextView !== view) {
+      trackUiEvent('ui.view_changed', {
+        exampleId: activeExampleId,
+        metadata: { view: nextView },
+      });
+    }
+
+    selectView(nextView);
+  }
+
+  function handleSelectExample(nextExampleId: string): void {
+    if (nextExampleId !== activeExampleId) {
+      trackUiEvent('ui.example_selected', { exampleId: nextExampleId });
+    }
+
+    selectExample(nextExampleId);
+  }
+
   return (
     <ReviewWorkspaceShell
       activeTab={workspaceViewToTab(view)}
       exampleId={activeExampleId}
       examples={examples}
-      onSelectExample={selectExample}
-      onSelectTab={(tab) => selectView(workspaceTabToView(tab))}
+      onSelectExample={handleSelectExample}
+      onSelectTab={handleSelectTab}
       selectedExampleId={activeExampleId}
     />
   );

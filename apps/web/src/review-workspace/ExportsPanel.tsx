@@ -13,6 +13,7 @@ import {
   type ReviewDecisionResult,
 } from '../graphql/operations.js';
 import { Button } from '../ui/Button.js';
+import { useTrackUiEvent } from '../use-track-ui-event.js';
 
 import { getDecisionStatus } from './decision-presentation.js';
 import { formatTimestamp, getErrorMessage } from './format.js';
@@ -62,6 +63,7 @@ export function ExportsPanel({
     ExportMappingMutationVariables
   >(EXPORT_MAPPING_MUTATION);
   const isExporting = exportMappingState.loading;
+  const trackUiEvent = useTrackUiEvent();
 
   async function createMappingExport(format: ExportFormat): Promise<void> {
     if (mapping === null || !canExport || isExporting) {
@@ -152,6 +154,12 @@ export function ExportsPanel({
                   </time>
                   <CopyButton
                     label={`Copy ${exportResult.format} export content`}
+                    onResult={(status) =>
+                      trackUiEvent(
+                        status === 'copied' ? 'ui.export_copied' : 'ui.export_copy_failed',
+                        { exampleId, metadata: { format: exportResult.format } },
+                      )
+                    }
                     value={exportResult.content}
                   />
                 </div>

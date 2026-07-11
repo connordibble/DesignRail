@@ -26,6 +26,7 @@ import { App } from './App.js';
 import {
   EXAMPLES_QUERY,
   EXPORT_MAPPING_MUTATION,
+  RECORD_UI_EVENT_MUTATION,
   REVIEW_WORKSPACE_QUERY,
   SAVE_REVIEW_DECISION_MUTATION,
   type ComplianceFindingResult,
@@ -921,6 +922,46 @@ describe('<App />', () => {
     // default example loads.
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
     expect(window.location.search).toBe('?view=review');
+  });
+
+  it('records a client instrumentation event when the view changes', async () => {
+    const user = userEvent.setup();
+    const uiEventResult = vi.fn(() => ({
+      data: {
+        recordUiEvent: {
+          id: 'event.ui.1',
+          name: 'ui.view_changed',
+          entityType: 'UI',
+          entityId: BUTTON_EXAMPLE_ID,
+          timestamp: '2026-01-01T00:00:05.000Z',
+        },
+      },
+    }));
+
+    renderApp([
+      createWorkspaceMock(POPULATED_RESULT),
+      {
+        request: {
+          query: RECORD_UI_EVENT_MUTATION,
+          variables: {
+            input: {
+              name: 'ui.view_changed',
+              exampleId: BUTTON_EXAMPLE_ID,
+              metadata: { view: 'exports' },
+            },
+          },
+        },
+        result: uiEventResult,
+      },
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+
+    // Fire-and-forget: the mutation is dispatched without blocking the tab change.
+    await waitFor(() => expect(uiEventResult).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('tab', { name: 'Exports' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('restores the previous view when navigating browser history', async () => {
