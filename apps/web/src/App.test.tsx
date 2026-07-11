@@ -45,6 +45,7 @@ import {
   type SaveReviewDecisionMutation,
   type SaveReviewDecisionMutationVariables,
 } from './graphql/operations.js';
+import { formatTimestamp } from './review-workspace/format.js';
 
 const REVIEW_WORKSPACE_VARIABLES = {
   exampleId: BUTTON_EXAMPLE_ID,
@@ -727,7 +728,7 @@ describe('<App />', () => {
     expect(await screen.findByText('Copy failed')).toBeInTheDocument();
   });
 
-  it('saves a rejected decision and keeps exports locked', async () => {
+  it('saves a rejected decision with a required rationale and keeps exports locked', async () => {
     const user = userEvent.setup();
     const rejectedDecision = createDecision('REJECTED');
 
@@ -738,6 +739,7 @@ describe('<App />', () => {
           mappingId: buttonComponentMappingFixture.id,
           status: 'REJECTED',
           reviewerLabel: 'Local reviewer',
+          notes: 'Mapping loses the icon-only variant.',
         },
         decision: rejectedDecision,
       }),
@@ -752,7 +754,19 @@ describe('<App />', () => {
 
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
 
+    // Reject opens an inline rationale form; confirmation stays disabled until a reason exists.
     await user.click(screen.getByRole('button', { name: 'Reject' }));
+
+    const confirmButton = screen.getByRole('button', { name: 'Confirm rejection' });
+    expect(confirmButton).toBeDisabled();
+
+    await user.type(
+      screen.getByLabelText('Rejection rationale'),
+      'Mapping loses the icon-only variant.',
+    );
+    expect(confirmButton).toBeEnabled();
+    await user.click(confirmButton);
+
     expect(await screen.findAllByText('REJECTED')).not.toHaveLength(0);
 
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
@@ -760,6 +774,72 @@ describe('<App />', () => {
     expect(screen.getByRole('button', { name: 'HTML' })).toBeDisabled();
     expect(screen.getByText('LOCKED')).toBeInTheDocument();
     expect(screen.getByText('Historical exports retained')).toBeInTheDocument();
+  });
+
+  it('cancels a rejection without saving a decision', async () => {
+    const user = userEvent.setup();
+
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reject' }));
+    await user.type(screen.getByLabelText('Rejection rationale'), 'Wrong component target.');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    // The decision actions return and no rejection was persisted (no mutation mock exists).
+    expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument();
+    expect(screen.getByText('Pending review')).toBeInTheDocument();
+  });
+
+  it('renders persisted timestamps as formatted dates with machine-readable values', async () => {
+    const user = userEvent.setup();
+    const acceptedDecision = createDecision('ACCEPTED');
+
+    renderApp([
+      createWorkspaceMock(
+        createWorkspaceResult({
+          decisionHistory: [acceptedDecision],
+          exports: [htmlExportFixture],
+          latestDecision: acceptedDecision,
+          metrics: { acceptedMappings: 1, exportsCreated: 1 },
+        }),
+      ),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    // Decision rail shows the formatted timestamp instead of the raw ISO string.
+    expect(screen.getByText(formatTimestamp(acceptedDecision.createdAt))).toBeInTheDocument();
+    expect(screen.queryByText(acceptedDecision.createdAt)).not.toBeInTheDocument();
+
+    // History and export timestamps render as <time> elements keeping the ISO value.
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    const exportTime = document.querySelector(`time[datetime="${htmlExportFixture.createdAt}"]`);
+    expect(exportTime).not.toBeNull();
+    expect(exportTime).toHaveTextContent(formatTimestamp(htmlExportFixture.createdAt));
+  });
+
+  it('recovers from a workspace error through the retry action', async () => {
+    const user = userEvent.setup();
+
+    renderApp([
+      createWorkspaceMock(new Error('GraphQL unavailable')),
+      createWorkspaceMock(POPULATED_RESULT),
+    ]);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('GraphQL unavailable');
+
+    await user.click(screen.getByRole('button', { name: 'Retry request' }));
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+  });
+
+  it('exposes a skip link targeting the review content region', () => {
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    const skipLink = screen.getByRole('link', { name: 'Skip to review content' });
+    expect(skipLink).toHaveAttribute('href', '#workspace-content');
   });
 
   it('saves edited Button controls and exports edited output', async () => {

@@ -10,6 +10,7 @@ import type {
 } from '../graphql/operations.js';
 
 import { getDecisionSummary } from './decision-presentation.js';
+import { formatTimestamp } from './format.js';
 import { computeMappingDiff } from './mapping-diff.js';
 import { EmptyLine, Panel, StatusBadge, StatusDot } from './primitives.js';
 import { STATUS_TONES, cx, getToneTextClass } from './workspace-tones.js';
@@ -55,9 +56,12 @@ function HistoryEntry({ decision, mapping, schema }: HistoryEntryProps): ReactEl
       <div className="flex flex-wrap items-center gap-dr-sm">
         <StatusBadge label={decision.status} tone={STATUS_TONES[decision.status]} />
         <span className="text-dr-small text-dr-text">{decision.reviewerLabel}</span>
-        <span className="ml-auto break-all font-mono text-dr-caption text-dr-subtle">
-          {decision.createdAt}
-        </span>
+        <time
+          className="ml-auto font-mono text-dr-caption tabular-nums text-dr-subtle"
+          dateTime={decision.createdAt}
+        >
+          {formatTimestamp(decision.createdAt)}
+        </time>
       </div>
       <p className="text-dr-small text-dr-muted">{summary.description}</p>
       {decision.notes === null ? null : (
@@ -67,7 +71,7 @@ function HistoryEntry({ decision, mapping, schema }: HistoryEntryProps): ReactEl
         <>
           <button
             aria-expanded={isDiffOpen}
-            className="justify-self-start text-dr-small font-medium text-dr-accent"
+            className="justify-self-start rounded-dr-xs px-dr-xs py-dr-xxs text-dr-small font-medium text-dr-accent transition-colors hover:bg-dr-panel-hover hover:text-dr-accent-hover focus-visible:outline focus-visible:outline-2 active:translate-y-px"
             onClick={() => setIsDiffOpen((open) => !open)}
             type="button"
           >

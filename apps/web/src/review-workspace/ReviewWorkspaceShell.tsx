@@ -68,12 +68,12 @@ export function ReviewWorkspaceShell({
     Schema: null,
   });
   const tabPanelRef = useRef<HTMLDivElement | null>(null);
-  const { data, error, loading } = useQuery<ReviewWorkspaceQuery, ReviewWorkspaceQueryVariables>(
-    REVIEW_WORKSPACE_QUERY,
-    {
-      variables: { exampleId },
-    },
-  );
+  const { data, error, loading, refetch } = useQuery<
+    ReviewWorkspaceQuery,
+    ReviewWorkspaceQueryVariables
+  >(REVIEW_WORKSPACE_QUERY, {
+    variables: { exampleId },
+  });
 
   const workspace = data?.reviewWorkspace ?? null;
   const metrics = data?.dashboardMetrics ?? EMPTY_METRICS;
@@ -91,6 +91,9 @@ export function ReviewWorkspaceShell({
     exampleId,
     loading,
     metrics,
+    onRetry: () => {
+      void refetch();
+    },
     workspace,
   });
 
@@ -136,6 +139,12 @@ export function ReviewWorkspaceShell({
 
   return (
     <main className="min-h-screen bg-dr-canvas font-ui text-dr-body text-dr-text">
+      <a
+        className="sr-only focus:not-sr-only focus:absolute focus:left-dr-sm focus:top-dr-sm focus:z-50 focus:rounded-dr-sm focus:border focus:border-dr-border-strong focus:bg-dr-panel-raised focus:px-dr-md focus:py-dr-xs focus:text-dr-small focus:font-medium focus:text-dr-text focus:outline focus:outline-2"
+        href="#workspace-content"
+      >
+        Skip to review content
+      </a>
       <div className="grid lg:grid-cols-[17rem_minmax(0,1fr)]">
         <aside className="border-b border-dr-border bg-dr-shell lg:min-h-screen lg:border-b-0 lg:border-r">
           <div className="flex flex-col gap-dr-md p-dr-md lg:h-full lg:p-dr-lg">
@@ -289,7 +298,7 @@ export function ReviewWorkspaceShell({
             onLoadDemoScenario={onSelectExample === undefined ? undefined : loadDemoScenario}
           />
 
-          <div className="grid gap-dr-md p-dr-lg">
+          <div className="grid gap-dr-md p-dr-lg" id="workspace-content" tabIndex={-1}>
             <div
               aria-labelledby={getTabId(activeTab)}
               id={tabPanelId}
@@ -360,6 +369,7 @@ interface RenderWorkspaceBodyInput {
   exampleId: string;
   loading: boolean;
   metrics: DashboardMetrics;
+  onRetry: () => void;
   workspace: ReviewWorkspace | null;
 }
 
@@ -370,6 +380,7 @@ function renderWorkspaceBody({
   exampleId,
   loading,
   metrics,
+  onRetry,
   workspace,
 }: RenderWorkspaceBodyInput): ReactElement {
   if (loading) {
@@ -377,7 +388,7 @@ function renderWorkspaceBody({
   }
 
   if (errorMessage !== undefined) {
-    return <ErrorWorkspace message={errorMessage} />;
+    return <ErrorWorkspace message={errorMessage} onRetry={onRetry} />;
   }
 
   if (workspace === null) {

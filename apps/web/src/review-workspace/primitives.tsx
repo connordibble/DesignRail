@@ -168,14 +168,23 @@ export function CopyButton({ label, value }: CopyButtonProps): ReactElement {
   }
 
   return (
-    <button
-      aria-label={label}
-      className="shrink-0 text-dr-caption font-medium text-dr-accent"
-      onClick={handleCopy}
-      type="button"
-    >
-      {status === 'copied' ? 'Copied' : status === 'failed' ? 'Copy failed' : 'Copy'}
-    </button>
+    <span className="inline-flex shrink-0">
+      <button
+        aria-label={label}
+        className="rounded-dr-xs px-dr-xs py-dr-xxs text-dr-caption font-medium text-dr-accent transition-colors hover:bg-dr-panel-hover hover:text-dr-accent-hover focus-visible:outline focus-visible:outline-2 active:translate-y-px"
+        onClick={handleCopy}
+        type="button"
+      >
+        {status === 'copied' ? 'Copied' : status === 'failed' ? 'Copy failed' : 'Copy'}
+      </button>
+      <span aria-live="polite" className="sr-only" role="status">
+        {status === 'copied'
+          ? 'Copied to clipboard.'
+          : status === 'failed'
+            ? 'Copy failed. The content can still be selected manually.'
+            : ''}
+      </span>
+    </span>
   );
 }
 

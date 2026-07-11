@@ -30,3 +30,16 @@ export function formatMappedValue(value: JsonValue): string {
 export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Request failed.';
 }
+
+// Fixed locale so recorded timestamps read identically for every reviewer of the public demo.
+const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
+
+/** Format an ISO timestamp for display, falling back to the raw value when unparseable. */
+export function formatTimestamp(isoTimestamp: string): string {
+  const parsed = new Date(isoTimestamp);
+
+  return Number.isNaN(parsed.getTime()) ? isoTimestamp : TIMESTAMP_FORMATTER.format(parsed);
+}

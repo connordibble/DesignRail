@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react';
 
+import { Button } from '../ui/Button.js';
+
 import { Panel } from './primitives.js';
 
 export function LoadingWorkspace(): ReactElement {
@@ -18,13 +20,22 @@ export function LoadingWorkspace(): ReactElement {
 
 interface ErrorWorkspaceProps {
   message: string;
+  onRetry?: () => void;
 }
 
-export function ErrorWorkspace({ message }: ErrorWorkspaceProps): ReactElement {
+export function ErrorWorkspace({ message, onRetry }: ErrorWorkspaceProps): ReactElement {
   return (
     <div className="rounded-dr-md border border-dr-danger bg-dr-panel p-dr-md" role="alert">
       <p className="text-dr-section-title font-semibold text-dr-danger">Workspace failed</p>
       <p className="mt-dr-xs text-dr-small text-dr-muted">{message}</p>
+      <p className="mt-dr-xs text-dr-small text-dr-subtle">
+        Check that the local GraphQL API is running (`pnpm dev` starts it on :4000), then retry.
+      </p>
+      {onRetry === undefined ? null : (
+        <Button className="mt-dr-sm" onClick={onRetry} size="sm" variant="secondary">
+          Retry request
+        </Button>
+      )}
     </div>
   );
 }

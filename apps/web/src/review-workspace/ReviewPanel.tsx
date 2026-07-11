@@ -28,7 +28,13 @@ import {
   getDecisionSummary,
   getExportGateSummary,
 } from './decision-presentation.js';
-import { formatJson, formatMappedValue, getErrorMessage, humanizeLabel } from './format.js';
+import {
+  formatJson,
+  formatMappedValue,
+  formatTimestamp,
+  getErrorMessage,
+  humanizeLabel,
+} from './format.js';
 import {
   MAPPING_CONFIDENCE_OPTIONS,
   canSaveMappingEdit,
@@ -67,6 +73,8 @@ export function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactEl
       : createMappingEditDraft(schema, mapping, workspace.latestDecision),
   );
   const [isEditing, setIsEditing] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [saveReviewDecision, saveDecisionState] = useMutation<
     SaveReviewDecisionMutation,
@@ -74,12 +82,16 @@ export function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactEl
   >(SAVE_REVIEW_DECISION_MUTATION);
   const isSavingDecision = saveDecisionState.loading;
 
-  async function persistDecision(status: ReviewDecisionStatus): Promise<void> {
+  async function persistDecision(
+    status: ReviewDecisionStatus,
+    notesOverride?: string,
+  ): Promise<void> {
     if (schema === null || mapping === null || draft === null || isSavingDecision) {
       return;
     }
 
-    const input = createSaveDecisionInput(schema, mapping.id, status, draft);
+    const effectiveDraft = notesOverride === undefined ? draft : { ...draft, notes: notesOverride };
+    const input = createSaveDecisionInput(schema, mapping.id, status, effectiveDraft);
 
     setSaveErrorMessage(null);
 
@@ -102,6 +114,12 @@ export function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactEl
     );
     setSaveErrorMessage(null);
     setIsEditing(false);
+  }
+
+  function cancelRejection(): void {
+    setRejectionReason('');
+    setSaveErrorMessage(null);
+    setIsRejecting(false);
   }
 
   return (
@@ -171,12 +189,20 @@ export function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactEl
                   onSave={() => persistDecision('EDITED')}
                   schema={schema}
                 />
+              ) : isRejecting ? (
+                <RejectionForm
+                  disabled={isSavingDecision}
+                  onCancel={cancelRejection}
+                  onChange={setRejectionReason}
+                  onConfirm={() => persistDecision('REJECTED', rejectionReason)}
+                  reason={rejectionReason}
+                />
               ) : (
                 <DecisionActions
                   disabled={isSavingDecision}
                   onAccept={() => persistDecision('ACCEPTED')}
                   onEdit={() => setIsEditing(true)}
-                  onReject={() => persistDecision('REJECTED')}
+                  onReject={() => setIsRejecting(true)}
                 />
               )}
 
@@ -195,7 +221,7 @@ export function ReviewPanel({ exampleId, workspace }: ReviewPanelProps): ReactEl
                 <DefinitionList
                   items={[
                     ['Reviewer', workspace.latestDecision.reviewerLabel],
-                    ['Saved', workspace.latestDecision.createdAt],
+                    ['Saved', formatTimestamp(workspace.latestDecision.createdAt)],
                     ['Notes', workspace.latestDecision.notes ?? 'No notes'],
                   ]}
                 />
@@ -286,6 +312,47 @@ function DecisionActions({
         </Button>
         <Button disabled={disabled} onClick={onReject} variant="danger">
           Reject
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+interface RejectionFormProps {
+  disabled: boolean;
+  onCancel: () => void;
+  onChange: (reason: string) => void;
+  onConfirm: () => void;
+  reason: string;
+}
+
+function RejectionForm({
+  disabled,
+  onCancel,
+  onChange,
+  onConfirm,
+  reason,
+}: RejectionFormProps): ReactElement {
+  const canConfirm = reason.trim().length > 0;
+
+  return (
+    <div aria-label="Reject mapping" className="grid gap-dr-sm" role="group">
+      <TextareaField
+        disabled={disabled}
+        id="rejection-reason"
+        label="Rejection rationale"
+        onChange={onChange}
+        value={reason}
+      />
+      <p className="text-dr-caption text-dr-subtle">
+        Recorded with the decision so the audit trail shows why the mapping was declined.
+      </p>
+      <div className="grid grid-cols-2 gap-dr-xs">
+        <Button disabled={disabled || !canConfirm} onClick={onConfirm} variant="danger">
+          Confirm rejection
+        </Button>
+        <Button disabled={disabled} onClick={onCancel} variant="secondary">
+          Cancel
         </Button>
       </div>
     </div>

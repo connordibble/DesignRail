@@ -15,7 +15,7 @@ import {
 import { Button } from '../ui/Button.js';
 
 import { getDecisionStatus } from './decision-presentation.js';
-import { getErrorMessage } from './format.js';
+import { formatTimestamp, getErrorMessage } from './format.js';
 import {
   CopyButton,
   EmptyLine,
@@ -144,9 +144,12 @@ export function ExportsPanel({
                   <span className="font-mono text-dr-caption font-semibold text-dr-text">
                     {exportResult.format}
                   </span>
-                  <span className="min-w-0 break-all font-mono text-dr-caption text-dr-subtle sm:text-right">
-                    {exportResult.createdAt}
-                  </span>
+                  <time
+                    className="min-w-0 font-mono text-dr-caption tabular-nums text-dr-subtle sm:text-right"
+                    dateTime={exportResult.createdAt}
+                  >
+                    {formatTimestamp(exportResult.createdAt)}
+                  </time>
                   <CopyButton
                     label={`Copy ${exportResult.format} export content`}
                     value={exportResult.content}
