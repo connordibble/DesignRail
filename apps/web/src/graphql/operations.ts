@@ -116,7 +116,19 @@ export interface ReviewWorkspace {
   mapping: ComponentMappingResult | null;
   complianceFindings: ComplianceFindingResult[];
   latestDecision: ReviewDecisionResult | null;
+  decisionHistory: ReviewDecisionResult[];
   exports: ExportResult[];
+}
+
+export interface ComplianceLedgerEntryResult {
+  // Only the identifying fields are fetched — latestDecisionStatus/complianceSummary are resolved
+  // per-Example server-side, and the UI already derives an equivalent summary from `finding`
+  // across all of an example's ledger entries, so selecting them here would be redundant work.
+  example: Pick<
+    ExampleResult,
+    'id' | 'name' | 'componentType' | 'fixturePath' | 'source' | 'status'
+  >;
+  finding: ComplianceFindingResult;
 }
 
 export interface ExamplesQuery {
@@ -126,6 +138,7 @@ export interface ExamplesQuery {
 export interface ReviewWorkspaceQuery {
   reviewWorkspace: ReviewWorkspace | null;
   dashboardMetrics: DashboardMetrics;
+  complianceLedger: ComplianceLedgerEntryResult[];
 }
 
 export interface ReviewWorkspaceQueryVariables {
@@ -159,6 +172,28 @@ export interface ExportMappingMutation {
 
 export interface ExportMappingMutationVariables {
   input: ExportMappingInput;
+}
+
+export interface RecordUiEventInput {
+  name: string;
+  exampleId?: string;
+  metadata?: Metadata;
+}
+
+export interface InstrumentationEventResult {
+  id: string;
+  name: string;
+  entityType: string;
+  entityId: string;
+  timestamp: string;
+}
+
+export interface RecordUiEventMutation {
+  recordUiEvent: InstrumentationEventResult;
+}
+
+export interface RecordUiEventMutationVariables {
+  input: RecordUiEventInput;
 }
 
 export const EXAMPLES_QUERY: TypedDocumentNode<ExamplesQuery, Record<string, never>> = gql`
@@ -266,6 +301,15 @@ export const REVIEW_WORKSPACE_QUERY: TypedDocumentNode<
         notes
         createdAt
       }
+      decisionHistory {
+        id
+        mappingId
+        status
+        reviewerLabel
+        editedMapping
+        notes
+        createdAt
+      }
       exports {
         id
         mappingId
@@ -283,6 +327,27 @@ export const REVIEW_WORKSPACE_QUERY: TypedDocumentNode<
       commonComplianceWarnings {
         message
         count
+      }
+    }
+    complianceLedger {
+      example {
+        id
+        name
+        componentType
+        fixturePath
+        source
+        status
+      }
+      finding {
+        id
+        mappingId
+        category
+        severity
+        message
+        remediation
+        path
+        blocking
+        createdAt
       }
     }
   }
@@ -316,6 +381,21 @@ export const EXPORT_MAPPING_MUTATION: TypedDocumentNode<
       format
       content
       createdAt
+    }
+  }
+`;
+
+export const RECORD_UI_EVENT_MUTATION: TypedDocumentNode<
+  RecordUiEventMutation,
+  RecordUiEventMutationVariables
+> = gql`
+  mutation RecordUiEvent($input: RecordUiEventInput!) {
+    recordUiEvent(input: $input) {
+      id
+      name
+      entityType
+      entityId
+      timestamp
     }
   }
 `;

@@ -18,17 +18,19 @@ import {
   inputComponentMappingFixture,
   inputExampleFixture,
 } from '@designrail/shared';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App.js';
 import {
   EXAMPLES_QUERY,
   EXPORT_MAPPING_MUTATION,
+  RECORD_UI_EVENT_MUTATION,
   REVIEW_WORKSPACE_QUERY,
   SAVE_REVIEW_DECISION_MUTATION,
   type ComplianceFindingResult,
+  type ComplianceLedgerEntryResult,
   type ComponentIntentResult,
   type ComponentMappingResult,
   type ExampleResult,
@@ -44,6 +46,7 @@ import {
   type SaveReviewDecisionMutation,
   type SaveReviewDecisionMutationVariables,
 } from './graphql/operations.js';
+import { formatTimestamp } from './review-workspace/format.js';
 
 const REVIEW_WORKSPACE_VARIABLES = {
   exampleId: BUTTON_EXAMPLE_ID,
@@ -122,6 +125,7 @@ const POPULATED_WORKSPACE: ReviewWorkspace = {
   mapping: toMappingResult(buttonComponentMappingFixture),
   complianceFindings: toFindingResults(buttonComplianceFindingsFixture),
   latestDecision: null,
+  decisionHistory: [],
   exports: [],
 };
 
@@ -131,6 +135,7 @@ const INPUT_WORKSPACE: ReviewWorkspace = {
   mapping: toMappingResult(inputComponentMappingFixture),
   complianceFindings: toFindingResults(inputComplianceFindingsFixture),
   latestDecision: null,
+  decisionHistory: [],
   exports: [],
 };
 
@@ -140,8 +145,25 @@ const CARD_WORKSPACE: ReviewWorkspace = {
   mapping: toMappingResult(cardComponentMappingFixture),
   complianceFindings: toFindingResults(cardComplianceFindingsFixture),
   latestDecision: null,
+  decisionHistory: [],
   exports: [],
 };
+
+function toLedgerEntries(
+  example: ExampleResult,
+  findings: ComplianceFindingResult[],
+): ComplianceLedgerEntryResult[] {
+  return findings.map((finding) => ({ example, finding }));
+}
+
+const COMPLIANCE_LEDGER: ComplianceLedgerEntryResult[] = [
+  ...toLedgerEntries(
+    POPULATED_WORKSPACE.example,
+    toFindingResults(buttonComplianceFindingsFixture),
+  ),
+  ...toLedgerEntries(INPUT_WORKSPACE.example, toFindingResults(inputComplianceFindingsFixture)),
+  ...toLedgerEntries(CARD_WORKSPACE.example, toFindingResults(cardComplianceFindingsFixture)),
+];
 
 const POPULATED_RESULT: ReviewWorkspaceQuery = {
   reviewWorkspace: POPULATED_WORKSPACE,
@@ -149,9 +171,25 @@ const POPULATED_RESULT: ReviewWorkspaceQuery = {
     ...createEmptyDashboardMetrics(),
     commonComplianceWarnings: [{ message: 'Token alias missing', count: 2 }],
   },
+  complianceLedger: COMPLIANCE_LEDGER,
 };
 
+const scrollIntoViewMock = vi.fn();
+
 describe('<App />', () => {
+  beforeEach(() => {
+    scrollIntoViewMock.mockReset();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoViewMock,
+    });
+  });
+
+  afterEach(() => {
+    // URL state persists on the shared jsdom window; reset it between tests.
+    window.history.replaceState(null, '', '/');
+  });
+
   it('renders the loading workspace state', () => {
     renderApp([createWorkspaceMock(POPULATED_RESULT, { delay: 50 })]);
 
@@ -173,6 +211,64 @@ describe('<App />', () => {
     expect(leftRail).toHaveClass('lg:min-h-screen');
   });
 
+  it('collapses navigation behind a menu disclosure that closes after tab activation', async () => {
+    const user = userEvent.setup();
+    renderApp([
+      createWorkspaceMock(POPULATED_RESULT),
+      createWorkspaceMock(POPULATED_RESULT),
+      createWorkspaceMock(POPULATED_RESULT),
+    ]);
+
+    await screen.findByRole('heading', { level: 1, name: 'Button' });
+
+    const menuButton = screen.getByRole('button', { name: 'Menu' });
+    const navContainer = document.getElementById('workspace-navigation');
+
+    if (navContainer === null) {
+      throw new Error('Expected the collapsible navigation container to be rendered.');
+    }
+
+    // Collapsed by default on mobile; the persistent rail re-appears via lg:flex on desktop.
+    expect(menuButton).toHaveAttribute('aria-controls', 'workspace-navigation');
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+    expect(navContainer).toHaveClass('hidden', 'lg:flex');
+
+    await user.click(menuButton);
+    expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+    expect(navContainer).not.toHaveClass('hidden');
+
+    // Activating a tab from the open menu closes it and hands focus to the panel.
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+    expect(navContainer).toHaveClass('hidden');
+    await waitFor(() => expect(screen.getByRole('tabpanel')).toHaveFocus());
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
+  });
+
+  it('hands mobile example focus to the new panel after collapsing navigation', async () => {
+    const user = userEvent.setup();
+    renderApp([
+      createWorkspaceMock(POPULATED_RESULT),
+      createWorkspaceMock(
+        {
+          reviewWorkspace: INPUT_WORKSPACE,
+          dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: COMPLIANCE_LEDGER,
+        },
+        { exampleId: INPUT_EXAMPLE_ID },
+      ),
+    ]);
+
+    await screen.findByRole('heading', { level: 1, name: 'Button' });
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
+    await user.click(screen.getByRole('button', { name: /Input/ }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Input' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('tabpanel')).toHaveFocus());
+    expect(screen.getByRole('button', { name: 'Menu' })).toHaveAttribute('aria-expanded', 'false');
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
+  });
+
   it('renders the error workspace state', async () => {
     renderApp([createWorkspaceMock(new Error('GraphQL unavailable'))]);
 
@@ -184,6 +280,7 @@ describe('<App />', () => {
       createWorkspaceMock({
         reviewWorkspace: null,
         dashboardMetrics: createEmptyDashboardMetrics(),
+        complianceLedger: [],
       }),
     ]);
 
@@ -194,10 +291,12 @@ describe('<App />', () => {
   it('renders Button intent, mapping, and compliance content from GraphQL data', async () => {
     renderApp([createWorkspaceMock(POPULATED_RESULT)]);
 
-    expect(
-      await screen.findByText('Review implementation proposals before export'),
-    ).toBeInTheDocument();
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    const demoRibbon = screen.getByRole('region', { name: 'Demo path' });
+    expect(within(demoRibbon).getByText('Mock Figma input')).toBeInTheDocument();
+    expect(within(demoRibbon).getByText('Gated export')).toBeInTheDocument();
+    expect(within(demoRibbon).getByRole('button', { name: 'Load Button demo' })).toBeEnabled();
     expect(screen.getAllByText(buttonComponentMappingFixture.targetComponent)).not.toHaveLength(0);
     expect(screen.getByText(buttonComplianceFindingsFixture[0]!.category)).toBeInTheDocument();
     expect(screen.getByText(buttonComplianceFindingsFixture[0]!.message)).toBeInTheDocument();
@@ -211,6 +310,7 @@ describe('<App />', () => {
         {
           reviewWorkspace: INPUT_WORKSPACE,
           dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: COMPLIANCE_LEDGER,
         },
         { exampleId: INPUT_EXAMPLE_ID },
       ),
@@ -223,10 +323,13 @@ describe('<App />', () => {
     expect(await screen.findByText(inputComponentIntentFixture.summary)).toBeInTheDocument();
 
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    const pushStateSpy = vi.spyOn(window.history, 'pushState');
+    pushStateSpy.mockClear();
     await user.click(screen.getByRole('button', { name: 'Load Button demo' }));
 
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Review' })).toHaveAttribute('aria-selected', 'true');
+    expect(pushStateSpy).toHaveBeenCalledTimes(1);
   });
 
   it('renders example rows with decision state and compliance summary', async () => {
@@ -257,6 +360,7 @@ describe('<App />', () => {
         {
           reviewWorkspace: INPUT_WORKSPACE,
           dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: COMPLIANCE_LEDGER,
         },
         { exampleId: INPUT_EXAMPLE_ID },
       ),
@@ -305,6 +409,7 @@ describe('<App />', () => {
     const inputResult = (overrides: Partial<ReviewWorkspace> = {}): ReviewWorkspaceQuery => ({
       reviewWorkspace: { ...INPUT_WORKSPACE, ...overrides },
       dashboardMetrics: createEmptyDashboardMetrics(),
+      complianceLedger: COMPLIANCE_LEDGER,
     });
 
     renderApp(
@@ -366,6 +471,7 @@ describe('<App />', () => {
     const cardResult = (overrides: Partial<ReviewWorkspace> = {}): ReviewWorkspaceQuery => ({
       reviewWorkspace: { ...CARD_WORKSPACE, ...overrides },
       dashboardMetrics: createEmptyDashboardMetrics(),
+      complianceLedger: COMPLIANCE_LEDGER,
     });
 
     renderApp(
@@ -421,6 +527,7 @@ describe('<App />', () => {
           acceptedMappings: 1,
           exportsCreated: 1,
         },
+        complianceLedger: COMPLIANCE_LEDGER,
       }),
     ]);
 
@@ -434,6 +541,13 @@ describe('<App />', () => {
 
     reviewTab.focus();
     await user.keyboard('{ArrowLeft}');
+    const complianceTab = screen.getByRole('tab', { name: 'Compliance' });
+    expect(complianceTab).toHaveAttribute('aria-selected', 'true');
+    expect(complianceTab).toHaveFocus();
+    expect(
+      within(screen.getByRole('tabpanel')).getByRole('heading', { name: 'Compliance Timeline' }),
+    ).toBeInTheDocument();
+    await user.keyboard('{ArrowLeft}');
     expect(dashboardTab).toHaveAttribute('aria-selected', 'true');
     expect(dashboardTab).toHaveFocus();
     expect(dashboardTab).toHaveAttribute('aria-controls', 'workspace-panel-dashboard');
@@ -444,6 +558,19 @@ describe('<App />', () => {
       within(screen.getByRole('tabpanel')).getByRole('heading', { name: 'Dashboard' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Accepted')).toBeInTheDocument();
+
+    reviewTab.focus();
+    await user.keyboard('{ArrowRight}');
+    const historyTab = screen.getByRole('tab', { name: 'History' });
+    expect(historyTab).toHaveAttribute('aria-selected', 'true');
+    expect(historyTab).toHaveFocus();
+    expect(
+      within(screen.getByRole('tabpanel')).getByRole('heading', { name: 'Decision History' }),
+    ).toBeInTheDocument();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Exports' })).toHaveAttribute('aria-selected', 'true');
+    await user.keyboard('{ArrowLeft}');
+    expect(historyTab).toHaveAttribute('aria-selected', 'true');
 
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
     expect(
@@ -598,9 +725,54 @@ describe('<App />', () => {
 
     expect(briefCard).toHaveClass('min-w-0', 'overflow-hidden');
     expect(briefContent).toHaveClass('max-w-full', 'overflow-x-auto', 'overscroll-x-contain');
+
+    const withinBriefCard = within(briefCard);
+    expect(
+      withinBriefCard.getByText(/Structured, human-reviewed context for AI coding agents/),
+    ).toBeInTheDocument();
+
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    await user.click(
+      withinBriefCard.getByRole('button', { name: 'Copy AGENT_BRIEF export content' }),
+    );
+
+    expect(writeText).toHaveBeenCalledWith(briefExport.content);
+    expect(await withinBriefCard.findByText('Copied')).toBeInTheDocument();
   });
 
-  it('saves a rejected decision and keeps exports locked', async () => {
+  it('shows a failure state when copying an export is denied', async () => {
+    const user = userEvent.setup();
+    const acceptedDecision = createDecision('ACCEPTED');
+
+    renderApp([
+      createWorkspaceMock(
+        createWorkspaceResult({
+          exports: [htmlExportFixture],
+          latestDecision: acceptedDecision,
+          metrics: { acceptedMappings: 1, exportsCreated: 1 },
+        }),
+      ),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error('Permission denied')) },
+    });
+
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    await user.click(screen.getByRole('button', { name: 'Copy HTML export content' }));
+
+    expect(await screen.findByText('Copy failed')).toBeInTheDocument();
+  });
+
+  it('saves a rejected decision with a required rationale and keeps exports locked', async () => {
     const user = userEvent.setup();
     const rejectedDecision = createDecision('REJECTED');
 
@@ -611,6 +783,7 @@ describe('<App />', () => {
           mappingId: buttonComponentMappingFixture.id,
           status: 'REJECTED',
           reviewerLabel: 'Local reviewer',
+          notes: 'Mapping loses the icon-only variant.',
         },
         decision: rejectedDecision,
       }),
@@ -625,7 +798,19 @@ describe('<App />', () => {
 
     expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
 
+    // Reject opens an inline rationale form; confirmation stays disabled until a reason exists.
     await user.click(screen.getByRole('button', { name: 'Reject' }));
+
+    const confirmButton = screen.getByRole('button', { name: 'Confirm rejection' });
+    expect(confirmButton).toBeDisabled();
+
+    await user.type(
+      screen.getByLabelText('Rejection rationale'),
+      'Mapping loses the icon-only variant.',
+    );
+    expect(confirmButton).toBeEnabled();
+    await user.click(confirmButton);
+
     expect(await screen.findAllByText('REJECTED')).not.toHaveLength(0);
 
     await user.click(screen.getByRole('tab', { name: 'Exports' }));
@@ -633,6 +818,210 @@ describe('<App />', () => {
     expect(screen.getByRole('button', { name: 'HTML' })).toBeDisabled();
     expect(screen.getByText('LOCKED')).toBeInTheDocument();
     expect(screen.getByText('Historical exports retained')).toBeInTheDocument();
+  });
+
+  it('cancels a rejection without saving a decision', async () => {
+    const user = userEvent.setup();
+
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reject' }));
+    await user.type(screen.getByLabelText('Rejection rationale'), 'Wrong component target.');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    // The decision actions return and no rejection was persisted (no mutation mock exists).
+    expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument();
+    expect(screen.getByText('Pending review')).toBeInTheDocument();
+  });
+
+  it('renders persisted timestamps as formatted dates with machine-readable values', async () => {
+    const user = userEvent.setup();
+    const acceptedDecision = createDecision('ACCEPTED');
+
+    renderApp([
+      createWorkspaceMock(
+        createWorkspaceResult({
+          decisionHistory: [acceptedDecision],
+          exports: [htmlExportFixture],
+          latestDecision: acceptedDecision,
+          metrics: { acceptedMappings: 1, exportsCreated: 1 },
+        }),
+      ),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    // Decision rail shows the formatted timestamp instead of the raw ISO string.
+    expect(screen.getByText(formatTimestamp(acceptedDecision.createdAt))).toBeInTheDocument();
+    expect(screen.queryByText(acceptedDecision.createdAt)).not.toBeInTheDocument();
+
+    // Decision, history, and export timestamps render as <time> elements keeping the ISO value.
+    const decisionTime = document.querySelector(`time[datetime="${acceptedDecision.createdAt}"]`);
+    expect(decisionTime).not.toBeNull();
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    const exportTime = document.querySelector(`time[datetime="${htmlExportFixture.createdAt}"]`);
+    expect(exportTime).not.toBeNull();
+    expect(exportTime).toHaveTextContent(formatTimestamp(htmlExportFixture.createdAt));
+  });
+
+  it('recovers from a workspace error through the retry action', async () => {
+    const user = userEvent.setup();
+
+    renderApp([
+      createWorkspaceMock(new Error('GraphQL unavailable')),
+      createWorkspaceMock(POPULATED_RESULT),
+    ]);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('GraphQL unavailable');
+
+    await user.click(screen.getByRole('button', { name: 'Retry request' }));
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+  });
+
+  it('exposes a skip link targeting the review content region', () => {
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    const skipLink = screen.getByRole('link', { name: 'Skip to review content' });
+    expect(skipLink).toHaveAttribute('href', '#workspace-content');
+  });
+
+  it('persists the selected view and example in the URL', async () => {
+    const user = userEvent.setup();
+    renderApp([
+      createWorkspaceMock(POPULATED_RESULT),
+      createWorkspaceMock(
+        {
+          reviewWorkspace: INPUT_WORKSPACE,
+          dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: COMPLIANCE_LEDGER,
+        },
+        { exampleId: INPUT_EXAMPLE_ID },
+      ),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+    expect(window.location.search).toBe('?view=exports');
+
+    await user.click(await screen.findByRole('button', { name: /Input/ }));
+    expect(window.location.search).toBe(
+      `?view=exports&example=${encodeURIComponent(INPUT_EXAMPLE_ID).replace(/%2E/g, '.')}`,
+    );
+  });
+
+  it('restores the view and example from the URL on load', async () => {
+    window.history.replaceState(null, '', `/?view=history&example=${INPUT_EXAMPLE_ID}`);
+
+    renderApp([
+      createWorkspaceMock(
+        {
+          reviewWorkspace: INPUT_WORKSPACE,
+          dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: COMPLIANCE_LEDGER,
+        },
+        { exampleId: INPUT_EXAMPLE_ID },
+      ),
+    ]);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Input' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'History' })).toHaveAttribute('aria-selected', 'true');
+    expect(
+      within(screen.getByRole('tabpanel')).getByRole('heading', { name: 'Decision History' }),
+    ).toBeInTheDocument();
+  });
+
+  it('falls back to the review view for an unknown view parameter', async () => {
+    window.history.replaceState(null, '', '/?view=nonsense');
+
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Review' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('corrects an unknown example from the URL once examples load', async () => {
+    window.history.replaceState(null, '', '/?view=review&example=example.missing');
+
+    renderApp([
+      createWorkspaceMock(
+        {
+          reviewWorkspace: null,
+          dashboardMetrics: createEmptyDashboardMetrics(),
+          complianceLedger: [],
+        },
+        { exampleId: 'example.missing' },
+      ),
+      createWorkspaceMock(POPULATED_RESULT),
+    ]);
+
+    // Once the example list resolves, the invalid id is replaced (no history entry) and the
+    // default example loads.
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+    expect(window.location.search).toBe('?view=review');
+  });
+
+  it('records a client instrumentation event when the view changes', async () => {
+    const user = userEvent.setup();
+    const uiEventResult = vi.fn(() => ({
+      data: {
+        recordUiEvent: {
+          id: 'event.ui.1',
+          name: 'ui.view_changed',
+          entityType: 'UI',
+          entityId: BUTTON_EXAMPLE_ID,
+          timestamp: '2026-01-01T00:00:05.000Z',
+        },
+      },
+    }));
+
+    renderApp([
+      createWorkspaceMock(POPULATED_RESULT),
+      {
+        request: {
+          query: RECORD_UI_EVENT_MUTATION,
+          variables: {
+            input: {
+              name: 'ui.view_changed',
+              exampleId: BUTTON_EXAMPLE_ID,
+              metadata: { view: 'exports' },
+            },
+          },
+        },
+        result: uiEventResult,
+      },
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Exports' }));
+
+    // Fire-and-forget: the mutation is dispatched without blocking the tab change.
+    await waitFor(() => expect(uiEventResult).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('tab', { name: 'Exports' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('restores the previous view when navigating browser history', async () => {
+    const user = userEvent.setup();
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Compliance' }));
+    expect(window.location.search).toBe('?view=compliance');
+
+    // Simulate the browser's back navigation deterministically.
+    act(() => {
+      window.history.replaceState(null, '', '/?view=review');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: 'Review' })).toHaveAttribute('aria-selected', 'true'),
+    );
   });
 
   it('saves edited Button controls and exports edited output', async () => {
@@ -706,6 +1095,99 @@ describe('<App />', () => {
     await user.click(screen.getByRole('button', { name: 'HTML' }));
 
     expect(await screen.findByText(editedExport.content)).toBeInTheDocument();
+  });
+
+  it('shows an empty history state when no decisions have been recorded', async () => {
+    const user = userEvent.setup();
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'History' }));
+
+    expect(
+      screen.getByText('No review decisions have been recorded for this mapping yet.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows decision history with an expandable diff for an edited entry', async () => {
+    const user = userEvent.setup();
+    const editedMapping = {
+      mappedProps: {
+        variant: 'warning',
+        size: 'large',
+        disabled: true,
+      },
+      mappedSlots: {
+        default: 'Publish changes',
+      },
+      confidence: 'HIGH' as const,
+      rationale: buttonComponentMappingFixture.rationale,
+    };
+    const earlierDecision = createDecision('ACCEPTED', {
+      id: 'decision.button.accepted-earlier',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    const editedDecision = createDecision('EDITED', {
+      id: 'decision.button.edited-later',
+      editedMapping,
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+
+    renderApp([
+      createWorkspaceMock(
+        createWorkspaceResult({
+          decisionHistory: [editedDecision, earlierDecision],
+          latestDecision: editedDecision,
+          metrics: { editedMappings: 1 },
+        }),
+      ),
+    ]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'History' }));
+
+    expect(await screen.findAllByText('EDITED')).not.toHaveLength(0);
+    expect(screen.getByText('ACCEPTED')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'View diff' }));
+
+    expect(screen.getByText('primary')).toBeInTheDocument();
+    expect(screen.getByText('warning')).toBeInTheDocument();
+  });
+
+  it('shows an empty compliance timeline when no findings exist', async () => {
+    const user = userEvent.setup();
+    renderApp([createWorkspaceMock(createWorkspaceResult({ complianceLedger: [] }))]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Compliance' }));
+
+    expect(
+      screen.getByText('No compliance findings recorded across any component.'),
+    ).toBeInTheDocument();
+  });
+
+  it('groups the compliance timeline by component with a per-component summary', async () => {
+    const user = userEvent.setup();
+    renderApp([createWorkspaceMock(POPULATED_RESULT)]);
+
+    expect(await screen.findByText(buttonComponentIntentFixture.summary)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Compliance' }));
+
+    const timelinePanel = within(screen.getByRole('tabpanel'));
+
+    expect(timelinePanel.getByRole('heading', { name: 'Compliance Timeline' })).toBeInTheDocument();
+    expect(
+      timelinePanel.getByText('1 warning · 9 informational across 3 components'),
+    ).toBeInTheDocument();
+    expect(timelinePanel.getByText('Button')).toBeInTheDocument();
+    expect(timelinePanel.getByText('Card')).toBeInTheDocument();
+    expect(timelinePanel.getByText('Input')).toBeInTheDocument();
+    expect(timelinePanel.getByText(inputComplianceFindingsFixture[1]!.message)).toBeInTheDocument();
   });
 
   it('shows export errors and allows retry', async () => {
@@ -807,10 +1289,14 @@ function createWorkspaceMock(
 }
 
 function createWorkspaceResult({
+  complianceLedger = COMPLIANCE_LEDGER,
+  decisionHistory = [],
   exports = [],
   latestDecision = null,
   metrics = {},
 }: {
+  complianceLedger?: ComplianceLedgerEntryResult[];
+  decisionHistory?: ReviewDecisionResult[];
   exports?: ExportResult[];
   latestDecision?: ReviewDecisionResult | null;
   metrics?: Partial<ReviewWorkspaceQuery['dashboardMetrics']>;
@@ -818,6 +1304,7 @@ function createWorkspaceResult({
   return {
     reviewWorkspace: {
       ...POPULATED_WORKSPACE,
+      decisionHistory,
       exports,
       latestDecision,
     },
@@ -825,6 +1312,7 @@ function createWorkspaceResult({
       ...createEmptyDashboardMetrics(),
       ...metrics,
     },
+    complianceLedger,
   };
 }
 

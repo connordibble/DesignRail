@@ -29,8 +29,10 @@ import {
   getReviewWorkspace,
   listExportsByMappingId,
   listComplianceFindingsByMappingId,
+  listComplianceLedger,
   listExamples,
   listReviewDecisions,
+  listReviewDecisionsByMappingId,
   recordInstrumentationEvent,
   saveReviewDecision,
   seedDesignRailData,
@@ -75,6 +77,30 @@ describe('DesignRail repositories', () => {
     expect(
       listComplianceFindingsByMappingId(client, buttonComponentMappingFixture.id),
     ).toHaveLength(3);
+  });
+
+  it('returns every compliance finding across all examples, most severe first', () => {
+    const ledger = listComplianceLedger(client);
+
+    expect(ledger).toHaveLength(10);
+    // Input's token-usage warning is the only non-info finding in the seed data, so it sorts first.
+    expect(ledger[0]).toMatchObject({
+      example: { name: 'Input' },
+      finding: { id: 'finding.input.email.token-usage', severity: 'WARNING' },
+    });
+    expect(ledger.slice(1).every((entry) => entry.finding.severity === 'INFO')).toBe(true);
+    // Remaining info findings group by example name alphabetically: Button, Card, Input.
+    expect(ledger.slice(1).map((entry) => entry.example.name)).toEqual([
+      'Button',
+      'Button',
+      'Button',
+      'Card',
+      'Card',
+      'Card',
+      'Input',
+      'Input',
+      'Input',
+    ]);
   });
 
   it('returns a review workspace for the seeded Button example', () => {
@@ -156,6 +182,42 @@ describe('DesignRail repositories', () => {
       id: 'decision.test.rejected',
       status: 'REJECTED',
     });
+  });
+
+  it('returns full decision history for a mapping in most-recent-first order', () => {
+    saveReviewDecision(client, {
+      id: 'decision.test.accepted',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'ACCEPTED',
+      reviewerLabel: 'Repository test',
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+    saveReviewDecision(client, {
+      id: 'decision.test.edited',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'EDITED',
+      reviewerLabel: 'Repository test',
+      editedMapping: {
+        mappedSlots: {
+          default: 'Publish',
+        },
+      },
+      createdAt: '2026-01-01T00:00:02.000Z',
+    });
+    saveReviewDecision(client, {
+      id: 'decision.test.rejected',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'REJECTED',
+      reviewerLabel: 'Repository test',
+      createdAt: '2026-01-01T00:00:03.000Z',
+    });
+
+    expect(
+      listReviewDecisionsByMappingId(client, buttonComponentMappingFixture.id).map((d) => d.id),
+    ).toEqual(['decision.test.rejected', 'decision.test.edited', 'decision.test.accepted']);
+    expect(
+      getReviewWorkspace(client, buttonExampleFixture.id)?.decisionHistory.map((d) => d.status),
+    ).toEqual(['REJECTED', 'EDITED', 'ACCEPTED']);
   });
 
   it('blocks exports until the latest decision is accepted or edited', () => {
@@ -283,6 +345,33 @@ describe('DesignRail repositories', () => {
         content: '<sl-button variant="warning" size="large" disabled>Publish changes</sl-button>',
       },
     });
+  });
+
+  it('exports an agent brief carrying the authorizing decision and compliance findings', () => {
+    saveReviewDecision(client, {
+      id: 'decision.test.accepted-for-brief',
+      mappingId: buttonComponentMappingFixture.id,
+      status: 'ACCEPTED',
+      reviewerLabel: 'Repository test',
+      createdAt: '2026-01-01T00:00:01.000Z',
+    });
+
+    const outcome = createExport(client, {
+      id: 'export.test.agent-brief',
+      mappingId: buttonComponentMappingFixture.id,
+      format: 'AGENT_BRIEF',
+      createdAt: '2026-01-01T00:00:02.000Z',
+    });
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) {
+      return;
+    }
+
+    expect(outcome.exportResult.content).toContain(
+      'Review: ACCEPTED by Repository test on 2026-01-01T00:00:01.000Z',
+    );
+    expect(outcome.exportResult.content).toContain('Compliance: 0 blockers, 0 warnings, 3 info');
   });
 
   it('records instrumentation events', () => {

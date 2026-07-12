@@ -1,7 +1,9 @@
 import {
   DESIGNRAIL_GRAPHQL_SCHEMA,
+  recordUiEventInputSchema,
   type ExportFormat,
   type MappingEdit,
+  type Metadata,
   type ReviewDecisionStatus,
 } from '@designrail/shared';
 import {
@@ -23,6 +25,7 @@ import {
   getMappingByExampleId,
   getReviewWorkspace,
   listComplianceFindingsByMappingId,
+  listComplianceLedger,
   listExamples,
   listReviewDecisions,
   recordInstrumentationEvent,
@@ -66,6 +69,14 @@ interface ExportMappingArgs {
   input: {
     mappingId: string;
     format: ExportFormat;
+  };
+}
+
+interface RecordUiEventArgs {
+  input: {
+    name: string;
+    exampleId?: string | null;
+    metadata?: Metadata | null;
   };
 }
 
@@ -120,6 +131,7 @@ export function createResolvers(client: DatabaseClient) {
       compliance: (_parent: unknown, args: MappingIdArgs) =>
         listComplianceFindingsByMappingId(client, args.mappingId, args),
       reviewDecisions: (_parent: unknown, args: LimitArgs) => listReviewDecisions(client, args),
+      complianceLedger: (_parent: unknown, args: LimitArgs) => listComplianceLedger(client, args),
       dashboardMetrics: () => getDashboardMetrics(client),
       reviewWorkspace: (_parent: unknown, args: ReviewWorkspaceArgs) =>
         getReviewWorkspace(client, args.exampleId),
@@ -162,6 +174,25 @@ export function createResolvers(client: DatabaseClient) {
         });
 
         return outcome.exportResult;
+      },
+      recordUiEvent: (_parent: unknown, args: RecordUiEventArgs) => {
+        const parsed = recordUiEventInputSchema.safeParse(args.input);
+
+        if (!parsed.success) {
+          throw new GraphQLError('Invalid UI instrumentation event.', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              issues: parsed.error.issues.map((issue) => issue.message),
+            },
+          });
+        }
+
+        return recordInstrumentationEvent(client, {
+          name: parsed.data.name,
+          entityType: 'UI',
+          entityId: parsed.data.exampleId ?? 'web-client',
+          metadata: parsed.data.metadata,
+        });
       },
     },
   };

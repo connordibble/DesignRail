@@ -169,6 +169,35 @@ describe('DesignRail GraphQL API', () => {
     });
   });
 
+  it('resolves the compliance ledger across every example', async () => {
+    const body = await graphql<{
+      complianceLedger: Array<{
+        example: { id: string; name: string };
+        finding: { id: string; severity: string };
+      }>;
+    }>(`
+      query ComplianceLedger {
+        complianceLedger {
+          example {
+            id
+            name
+          }
+          finding {
+            id
+            severity
+          }
+        }
+      }
+    `);
+
+    expect(body.errors).toBeUndefined();
+    expect(body.data?.complianceLedger).toHaveLength(10);
+    expect(body.data?.complianceLedger[0]).toMatchObject({
+      example: { name: 'Input' },
+      finding: { id: 'finding.input.email.token-usage', severity: 'WARNING' },
+    });
+  });
+
   it('resolves component intent by example id', async () => {
     const body = await graphql<{
       componentIntent: { id: string; componentType: string; variants: string[] } | null;
@@ -226,6 +255,7 @@ describe('DesignRail GraphQL API', () => {
         mapping: { id: string; targetComponent: string } | null;
         complianceFindings: Array<{ mappingId: string; severity: string }>;
         latestDecision: { status: string } | null;
+        decisionHistory: Array<{ status: string }>;
         exports: Array<{ id: string }>;
       } | null;
     }>(
@@ -248,6 +278,9 @@ describe('DesignRail GraphQL API', () => {
               severity
             }
             latestDecision {
+              status
+            }
+            decisionHistory {
               status
             }
             exports {
@@ -287,7 +320,71 @@ describe('DesignRail GraphQL API', () => {
         },
       ],
       latestDecision: null,
+      decisionHistory: [],
       exports: [],
+    });
+  });
+
+  it('returns decision history alongside the latest decision', async () => {
+    await graphql(
+      `
+        mutation SaveReviewDecision($input: SaveReviewDecisionInput!) {
+          saveReviewDecision(input: $input) {
+            id
+          }
+        }
+      `,
+      {
+        input: {
+          mappingId: buttonComponentMappingFixture.id,
+          status: 'ACCEPTED',
+          reviewerLabel: 'GraphQL test',
+        },
+      },
+    );
+    await graphql(
+      `
+        mutation SaveReviewDecision($input: SaveReviewDecisionInput!) {
+          saveReviewDecision(input: $input) {
+            id
+          }
+        }
+      `,
+      {
+        input: {
+          mappingId: buttonComponentMappingFixture.id,
+          status: 'EDITED',
+          reviewerLabel: 'GraphQL test',
+          editedMapping: { mappedProps: { variant: 'neutral' } },
+        },
+      },
+    );
+
+    const body = await graphql<{
+      reviewWorkspace: {
+        decisionHistory: Array<{ status: string }>;
+        latestDecision: { status: string } | null;
+      } | null;
+    }>(
+      `
+        query ReviewWorkspace($exampleId: ID!) {
+          reviewWorkspace(exampleId: $exampleId) {
+            decisionHistory {
+              status
+            }
+            latestDecision {
+              status
+            }
+          }
+        }
+      `,
+      { exampleId: buttonExampleFixture.id },
+    );
+
+    expect(body.errors).toBeUndefined();
+    expect(body.data?.reviewWorkspace).toMatchObject({
+      decisionHistory: [{ status: 'EDITED' }, { status: 'ACCEPTED' }],
+      latestDecision: { status: 'EDITED' },
     });
   });
 
@@ -319,6 +416,53 @@ describe('DesignRail GraphQL API', () => {
       status: 'ACCEPTED',
       reviewerLabel: 'GraphQL test',
     });
+  });
+
+  it('records client UI instrumentation events with a UI entity type', async () => {
+    const body = await graphql<{
+      recordUiEvent: { id: string; name: string; entityType: string; entityId: string };
+    }>(
+      `
+        mutation RecordUiEvent($input: RecordUiEventInput!) {
+          recordUiEvent(input: $input) {
+            id
+            name
+            entityType
+            entityId
+          }
+        }
+      `,
+      {
+        input: {
+          name: 'ui.view_changed',
+          exampleId: buttonExampleFixture.id,
+          metadata: { view: 'exports' },
+        },
+      },
+    );
+
+    expect(body.errors).toBeUndefined();
+    expect(body.data?.recordUiEvent).toMatchObject({
+      name: 'ui.view_changed',
+      entityType: 'UI',
+      entityId: buttonExampleFixture.id,
+    });
+  });
+
+  it('rejects UI instrumentation events outside the ui.* namespace', async () => {
+    const body = await graphql<{ recordUiEvent: { id: string } }>(
+      `
+        mutation RecordUiEvent($input: RecordUiEventInput!) {
+          recordUiEvent(input: $input) {
+            id
+          }
+        }
+      `,
+      { input: { name: 'review_decision.saved' } },
+    );
+
+    expect(body.data ?? undefined).toBeUndefined();
+    expect(body.errors?.[0]?.extensions?.['code']).toBe('BAD_USER_INPUT');
   });
 
   it('blocks export when no accepted or edited decision exists', async () => {

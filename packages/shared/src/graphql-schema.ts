@@ -128,6 +128,11 @@ export const DESIGNRAIL_GRAPHQL_SCHEMA = String.raw`
     createdAt: String!
   }
 
+  type ComplianceLedgerEntry {
+    example: Example!
+    finding: ComplianceFinding!
+  }
+
   type ReviewDecision {
     id: ID!
     mappingId: ID!
@@ -166,6 +171,7 @@ export const DESIGNRAIL_GRAPHQL_SCHEMA = String.raw`
     mapping: ComponentMapping
     complianceFindings: [ComplianceFinding!]!
     latestDecision: ReviewDecision
+    decisionHistory: [ReviewDecision!]!
     exports: [ExportResult!]!
   }
 
@@ -199,12 +205,28 @@ export const DESIGNRAIL_GRAPHQL_SCHEMA = String.raw`
     format: ExportFormat!
   }
 
+  type InstrumentationEvent {
+    id: ID!
+    name: String!
+    entityType: String!
+    entityId: String!
+    timestamp: String!
+    metadata: JSON!
+  }
+
+  input RecordUiEventInput {
+    name: String!
+    exampleId: ID
+    metadata: JSON
+  }
+
   type Query {
     examples(limit: Int = 50): [Example!]!
     componentIntent(exampleId: ID!): ComponentIntent
     mapping(exampleId: ID!): ComponentMapping
     compliance(mappingId: ID!, limit: Int = 50): [ComplianceFinding!]!
     reviewDecisions(limit: Int = 100): [ReviewDecision!]!
+    complianceLedger(limit: Int = 200): [ComplianceLedgerEntry!]!
     dashboardMetrics: DashboardMetrics!
     reviewWorkspace(exampleId: ID!): ReviewWorkspace
   }
@@ -212,5 +234,6 @@ export const DESIGNRAIL_GRAPHQL_SCHEMA = String.raw`
   type Mutation {
     saveReviewDecision(input: SaveReviewDecisionInput!): ReviewDecision!
     exportMapping(input: ExportMappingInput!): ExportResult!
+    recordUiEvent(input: RecordUiEventInput!): InstrumentationEvent!
   }
 `;

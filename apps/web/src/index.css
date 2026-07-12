@@ -1,3 +1,8 @@
+/* Hallmark · macrostructure: persistent-review-rail · genre: modern-minimal · tone: technical
+ * palette: signal-cyan on instrument-charcoal · design-system: DESIGN.md
+ * pre-emit critique: P5 H5 E5 S5 R5 V5 · contrast: pass (40–41)
+ * nav: review rail · footer: n/a · slop: pass (42–49) · mobile: pass (34, 49–57)
+ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,6 +50,7 @@
 
   html {
     min-height: 100%;
+    overflow-x: clip;
     background: var(--dr-color-canvas);
     color: var(--dr-color-text);
     color-scheme: dark;
@@ -55,6 +61,7 @@
   body {
     min-height: 100%;
     margin: 0;
+    overflow-x: clip;
     background: var(--dr-color-canvas);
   }
 
@@ -66,6 +73,10 @@
   [tabindex]:not([tabindex='-1']) {
     outline-color: var(--dr-color-accent);
     outline-offset: 2px;
+  }
+
+  button {
+    touch-action: manipulation;
   }
 
   @media (prefers-reduced-motion: reduce) {

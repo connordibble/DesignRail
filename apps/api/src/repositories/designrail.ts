@@ -47,7 +47,7 @@ import {
   type DatabaseClient,
 } from '../db/index.js';
 
-import { renderExportContent } from './export-renderer.js';
+import { renderExportContent, type AgentBriefContext } from './export-renderer.js';
 
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_LIST_LIMIT = 200;
@@ -88,12 +88,18 @@ export interface ComplianceSeverityCounts {
   info: number;
 }
 
+export interface ComplianceLedgerEntry {
+  example: Example;
+  finding: ComplianceFinding;
+}
+
 export interface ReviewWorkspace {
   example: Example;
   intent: ComponentIntent | null;
   mapping: ComponentMapping | null;
   complianceFindings: ComplianceFinding[];
   latestDecision: ReviewDecision | null;
+  decisionHistory: ReviewDecision[];
   exports: ExportResult[];
 }
 
@@ -454,6 +460,54 @@ export function countComplianceFindingsBySeverity(
   return summary;
 }
 
+const SEVERITY_RANK: Record<ComplianceFinding['severity'], number> = {
+  BLOCKER: 0,
+  WARNING: 1,
+  INFO: 2,
+};
+
+/**
+ * Every compliance finding across every example, most severe first. Examples with a blocker or
+ * warning naturally group earliest since findings are pre-sorted by severity before grouping.
+ */
+export function listComplianceLedger(
+  client: DatabaseClient,
+  input: PaginationInput = {},
+): ComplianceLedgerEntry[] {
+  const entries: ComplianceLedgerEntry[] = [];
+
+  for (const example of listExamples(client, { limit: MAX_LIST_LIMIT })) {
+    const mapping = getMappingByExampleId(client, example.id);
+
+    if (mapping === null) {
+      continue;
+    }
+
+    for (const finding of listComplianceFindingsByMappingId(client, mapping.id, {
+      limit: MAX_LIST_LIMIT,
+    })) {
+      entries.push({ example, finding });
+    }
+  }
+
+  entries.sort((left, right) => {
+    const severityDiff =
+      SEVERITY_RANK[left.finding.severity] - SEVERITY_RANK[right.finding.severity];
+    if (severityDiff !== 0) {
+      return severityDiff;
+    }
+
+    const nameDiff = left.example.name.localeCompare(right.example.name);
+    if (nameDiff !== 0) {
+      return nameDiff;
+    }
+
+    return left.finding.id.localeCompare(right.finding.id);
+  });
+
+  return entries.slice(0, normalizeLimit(input.limit, 200));
+}
+
 export function listReviewDecisions(
   client: DatabaseClient,
   input: PaginationInput = {},
@@ -480,6 +534,21 @@ export function getLatestReviewDecisionByMappingId(
     .get();
 
   return row === undefined ? null : toReviewDecision(row);
+}
+
+export function listReviewDecisionsByMappingId(
+  client: DatabaseClient,
+  mappingId: string,
+  input: PaginationInput = {},
+): ReviewDecision[] {
+  return client.db
+    .select()
+    .from(reviewDecisions)
+    .where(eq(reviewDecisions.mappingId, mappingId))
+    .orderBy(desc(reviewDecisions.createdAt), desc(reviewDecisions.id))
+    .limit(normalizeLimit(input.limit, 100))
+    .all()
+    .map(toReviewDecision);
 }
 
 export function saveReviewDecision(
@@ -588,10 +657,18 @@ export function createExport(
       ? applyMappingEdit(mapping, latestDecision.editedMapping)
       : mapping;
 
+  const agentBriefContext: AgentBriefContext | undefined =
+    input.format === 'AGENT_BRIEF'
+      ? {
+          decision: latestDecision,
+          findings: listComplianceFindingsByMappingId(client, mapping.id),
+        }
+      : undefined;
+
   let content: string;
 
   try {
-    content = renderExportContent(effectiveMapping, input.format);
+    content = renderExportContent(effectiveMapping, input.format, agentBriefContext);
   } catch (error) {
     return {
       ok: false,
@@ -680,6 +757,10 @@ export function getReviewWorkspace(
 
   const intent = getComponentIntentByExampleId(client, exampleId);
   const mapping = getMappingByExampleId(client, exampleId);
+  // decisionHistory is already ordered latest-first (same predicate and tiebreak as
+  // getLatestReviewDecisionByMappingId), so its head is the latest decision — avoids a second query.
+  const decisionHistory =
+    mapping === null ? [] : listReviewDecisionsByMappingId(client, mapping.id);
 
   return {
     example,
@@ -687,8 +768,8 @@ export function getReviewWorkspace(
     mapping,
     complianceFindings:
       mapping === null ? [] : listComplianceFindingsByMappingId(client, mapping.id),
-    latestDecision:
-      mapping === null ? null : getLatestReviewDecisionByMappingId(client, mapping.id),
+    latestDecision: decisionHistory[0] ?? null,
+    decisionHistory,
     exports: mapping === null ? [] : listExportsByMappingId(client, mapping.id),
   };
 }

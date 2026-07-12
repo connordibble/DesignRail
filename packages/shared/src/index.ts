@@ -53,6 +53,7 @@ export const instrumentationEntityTypeSchema = z.enum([
   'COMPONENT_MAPPING',
   'REVIEW_DECISION',
   'EXPORT',
+  'UI',
 ]);
 
 export const sourceReferenceSchema = z.object({
@@ -204,6 +205,15 @@ export const instrumentationEventSchema = z.object({
   metadata: metadataSchema.default({}),
 });
 
+/** Client UI events use a namespaced `ui.<subject>_<action>` form so the ledger stays scannable. */
+export const UI_EVENT_NAME_PATTERN = /^ui\.[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/;
+
+export const recordUiEventInputSchema = z.object({
+  name: z.string().regex(UI_EVENT_NAME_PATTERN, 'UI event names must match ui.<subject>_<action>'),
+  exampleId: z.string().min(1).nullish(),
+  metadata: metadataSchema.default({}),
+});
+
 export const dashboardWarningSchema = z.object({
   message: z.string().min(1),
   count: z.number().int().nonnegative(),
@@ -271,6 +281,7 @@ export type ComplianceFinding = z.infer<typeof complianceFindingSchema>;
 export type ReviewDecision = z.infer<typeof reviewDecisionSchema>;
 export type ExportResult = z.infer<typeof exportResultSchema>;
 export type InstrumentationEvent = z.infer<typeof instrumentationEventSchema>;
+export type RecordUiEventInput = z.infer<typeof recordUiEventInputSchema>;
 export type DashboardWarning = z.infer<typeof dashboardWarningSchema>;
 export type DashboardMetrics = z.infer<typeof dashboardMetricsSchema>;
 export type ToolMode = z.infer<typeof toolModeSchema>;
