@@ -14,6 +14,7 @@ const REQUIRED_PROOF_ASSETS = [
   'assets/designrail-demo.mp4',
   'assets/designrail-demo.vtt',
   'assets/architecture.svg',
+  'assets/architecture-mobile.svg',
   'assets/demo-input-intent.png',
   'assets/demo-compliance.png',
   'assets/demo-rejection-rationale.png',

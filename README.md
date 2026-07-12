@@ -6,7 +6,7 @@ DesignRail is a human review gate for design-to-code workflows. It surfaces sche
 
 [![DesignRail review workspace showing normalized source intent, a recommended Shoelace mapping, the human decision gate, and compliance findings](assets/demo-input-intent.png)](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4)
 
-[Watch the 72-second walkthrough](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4) · [Run it locally](#run-it-locally) · [See the architecture](#architecture)
+[Watch the demo](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4) · [Run locally](#run-it-locally) · [Architecture](#architecture)
 
 The demo is local, credential-free, and backed by public mock fixtures. Generation never bypasses review, so the handoff decision stays visible and auditable.
 
@@ -70,7 +70,12 @@ Open any image for the full-resolution view.
 
 ## Architecture
 
-[![DesignRail architecture flowing from a public mock fixture through normalized intent, deterministic evaluation, GraphQL-backed review, and a human-controlled export gate](assets/architecture.svg)](assets/architecture.svg)
+<a href="assets/architecture.svg">
+  <picture>
+    <source media="(max-width: 600px)" srcset="assets/architecture-mobile.svg" />
+    <img src="assets/architecture.svg" alt="DesignRail architecture flowing from a public mock fixture through normalized intent, deterministic evaluation, GraphQL-backed review, and a human-controlled export gate" />
+  </picture>
+</a>
 
 GraphQL is the contract between the UI, API, and persistence layer. The UI reads a complete review workspace and writes decisions, exports, and client instrumentation through typed operations. Pipeline tools generate deterministic fixture-backed data but do not bypass the human gate.
 
