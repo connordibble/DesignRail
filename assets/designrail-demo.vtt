@@ -1,0 +1,16 @@
+WEBVTT
+
+00:00.000 --> 00:12.000
+Design intent becomes a reviewable, schema-backed proposal.
+
+00:12.000 --> 00:24.000
+Findings stay ordered, specific, and actionable.
+
+00:24.000 --> 00:36.000
+Rejection requires a rationale before it can be saved.
+
+00:36.000 --> 00:48.000
+Edited decisions retain a field-level diff.
+
+00:48.000 --> 01:00.000
+Only reviewed mappings can produce code or an Agent Brief.
