@@ -41,7 +41,11 @@ if (!readme.includes(`\n${EMBEDDED_DEMO_URL}\n`)) {
   failures.push('README.md must render the GitHub user-attachment demo URL on its own line.');
 }
 
-if (readme.includes('raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4')) {
+if (
+  readme.includes(
+    'raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4',
+  )
+) {
   failures.push('README.md still links the demo through raw.githubusercontent.com.');
 }
 
