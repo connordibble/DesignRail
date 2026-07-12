@@ -1,26 +1,44 @@
+<!-- Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="1080" viewBox="0 0 720 1080" role="img" aria-labelledby="title description">
   <title id="title">DesignRail system architecture for narrow screens</title>
   <desc id="description">A stacked four-stage flow from mock design input through deterministic evaluation and GraphQL-backed human review to an authorized or locked export.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#728584" />
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-subtle)" />
     </marker>
     <style>
-      .stage { fill: #0b1011; stroke: #263338; stroke-width: 1.5; }
-      .node { fill: #111719; stroke: #35464d; stroke-width: 1.5; }
-      .node-accent { fill: #0f3032; stroke: #32d3c4; stroke-width: 2; }
-      .node-danger { fill: #241416; stroke: #ef6464; stroke-width: 1.5; }
-      .stage-label { fill: #728584; font: 600 16px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 1.5px; }
-      .node-title { fill: #eef6f5; font: 600 20px ui-sans-serif, system-ui, sans-serif; }
-      .node-detail { fill: #a6b5b4; font: 400 16px ui-sans-serif, system-ui, sans-serif; }
-      .connector { fill: none; stroke: #728584; stroke-width: 2; marker-end: url(#arrow); }
-      .connector-accent { fill: none; stroke: #32d3c4; stroke-width: 2.5; marker-end: url(#arrow); }
-      .connector-danger { fill: none; stroke: #ef6464; stroke-width: 2; marker-end: url(#arrow); }
-      .footer { fill: #a6b5b4; font: 500 16px ui-sans-serif, system-ui, sans-serif; }
+      :root {
+        --color-canvas: #070a0b;
+        --color-shell: #0b1011;
+        --color-panel: #111719;
+        --color-accent-soft: #0f3032;
+        --color-danger-soft: #241416;
+        --color-border: #263338;
+        --color-border-strong: #35464d;
+        --color-text: #eef6f5;
+        --color-muted: #a6b5b4;
+        --color-subtle: #728584;
+        --color-accent: #32d3c4;
+        --color-success: #35b779;
+        --color-danger: #ef6464;
+        --font-ui: ui-sans-serif, system-ui, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .stage { fill: var(--color-shell); stroke: var(--color-border); stroke-width: 1.5; }
+      .node { fill: var(--color-panel); stroke: var(--color-border-strong); stroke-width: 1.5; }
+      .node-accent { fill: var(--color-accent-soft); stroke: var(--color-accent); stroke-width: 2; }
+      .node-danger { fill: var(--color-danger-soft); stroke: var(--color-danger); stroke-width: 1.5; }
+      .stage-label { fill: var(--color-subtle); font: 600 16px var(--font-mono); letter-spacing: 1.5px; }
+      .node-title { fill: var(--color-text); font: 600 20px var(--font-ui); }
+      .node-detail { fill: var(--color-muted); font: 400 16px var(--font-ui); }
+      .connector { fill: none; stroke: var(--color-subtle); stroke-width: 2; marker-end: url(#arrow); }
+      .connector-accent { fill: none; stroke: var(--color-accent); stroke-width: 2.5; marker-end: url(#arrow); }
+      .connector-danger { fill: none; stroke: var(--color-danger); stroke-width: 2; marker-end: url(#arrow); }
+      .footer { fill: var(--color-muted); font: 500 16px var(--font-ui); }
     </style>
   </defs>
 
-  <rect width="720" height="1080" rx="18" fill="#070a0b" />
+  <rect width="720" height="1080" rx="18" fill="var(--color-canvas)" />
   <text x="36" y="48" class="node-title" font-size="26">From intent to an authorized export</text>
   <text x="36" y="76" class="node-detail">The human gate owns export authority.</text>
 
@@ -69,14 +87,14 @@
   <path d="M326 866 H374" class="connector-accent" />
   <path d="M326 930 H374" class="connector-danger" />
   <rect x="374" y="824" width="298" height="82" rx="9" class="node" />
-  <circle cx="397" cy="852" r="5" fill="#35b779" />
+  <circle cx="397" cy="852" r="5" fill="var(--color-success)" />
   <text x="412" y="858" class="node-title">Accepted or edited</text>
   <text x="394" y="884" class="node-detail">HTML · React · Agent Brief</text>
   <rect x="374" y="920" width="298" height="70" rx="9" class="node-danger" />
-  <circle cx="397" cy="946" r="5" fill="#ef6464" />
+  <circle cx="397" cy="946" r="5" fill="var(--color-danger)" />
   <text x="412" y="952" class="node-title">Rejected</text>
   <text x="394" y="976" class="node-detail">Export stays locked</text>
 
-  <line x1="36" y1="1038" x2="684" y2="1038" stroke="#263338" stroke-width="1" />
+  <line x1="36" y1="1038" x2="684" y2="1038" stroke="var(--color-border)" stroke-width="1" />
   <text x="36" y="1065" class="footer">Fixture-backed by default · GraphQL is the contract</text>
 </svg>
