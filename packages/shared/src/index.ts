@@ -9,12 +9,7 @@ export const INPUT_EXAMPLE_ID = 'example.input.email';
 export const CARD_EXAMPLE_ID = 'example.card.basic';
 
 export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
   z.union([
