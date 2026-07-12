@@ -12,11 +12,11 @@
     "test": "echo 'No docs tests' && exit 0"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.30.6",
-    "astro": "^5.1.5"
+    "@astrojs/starlight": "^0.37.0",
+    "astro": "^5.18.2"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.4",
+    "@astrojs/check": "^0.9.9",
     "typescript": "^5.7.3"
   }
 }
