@@ -6,7 +6,7 @@ DesignRail is a human review gate for design-to-code workflows. It surfaces sche
 
 [![DesignRail review workspace showing normalized source intent, a recommended Shoelace mapping, the human decision gate, and compliance findings](assets/demo-input-intent.png)](assets/demo-input-intent.png)
 
-[Download demo · MP4 · 2.7 MB](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4) · [Run locally](#run-it-locally) · [Architecture](#architecture)
+[Demo download · 2.7 MB](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4) · [Run locally](#run-it-locally) · [Architecture](#architecture)
 
 The demo is local, credential-free, and backed by public mock fixtures. Generation never bypasses review, so the handoff decision stays visible and auditable.
 
