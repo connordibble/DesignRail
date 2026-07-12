@@ -113,16 +113,19 @@ function validateLocalTarget(target) {
 }
 
 function validateDemoVideo(videoPath) {
-  if (!existsSync(videoPath)) {
+  // Read once and derive the size from the buffer so the size check and the atom
+  // parse always describe the same bytes (a missing video is reported by the
+  // required-asset check, not here).
+  let video;
+  try {
+    video = readFileSync(videoPath);
+  } catch {
     return;
   }
 
-  const stats = statSync(videoPath);
-  if (stats.size > MAX_VIDEO_BYTES) {
-    failures.push(`Demo video is ${(stats.size / 1024 / 1024).toFixed(1)} MiB; limit is 20 MiB.`);
+  if (video.length > MAX_VIDEO_BYTES) {
+    failures.push(`Demo video is ${(video.length / 1024 / 1024).toFixed(1)} MiB; limit is 20 MiB.`);
   }
-
-  const video = readFileSync(videoPath);
   const boxes = readTopLevelMp4Boxes(video);
   const ftyp = boxes.findIndex((box) => box.type === 'ftyp');
   const moov = boxes.findIndex((box) => box.type === 'moov');
