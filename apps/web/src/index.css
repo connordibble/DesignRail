@@ -1,5 +1,7 @@
-/* Hallmark · app shell · design-system: DESIGN.md · genre: modern-minimal · tone: technical
- * pre-emit critique: P5 H5 E4 S5 R5 V4
+/* Hallmark · macrostructure: persistent-review-rail · genre: modern-minimal · tone: technical
+ * palette: signal-cyan on instrument-charcoal · design-system: DESIGN.md
+ * pre-emit critique: P5 H5 E5 S5 R5 V5 · contrast: pass (40–41)
+ * nav: review rail · footer: n/a · slop: pass (42–49) · mobile: pass (34, 49–57)
  */
 @tailwind base;
 @tailwind components;

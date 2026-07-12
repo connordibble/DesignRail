@@ -342,11 +342,21 @@ function RejectionForm({
       <p className="text-dr-caption text-dr-subtle">
         Recorded with the decision so the audit trail shows why the mapping was declined.
       </p>
-      <div className="grid grid-cols-2 gap-dr-xs">
-        <Button disabled={disabled || !canConfirm} onClick={onConfirm} variant="danger">
+      <div className="grid grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] gap-dr-xs">
+        <Button
+          className="whitespace-nowrap"
+          disabled={disabled || !canConfirm}
+          onClick={onConfirm}
+          variant="danger"
+        >
           Confirm rejection
         </Button>
-        <Button disabled={disabled} onClick={onCancel} variant="secondary">
+        <Button
+          className="whitespace-nowrap"
+          disabled={disabled}
+          onClick={onCancel}
+          variant="secondary"
+        >
           Cancel
         </Button>
       </div>
