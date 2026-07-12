@@ -4,9 +4,9 @@
 
 DesignRail is a human review gate for design-to-code workflows. It surfaces schema-backed component proposals and compliance risks before a developer authorizes export.
 
-[![DesignRail review workspace showing normalized source intent, a recommended Shoelace mapping, the human decision gate, and compliance findings](assets/demo-input-intent.png)](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4)
+[![DesignRail review workspace showing normalized source intent, a recommended Shoelace mapping, the human decision gate, and compliance findings](assets/demo-input-intent.png)](assets/demo-input-intent.png)
 
-[Watch the demo](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4) · [Run locally](#run-it-locally) · [Architecture](#architecture)
+[Download demo · MP4 · 2.7 MB](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4) · [Run locally](#run-it-locally) · [Architecture](#architecture)
 
 The demo is local, credential-free, and backed by public mock fixtures. Generation never bypasses review, so the handoff decision stays visible and auditable.
 
@@ -55,7 +55,7 @@ Open any image for the full-resolution view.
   </tr>
 </table>
 
-[Watch the captioned 72-second demo](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4), read the [caption transcript](assets/designrail-demo.vtt), or follow [the live demo script](DEMO_SCRIPT.md).
+[Download the captioned demo (MP4, 2.7 MB)](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4), read the [caption transcript](assets/designrail-demo.vtt), or follow [the live demo script](DEMO_SCRIPT.md).
 
 ## What is shipped
 
