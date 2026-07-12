@@ -51,7 +51,7 @@ The selected example and workspace view are stored in the URL, so a review state
   </tr>
 </table>
 
-[Watch the captioned 60-second demo](assets/designrail-demo.mp4), read the [caption transcript](assets/designrail-demo.vtt), or follow [the live demo script](DEMO_SCRIPT.md).
+[Watch the captioned 72-second demo](assets/designrail-demo.mp4), read the [caption transcript](assets/designrail-demo.vtt), or follow [the live demo script](DEMO_SCRIPT.md).
 
 ## What is shipped
 
