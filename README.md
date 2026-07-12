@@ -4,9 +4,13 @@
 
 DesignRail is a human review gate for design-to-code workflows. It surfaces schema-backed component proposals and compliance risks before a developer authorizes export.
 
-[![DesignRail review workspace showing source intent, a recommended Shoelace mapping, compliance status, and human review controls](assets/designrail-poster.png)](assets/designrail-demo.mp4)
+[![DesignRail review workspace showing normalized source intent, a recommended Shoelace mapping, the human decision gate, and compliance findings](assets/demo-input-intent.png)](assets/demo-input-intent.png)
 
-The demo is local, credential-free, and backed by public mock fixtures. It is not a one-click generator; it makes the handoff decision visible and auditable.
+https://github.com/user-attachments/assets/c2dc1517-06e2-4830-b815-389d3bbdec30
+
+[Run locally](#run-it-locally) · [Architecture](#architecture)
+
+The demo is local, credential-free, and backed by public mock fixtures. Generation never bypasses review, so the handoff decision stays visible and auditable.
 
 ## Run it locally
 
@@ -32,26 +36,28 @@ The selected example and workspace view are stored in the URL, so a review state
 
 ## Product proof
 
+Open any image for the full-resolution view.
+
 <table>
   <tr>
     <th scope="col">Compliance ledger</th>
     <th scope="col">Required rejection rationale</th>
   </tr>
   <tr>
-    <td><img src="assets/demo-compliance.png" alt="Compliance ledger ordered by severity across Button, Input, and Card mappings" width="480" /></td>
-    <td><img src="assets/demo-rejection-rationale.png" alt="Rejected Input mapping with a required rationale and locked export gate" width="480" /></td>
+    <td valign="top"><a href="assets/demo-compliance.png"><img src="assets/demo-compliance.png" alt="Compliance ledger ordered by severity across Button, Input, and Card mappings" width="480" /></a></td>
+    <td valign="top"><a href="assets/demo-rejection-rationale.png"><img src="assets/demo-rejection-rationale.png" alt="Rejected Input mapping with a required rationale and locked export gate" width="480" /></a></td>
   </tr>
   <tr>
     <th scope="col">Decision diff</th>
     <th scope="col">Reviewed Agent Brief</th>
   </tr>
   <tr>
-    <td><img src="assets/demo-history-diff.png" alt="Edited Card decision showing recommended and reviewed values side by side" width="480" /></td>
-    <td><img src="assets/demo-agent-brief.png" alt="Accepted Button mapping with HTML, React, and Agent Brief export history" width="480" /></td>
+    <td valign="top"><a href="assets/demo-history-diff.png"><img src="assets/demo-history-diff.png" alt="Edited Card decision showing recommended and reviewed values side by side" width="480" /></a></td>
+    <td valign="top"><a href="assets/demo-agent-brief.png"><img src="assets/demo-agent-brief.png" alt="Accepted Button mapping with HTML, React, and Agent Brief export history" width="480" /></a></td>
   </tr>
 </table>
 
-[Watch the captioned 72-second demo](assets/designrail-demo.mp4), read the [caption transcript](assets/designrail-demo.vtt), or follow [the live demo script](DEMO_SCRIPT.md).
+Read the [caption transcript](assets/designrail-demo.vtt) or follow [the live demo script](DEMO_SCRIPT.md).
 
 ## What is shipped
 
@@ -66,17 +72,12 @@ The selected example and workspace view are stored in the URL, so a review state
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  fixture["Mock Figma fixture"] --> intent["Normalized ComponentIntent"]
-  intent --> mapper["Schema-driven mapper"]
-  mapper --> compliance["Deterministic compliance review"]
-  compliance --> api["GraphQL API + SQLite"]
-  api <--> ui["React review console"]
-  ui --> decision{"Human decision"}
-  decision -->|Accept or edit| export["HTML / React / Agent Brief"]
-  decision -->|Reject| locked["Export gate locked"]
-```
+<a href="assets/architecture.svg">
+  <picture>
+    <source media="(max-width: 600px)" srcset="assets/architecture-mobile.svg" />
+    <img src="assets/architecture.svg" alt="DesignRail architecture flowing from a public mock fixture through normalized intent, deterministic evaluation, GraphQL-backed review, and a human-controlled export gate" />
+  </picture>
+</a>
 
 GraphQL is the contract between the UI, API, and persistence layer. The UI reads a complete review workspace and writes decisions, exports, and client instrumentation through typed operations. Pipeline tools generate deterministic fixture-backed data but do not bypass the human gate.
 

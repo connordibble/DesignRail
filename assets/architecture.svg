@@ -1,0 +1,119 @@
+<!-- Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title description">
+  <title id="title">DesignRail system architecture</title>
+  <desc id="description">A four-stage flow from mock design input through deterministic evaluation and GraphQL-backed human review to an authorized or locked export.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-subtle)" />
+    </marker>
+    <style>
+      :root {
+        --color-canvas: #070a0b;
+        --color-shell: #0b1011;
+        --color-panel: #111719;
+        --color-accent-soft: #0f3032;
+        --color-danger-soft: #241416;
+        --color-border: #263338;
+        --color-border-strong: #35464d;
+        --color-text: #eef6f5;
+        --color-muted: #a6b5b4;
+        --color-subtle: #728584;
+        --color-accent: #32d3c4;
+        --color-success: #35b779;
+        --color-danger: #ef6464;
+        --font-ui: ui-sans-serif, system-ui, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .stage { fill: var(--color-shell); stroke: var(--color-border); stroke-width: 1.5; }
+      .node { fill: var(--color-panel); stroke: var(--color-border-strong); stroke-width: 1.5; }
+      .node-accent { fill: var(--color-accent-soft); stroke: var(--color-accent); stroke-width: 2; }
+      .node-danger { fill: var(--color-danger-soft); stroke: var(--color-danger); stroke-width: 1.5; }
+      .stage-label { fill: var(--color-subtle); font: 600 16px var(--font-mono); letter-spacing: 1.5px; }
+      .node-title { fill: var(--color-text); font: 600 19px var(--font-ui); }
+      .node-detail { fill: var(--color-muted); font: 400 15px var(--font-ui); }
+      .connector { fill: none; stroke: var(--color-subtle); stroke-width: 2; marker-end: url(#arrow); }
+      .connector-accent { fill: none; stroke: var(--color-accent); stroke-width: 2.5; marker-end: url(#arrow); }
+      .connector-danger { fill: none; stroke: var(--color-danger); stroke-width: 2; marker-end: url(#arrow); }
+      .footer { fill: var(--color-muted); font: 500 16px var(--font-ui); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="620" rx="18" fill="var(--color-canvas)" />
+
+  <text x="44" y="45" class="node-title" font-size="24">From design intent to an authorized export</text>
+  <text x="44" y="73" class="node-detail">Deterministic proposals stay inspectable. A human decision remains the release gate.</text>
+
+  <rect x="36" y="102" width="258" height="414" rx="12" class="stage" />
+  <rect x="326" y="102" width="258" height="414" rx="12" class="stage" />
+  <rect x="616" y="102" width="258" height="414" rx="12" class="stage" />
+  <rect x="906" y="102" width="258" height="414" rx="12" class="stage" />
+
+  <text x="58" y="136" class="stage-label">01 · NORMALIZE</text>
+  <text x="348" y="136" class="stage-label">02 · EVALUATE</text>
+  <text x="638" y="136" class="stage-label">03 · REVIEW</text>
+  <text x="928" y="136" class="stage-label">04 · AUTHORIZE</text>
+
+  <rect x="58" y="164" width="214" height="92" rx="9" class="node" />
+  <text x="78" y="201" class="node-title">Mock Figma fixture</text>
+  <text x="78" y="228" class="node-detail">Public-safe by default</text>
+
+  <path d="M165 256 V298" class="connector" />
+
+  <rect x="58" y="298" width="214" height="106" rx="9" class="node" />
+  <text x="78" y="338" class="node-title">ComponentIntent</text>
+  <text x="78" y="365" class="node-detail">Normalized semantics,</text>
+  <text x="78" y="387" class="node-detail">states, tokens, and a11y</text>
+
+  <path d="M272 351 H348" class="connector" />
+
+  <rect x="348" y="164" width="214" height="92" rx="9" class="node" />
+  <text x="368" y="201" class="node-title">Schema mapper</text>
+  <text x="368" y="228" class="node-detail">Shoelace proposal</text>
+
+  <path d="M455 256 V298" class="connector" />
+
+  <rect x="348" y="298" width="214" height="106" rx="9" class="node" />
+  <text x="368" y="338" class="node-title">Compliance review</text>
+  <text x="368" y="365" class="node-detail">Severity, explanation,</text>
+  <text x="368" y="387" class="node-detail">and remediation</text>
+
+  <path d="M562 351 H638" class="connector" />
+
+  <rect x="638" y="164" width="214" height="92" rx="9" class="node" />
+  <text x="658" y="201" class="node-title">GraphQL + SQLite</text>
+  <text x="658" y="228" class="node-detail">Typed review contract</text>
+
+  <path d="M745 256 V298" class="connector-accent" />
+  <path d="M771 298 V256" class="connector-accent" />
+
+  <rect x="638" y="298" width="214" height="106" rx="9" class="node-accent" />
+  <text x="658" y="338" class="node-title">Review console</text>
+  <text x="658" y="365" class="node-detail">Compare, edit, reject,</text>
+  <text x="658" y="387" class="node-detail">audit, and export</text>
+
+  <path d="M852 351 H890 V210 H928" class="connector-accent" />
+
+  <rect x="928" y="164" width="214" height="92" rx="9" class="node-accent" />
+  <text x="948" y="201" class="node-title">Human decision</text>
+  <text x="948" y="228" class="node-detail">Accept · edit · reject</text>
+
+  <path d="M1008 256 V290" class="connector-accent" />
+  <path d="M1062 256 V408" class="connector-danger" />
+
+  <rect x="928" y="290" width="214" height="84" rx="9" class="node" />
+  <circle cx="951" cy="318" r="5" fill="var(--color-success)" />
+  <text x="966" y="324" class="node-title">Accepted or edited</text>
+  <text x="948" y="351" class="node-detail">HTML · React · Agent Brief</text>
+
+  <rect x="928" y="408" width="214" height="74" rx="9" class="node-danger" />
+  <circle cx="951" cy="435" r="5" fill="var(--color-danger)" />
+  <text x="966" y="441" class="node-title">Rejected</text>
+  <text x="948" y="463" class="node-detail">Export stays locked</text>
+
+  <line x1="44" y1="556" x2="1156" y2="556" stroke="var(--color-border)" stroke-width="1" />
+  <text x="44" y="588" class="footer">Fixture-backed by default</text>
+  <circle cx="278" cy="583" r="3" fill="var(--color-accent)" />
+  <text x="300" y="588" class="footer">GraphQL is the contract</text>
+  <circle cx="530" cy="583" r="3" fill="var(--color-accent)" />
+  <text x="552" y="588" class="footer">The human gate owns export authority</text>
+</svg>
