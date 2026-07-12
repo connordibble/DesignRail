@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const README_PATH = resolve(ROOT, 'README.md');
 const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
+const EMBEDDED_DEMO_URL =
+  'https://github.com/user-attachments/assets/c2dc1517-06e2-4830-b815-389d3bbdec30';
 const REQUIRED_PROOF_ASSETS = [
   'assets/designrail-demo.mp4',
   'assets/designrail-demo.vtt',
@@ -34,6 +36,14 @@ for (const asset of REQUIRED_PROOF_ASSETS) {
 }
 
 validateDemoVideo(resolve(ROOT, 'assets/designrail-demo.mp4'));
+
+if (!readme.includes(`\n${EMBEDDED_DEMO_URL}\n`)) {
+  failures.push('README.md must render the GitHub user-attachment demo URL on its own line.');
+}
+
+if (readme.includes('raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4')) {
+  failures.push('README.md still links the demo through raw.githubusercontent.com.');
+}
 
 if (readme.includes('designrail-demo.mov')) {
   failures.push('README.md still references the replaced .mov demo.');
