@@ -4,9 +4,11 @@
 
 DesignRail is a human review gate for design-to-code workflows. It surfaces schema-backed component proposals and compliance risks before a developer authorizes export.
 
-[![DesignRail review workspace showing source intent, a recommended Shoelace mapping, compliance status, and human review controls](assets/designrail-poster.png)](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4)
+[![DesignRail review workspace showing normalized source intent, a recommended Shoelace mapping, the human decision gate, and compliance findings](assets/demo-input-intent.png)](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4)
 
-The demo is local, credential-free, and backed by public mock fixtures. It is not a one-click generator; it makes the handoff decision visible and auditable.
+[Watch the 72-second walkthrough](https://raw.githubusercontent.com/connordibble/DesignRail/main/assets/designrail-demo.mp4) · [Run it locally](#run-it-locally) · [See the architecture](#architecture)
+
+The demo is local, credential-free, and backed by public mock fixtures. Generation never bypasses review, so the handoff decision stays visible and auditable.
 
 ## Run it locally
 
@@ -32,22 +34,24 @@ The selected example and workspace view are stored in the URL, so a review state
 
 ## Product proof
 
+Open any image for the full-resolution view.
+
 <table>
   <tr>
     <th scope="col">Compliance ledger</th>
     <th scope="col">Required rejection rationale</th>
   </tr>
   <tr>
-    <td><img src="assets/demo-compliance.png" alt="Compliance ledger ordered by severity across Button, Input, and Card mappings" width="480" /></td>
-    <td><img src="assets/demo-rejection-rationale.png" alt="Rejected Input mapping with a required rationale and locked export gate" width="480" /></td>
+    <td valign="top"><a href="assets/demo-compliance.png"><img src="assets/demo-compliance.png" alt="Compliance ledger ordered by severity across Button, Input, and Card mappings" width="480" /></a></td>
+    <td valign="top"><a href="assets/demo-rejection-rationale.png"><img src="assets/demo-rejection-rationale.png" alt="Rejected Input mapping with a required rationale and locked export gate" width="480" /></a></td>
   </tr>
   <tr>
     <th scope="col">Decision diff</th>
     <th scope="col">Reviewed Agent Brief</th>
   </tr>
   <tr>
-    <td><img src="assets/demo-history-diff.png" alt="Edited Card decision showing recommended and reviewed values side by side" width="480" /></td>
-    <td><img src="assets/demo-agent-brief.png" alt="Accepted Button mapping with HTML, React, and Agent Brief export history" width="480" /></td>
+    <td valign="top"><a href="assets/demo-history-diff.png"><img src="assets/demo-history-diff.png" alt="Edited Card decision showing recommended and reviewed values side by side" width="480" /></a></td>
+    <td valign="top"><a href="assets/demo-agent-brief.png"><img src="assets/demo-agent-brief.png" alt="Accepted Button mapping with HTML, React, and Agent Brief export history" width="480" /></a></td>
   </tr>
 </table>
 
@@ -66,17 +70,7 @@ The selected example and workspace view are stored in the URL, so a review state
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  fixture["Mock Figma fixture"] --> intent["Normalized ComponentIntent"]
-  intent --> mapper["Schema-driven mapper"]
-  mapper --> compliance["Deterministic compliance review"]
-  compliance --> api["GraphQL API + SQLite"]
-  api <--> ui["React review console"]
-  ui --> decision{"Human decision"}
-  decision -->|Accept or edit| export["HTML / React / Agent Brief"]
-  decision -->|Reject| locked["Export gate locked"]
-```
+[![DesignRail architecture flowing from a public mock fixture through normalized intent, deterministic evaluation, GraphQL-backed review, and a human-controlled export gate](assets/architecture.svg)](assets/architecture.svg)
 
 GraphQL is the contract between the UI, API, and persistence layer. The UI reads a complete review workspace and writes decisions, exports, and client instrumentation through typed operations. Pipeline tools generate deterministic fixture-backed data but do not bypass the human gate.
 

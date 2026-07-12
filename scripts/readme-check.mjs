@@ -13,7 +13,8 @@ const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
 const REQUIRED_PROOF_ASSETS = [
   'assets/designrail-demo.mp4',
   'assets/designrail-demo.vtt',
-  'assets/designrail-poster.png',
+  'assets/architecture.svg',
+  'assets/demo-input-intent.png',
   'assets/demo-compliance.png',
   'assets/demo-rejection-rationale.png',
   'assets/demo-history-diff.png',
