@@ -16,6 +16,7 @@ run_script() {
 
 run_script secrets:check
 run_script mock-mode:check
+run_script readme:check
 run_script typecheck
 run_script lint
 run_script format:check

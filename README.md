@@ -113,6 +113,7 @@ A hosted deployment would also need authentication, authorization, multi-user re
 pnpm typecheck          # TypeScript and docs diagnostics
 pnpm lint               # ESLint
 pnpm format:check       # Prettier verification
+pnpm readme:check       # README links and proof assets
 pnpm test               # Deterministic test suite
 pnpm graphql:check      # GraphQL schema and operation drift
 pnpm db:check           # SQLite migration drift
