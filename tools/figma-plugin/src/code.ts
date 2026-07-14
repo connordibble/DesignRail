@@ -1,3 +1,4 @@
+import { extractNodeData, isExportable, type ExportableNode } from './node-extraction.js';
 import { serializeFixture, type FigmaNodeSnapshot, type FigmaTokenSnapshot } from './serializer.js';
 
 // Main thread: reads the current selection, builds a plain-data snapshot, and
@@ -5,69 +6,6 @@ import { serializeFixture, type FigmaNodeSnapshot, type FigmaTokenSnapshot } fro
 // the exported JSON is the only thing that leaves Figma, and the user carries it.
 
 figma.showUI(__html__, { width: 440, height: 620, themeColors: true });
-
-type ExportableNode = ComponentNode | ComponentSetNode | InstanceNode;
-
-function isExportable(node: SceneNode): node is ExportableNode {
-  return node.type === 'COMPONENT' || node.type === 'COMPONENT_SET' || node.type === 'INSTANCE';
-}
-
-function readVariantGroups(node: ExportableNode): Record<string, string[]> {
-  // variantGroupProperties throws on component sets with conflicting variants;
-  // treat that the same as having no declared groups.
-  try {
-    let set: ComponentSetNode | null = null;
-
-    if (node.type === 'COMPONENT_SET') {
-      set = node;
-    } else if (node.type === 'COMPONENT' && node.parent?.type === 'COMPONENT_SET') {
-      set = node.parent;
-    }
-
-    if (set === null) {
-      return {};
-    }
-
-    const groups: Record<string, string[]> = {};
-    for (const [name, group] of Object.entries(set.variantGroupProperties)) {
-      groups[name] = [...group.values];
-    }
-
-    return groups;
-  } catch {
-    return {};
-  }
-}
-
-function readProperties(node: ExportableNode): Record<string, string | number | boolean> {
-  const properties: Record<string, string | number | boolean> = {};
-
-  try {
-    if (node.type === 'INSTANCE') {
-      for (const [name, property] of Object.entries(node.componentProperties)) {
-        if (property.type === 'INSTANCE_SWAP') {
-          continue;
-        }
-        if (typeof property.value === 'string' || typeof property.value === 'boolean') {
-          properties[name] = property.value;
-        }
-      }
-    } else if (node.type === 'COMPONENT') {
-      for (const [name, value] of Object.entries(node.variantProperties ?? {})) {
-        properties[name] = value;
-      }
-    } else {
-      const defaultVariant = node.defaultVariant;
-      for (const [name, value] of Object.entries(defaultVariant?.variantProperties ?? {})) {
-        properties[name] = value;
-      }
-    }
-  } catch {
-    // Property APIs can throw on detached or errored components; export continues without them.
-  }
-
-  return properties;
-}
 
 function readPrimaryText(node: ExportableNode): string | undefined {
   const text = node.findOne((child) => child.type === 'TEXT');
@@ -79,23 +17,6 @@ function readPrimaryText(node: ExportableNode): string | undefined {
   const characters = text.characters.trim();
 
   return characters.length > 0 ? characters : undefined;
-}
-
-async function readDescription(node: ExportableNode): Promise<string | undefined> {
-  try {
-    if (node.type === 'INSTANCE') {
-      const main = await node.getMainComponentAsync();
-      const description = main?.description.trim() ?? '';
-
-      return description.length > 0 ? description : undefined;
-    }
-
-    const description = node.description.trim();
-
-    return description.length > 0 ? description : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 /** Best-effort: bound variables on the selected node itself, names in token dot-form. */
@@ -145,24 +66,28 @@ async function readTokens(node: ExportableNode): Promise<FigmaTokenSnapshot[]> {
 }
 
 async function buildSnapshot(node: ExportableNode): Promise<FigmaNodeSnapshot> {
-  const description = await readDescription(node);
+  const extracted = await extractNodeData(node);
   const primaryText = readPrimaryText(node);
   const fileKey = figma.fileKey;
 
   return {
     id: node.id,
-    name: node.name,
+    name: extracted.canonicalName,
+    nodeName: node.name,
     type: node.type,
-    ...(description === undefined ? {} : { description }),
+    ...(extracted.description === undefined ? {} : { description: extracted.description }),
     ...(fileKey === undefined ? {} : { fileKey }),
-    variantGroups: readVariantGroups(node),
-    properties: readProperties(node),
+    variantGroups: extracted.variantGroups,
+    properties: extracted.properties,
     ...(primaryText === undefined ? {} : { primaryText }),
     tokens: await readTokens(node),
   };
 }
 
+let refreshGeneration = 0;
+
 async function refresh(): Promise<void> {
+  const generation = ++refreshGeneration;
   const selection = figma.currentPage.selection;
 
   if (selection.length !== 1) {
@@ -186,10 +111,19 @@ async function refresh(): Promise<void> {
   }
 
   const snapshot = await buildSnapshot(node);
-  const { fileName, fixture, warnings } = serializeFixture(snapshot);
+  if (
+    generation !== refreshGeneration ||
+    figma.currentPage.selection.length !== 1 ||
+    figma.currentPage.selection[0]?.id !== node.id
+  ) {
+    return;
+  }
+
+  const { canExport, fileName, fixture, warnings } = serializeFixture(snapshot);
 
   figma.ui.postMessage({
     type: 'fixture',
+    canExport,
     fileName,
     json: JSON.stringify(fixture, null, 2),
     warnings,

@@ -33,6 +33,7 @@ import {
   type Metadata,
   type ReviewDecision,
   type ReviewDecisionStatus,
+  type SeedExample,
 } from '@designrail/shared';
 import { count, desc, eq, inArray, sql } from 'drizzle-orm';
 
@@ -345,11 +346,16 @@ function reseedComplianceFindings(
  */
 export function seedDesignRailData(client: DatabaseClient): void {
   for (const entry of EXAMPLE_REGISTRY) {
-    upsertExample(client, entry.example);
-    upsertComponentIntent(client, entry.intent);
-    upsertComponentMapping(client, entry.mapping);
-    reseedComplianceFindings(client, entry.mapping.id, entry.findings);
+    persistPipelineExample(client, entry);
   }
+}
+
+/** Persist one deterministic pipeline result as a reviewable example. */
+export function persistPipelineExample(client: DatabaseClient, entry: SeedExample): void {
+  upsertExample(client, entry.example);
+  upsertComponentIntent(client, entry.intent);
+  upsertComponentMapping(client, entry.mapping);
+  reseedComplianceFindings(client, entry.mapping.id, entry.findings);
 }
 
 export function listExamples(client: DatabaseClient, input: PaginationInput = {}): Example[] {
@@ -362,7 +368,7 @@ export function listExamples(client: DatabaseClient, input: PaginationInput = {}
     .map((row) => exampleSchema.parse(row));
 }
 
-function getExampleById(client: DatabaseClient, exampleId: string): Example | null {
+export function getExampleById(client: DatabaseClient, exampleId: string): Example | null {
   const row = client.db.select().from(examples).where(eq(examples.id, exampleId)).get();
 
   return row === undefined ? null : exampleSchema.parse(row);

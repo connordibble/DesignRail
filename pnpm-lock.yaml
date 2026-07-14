@@ -62,6 +62,15 @@ importers:
       '@as-integrations/fastify':
         specifier: ^3.1.0
         version: 3.1.0(@apollo/server@5.5.1(graphql@16.14.0))(fastify@5.8.5)
+      '@designrail/compliance-agent':
+        specifier: workspace:*
+        version: link:../../tools/compliance-agent
+      '@designrail/component-mapper':
+        specifier: workspace:*
+        version: link:../../tools/component-mapper
+      '@designrail/figma-import':
+        specifier: workspace:*
+        version: link:../../tools/figma-import
       '@designrail/schema':
         specifier: workspace:*
         version: link:../../packages/schema
@@ -208,6 +217,9 @@ importers:
 
   tools/figma-plugin:
     devDependencies:
+      '@designrail/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
       '@designrail/shared':
         specifier: workspace:*
         version: link:../../packages/shared

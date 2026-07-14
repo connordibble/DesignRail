@@ -1,3 +1,6 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { ApolloServer } from '@apollo/server';
 import fastifyApollo, { fastifyApolloDrainPlugin } from '@as-integrations/fastify';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
@@ -14,10 +17,12 @@ import {
   migrateDatabase,
   type DatabaseClient,
 } from './db/index.js';
-import { seedDesignRailData } from './repositories/index.js';
+import { ingestFigmaFixtures, seedDesignRailData } from './repositories/index.js';
 import { createResolvers, typeDefs } from './schema.js';
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
+const WORKSPACE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const DEFAULT_FIGMA_FIXTURE_DIRECTORY = resolve(WORKSPACE_ROOT, 'examples');
 
 const LOCAL_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
 
@@ -32,6 +37,7 @@ export interface QueryGuardOptions {
 
 export interface BuildServerOptions extends FastifyServerOptions {
   databaseClient?: DatabaseClient;
+  figmaFixtureDirectory?: string | false;
   queryGuards?: QueryGuardOptions | false;
   runMigrations?: boolean;
   seedData?: boolean;
@@ -83,6 +89,7 @@ export function createQueryGuardRules(options: QueryGuardOptions = {}): Validati
 export async function buildServer(options: BuildServerOptions = {}): Promise<FastifyInstance> {
   const {
     databaseClient,
+    figmaFixtureDirectory = DEFAULT_FIGMA_FIXTURE_DIRECTORY,
     queryGuards,
     runMigrations = true,
     seedData = true,
@@ -118,6 +125,20 @@ export async function buildServer(options: BuildServerOptions = {}): Promise<Fas
 
   if (seedData) {
     seedDesignRailData(client);
+
+    if (figmaFixtureDirectory !== false) {
+      const ingestion = ingestFigmaFixtures(client, {
+        directory: figmaFixtureDirectory,
+        fixturePathPrefix: 'examples',
+      });
+
+      if (ingestion.failures.length > 0) {
+        app.log.warn(
+          { failures: ingestion.failures },
+          'Some Figma fixtures could not be loaded into the review workspace.',
+        );
+      }
+    }
   }
 
   const apollo = new ApolloServer({

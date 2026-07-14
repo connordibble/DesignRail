@@ -1,3 +1,4 @@
+import { isSupportedComponentType } from '@designrail/schema/supported-component-types';
 import type { MockFigmaFixture } from '@designrail/shared';
 
 /**
@@ -13,7 +14,10 @@ export interface FigmaTokenSnapshot {
 
 export interface FigmaNodeSnapshot {
   id: string;
+  /** Canonical component or component-set name used for mapping. */
   name: string;
+  /** Selected node name retained in provenance when it differs from the canonical name. */
+  nodeName?: string;
   type: 'COMPONENT' | 'COMPONENT_SET' | 'INSTANCE';
   description?: string;
   fileKey?: string;
@@ -31,6 +35,8 @@ export interface SerializedFixture {
   /** Suggested file name under examples/ (figma-input.<component>.<qualifier>.json). */
   fileName: string;
   fixture: MockFigmaFixture;
+  /** Whether the current component type has a registered deterministic mapping. */
+  canExport: boolean;
   /** Human-readable notes about fallbacks taken during extraction. */
   warnings: string[];
 }
@@ -58,6 +64,17 @@ export function slugify(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function stableSourceHash(value: string): string {
+  let hash = 2_166_136_261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+
+  return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
 function pascalCase(value: string): string {
@@ -108,6 +125,9 @@ export function serializeFixture(snapshot: FigmaNodeSnapshot): SerializedFixture
   const componentType = pascalCase(baseName) || 'Component';
   const componentSlug = slugify(baseName) || 'component';
   const displayName = segments.length > 0 ? segments.join(' ') : snapshot.name.trim();
+  const fileKey = snapshot.fileKey?.trim();
+  const sourceNodeSlug = slugify(snapshot.id) || 'figma-node';
+  const sourceSlug = `${sourceNodeSlug}-${stableSourceHash(`${fileKey ?? 'local-file'}:${snapshot.id}`)}`;
 
   const groups = snapshot.variantGroups ?? {};
   const properties = snapshot.properties ?? {};
@@ -136,6 +156,20 @@ export function serializeFixture(snapshot: FigmaNodeSnapshot): SerializedFixture
   const variantValue = variantGroup !== null ? properties[variantGroup.key] : fallbackGroup?.[1][0];
   const qualifier =
     restSlug || slugify(typeof variantValue === 'string' ? variantValue : '') || 'export';
+  const fixtureQualifier = `${qualifier}.${sourceSlug}`;
+
+  if (fileKey === undefined || fileKey.length === 0) {
+    warnings.push(
+      'Figma file key unavailable; identifiers use a local-file fallback and should be reviewed before combining exports from multiple local files.',
+    );
+  }
+
+  const canExport = isSupportedComponentType(componentType);
+  if (!canExport) {
+    warnings.push(
+      `No Shoelace mapping is registered for component type "${componentType}"; export is disabled until the schema is extended or the component name is corrected.`,
+    );
+  }
 
   // Component properties become intent props; variant axes are represented by
   // variants/states above, so their keys are excluded here.
@@ -190,13 +224,11 @@ export function serializeFixture(snapshot: FigmaNodeSnapshot): SerializedFixture
     version: FIXTURE_VERSION,
     figma: {
       nodeId: snapshot.id,
-      nodeName: snapshot.name,
-      ...(snapshot.fileKey !== undefined && snapshot.fileKey.length > 0
-        ? { fileKey: snapshot.fileKey }
-        : {}),
+      nodeName: snapshot.nodeName?.trim() || snapshot.name,
+      ...(fileKey === undefined || fileKey.length === 0 ? {} : { fileKey }),
     },
-    exampleId: `example.${componentSlug}.${qualifier}`,
-    intentId: `intent.${componentSlug}.${qualifier}`,
+    exampleId: `example.${componentSlug}.${fixtureQualifier}`,
+    intentId: `intent.${componentSlug}.${fixtureQualifier}`,
     component: componentSlug,
     componentType,
     name: displayName,
@@ -213,8 +245,9 @@ export function serializeFixture(snapshot: FigmaNodeSnapshot): SerializedFixture
   };
 
   return {
-    fileName: `figma-input.${componentSlug}.${qualifier}.json`,
+    fileName: `figma-input.${componentSlug}.${fixtureQualifier}.json`,
     fixture,
+    canExport,
     warnings,
   };
 }

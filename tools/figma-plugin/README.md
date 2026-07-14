@@ -14,10 +14,10 @@ Then in the Figma desktop app: **Plugins → Development → Import plugin from 
 
 ## Use
 
-1. Select one component, component set, or instance.
-2. The panel shows the derived fixture: component type, example id, variants, states, props, tokens, and any extraction warnings.
+1. Select one supported component, component set, or instance. The current mapping registry supports Button, Input, and Card.
+2. The panel shows the derived fixture: component type, source-unique example id, variants, states, props, tokens, and any extraction warnings. Copy and download stay disabled when the component type has no registered mapping.
 3. **Copy JSON** or **Download**, save the file under `examples/` in this repo.
-4. Run `pnpm design:verify` to push it through import, mapping, and compliance review, then open it in the review workspace.
+4. Run `pnpm design:verify` to verify import, mapping, and compliance review. Start or restart the API; it discovers provenance-carrying fixtures in `examples/` and persists their deterministic pipeline output for the review workspace.
 
 ## What it extracts
 

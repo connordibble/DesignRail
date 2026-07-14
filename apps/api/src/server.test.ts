@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -322,6 +322,69 @@ describe('DesignRail GraphQL API', () => {
       latestDecision: null,
       decisionHistory: [],
       exports: [],
+    });
+  });
+
+  it('loads provenance fixtures into the GraphQL review workspace at startup', async () => {
+    await app.close();
+    const fixtureDir = join(tempDir, 'examples');
+    mkdirSync(fixtureDir, { recursive: true });
+    writeFileSync(
+      join(fixtureDir, 'figma-input.button.primary.12-34-3fec0ad9.json'),
+      JSON.stringify({
+        figma: { nodeId: '12:34', nodeName: 'Button', fileKey: 'demo-file' },
+        exampleId: 'example.button.primary.12-34-3fec0ad9',
+        intentId: 'intent.button.primary.12-34-3fec0ad9',
+        component: 'button',
+        componentType: 'Button',
+        name: 'Imported Button',
+        summary: 'A Figma-sourced primary button.',
+        props: { label: 'Publish', appearance: 'primary' },
+        variants: ['primary'],
+        states: ['default'],
+        tokens: [],
+        accessibility: { label: 'Publish', role: 'button', required: false },
+      }),
+    );
+    app = await buildServer({
+      logger: false,
+      databaseClient: client,
+      queryGuards: { maxAliases: 1 },
+      runMigrations: false,
+      figmaFixtureDirectory: fixtureDir,
+    });
+
+    const body = await graphql<{
+      reviewWorkspace: {
+        example: { name: string; source: string };
+        intent: { source: string } | null;
+        mapping: { targetComponent: string } | null;
+      } | null;
+    }>(
+      `
+        query ReviewWorkspace($exampleId: ID!) {
+          reviewWorkspace(exampleId: $exampleId) {
+            example {
+              name
+              source
+            }
+            intent {
+              source
+            }
+            mapping {
+              targetComponent
+            }
+          }
+        }
+      `,
+      { exampleId: 'example.button.primary.12-34-3fec0ad9' },
+    );
+
+    expect(body.errors).toBeUndefined();
+    expect(body.data?.reviewWorkspace).toEqual({
+      example: { name: 'Imported Button', source: 'FIGMA' },
+      intent: { source: 'FIGMA' },
+      mapping: { targetComponent: 'sl-button' },
     });
   });
 
