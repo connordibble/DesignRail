@@ -85,6 +85,17 @@ export const exampleSchema = z.object({
 });
 
 /**
+ * Figma node provenance carried by fixtures exported from the Figma plugin.
+ * Hand-authored mock fixtures omit it; its presence flips the normalized
+ * intent's source from MOCK to FIGMA. Never carries credentials.
+ */
+export const figmaProvenanceSchema = z.object({
+  nodeId: z.string().min(1),
+  nodeName: z.string().min(1).optional(),
+  fileKey: z.string().min(1).optional(),
+});
+
+/**
  * Shape of a raw mock Figma fixture (`examples/figma-input.*.json`) before normalization.
  * The importer validates against this so malformed mock input fails loudly.
  */
@@ -92,6 +103,7 @@ export const mockFigmaFixtureSchema = z.object({
   // Provenance metadata carried in the JSON file; retained but not used during normalization.
   $schema: z.string().optional(),
   version: z.string().optional(),
+  figma: figmaProvenanceSchema.optional(),
   exampleId: z.string().min(1),
   intentId: z.string().min(1),
   component: z.string().min(1),
@@ -274,6 +286,7 @@ export type TokenReference = z.infer<typeof tokenReferenceSchema>;
 export type AccessibilityMetadata = z.infer<typeof accessibilityMetadataSchema>;
 export type Example = z.infer<typeof exampleSchema>;
 export type MockFigmaFixture = z.infer<typeof mockFigmaFixtureSchema>;
+export type FigmaProvenance = z.infer<typeof figmaProvenanceSchema>;
 export type ComponentIntent = z.infer<typeof componentIntentSchema>;
 export type ComponentMapping = z.infer<typeof componentMappingSchema>;
 export type MappingEdit = z.infer<typeof mappingEditSchema>;
