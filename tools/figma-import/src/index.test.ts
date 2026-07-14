@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import {
   buttonComponentIntentFixture,
   cardComponentIntentFixture,
@@ -34,6 +36,35 @@ describe('@designrail/figma-import', () => {
     expect(() =>
       normalizeComponentIntent({ component: 'button' }, { sourcePath: 'x.json' }),
     ).toThrow();
+  });
+
+  it('marks fixtures carrying figma provenance as FIGMA-sourced', () => {
+    const raw = JSON.parse(
+      readFileSync('examples/figma-input.button.json', 'utf8'),
+    ) as Record<string, unknown>;
+    const withProvenance = {
+      ...raw,
+      figma: { nodeId: '12:34', nodeName: 'Button/Primary', fileKey: 'demo-file' },
+    };
+
+    const intent = normalizeComponentIntent(withProvenance, {
+      sourcePath: 'examples/figma-input.button.json',
+    });
+
+    expect(intent.source).toBe('FIGMA');
+    expect(intent.sourceRefs).toEqual([
+      { type: 'FIGMA_NODE', id: '12:34', name: 'Button/Primary' },
+    ]);
+  });
+
+  it('keeps fixtures without provenance MOCK-sourced with the file reference', () => {
+    const intent = importFigmaFixture({ inputPath: 'examples/figma-input.button.json' });
+
+    expect(intent.source).toBe('MOCK');
+    expect(intent.sourceRefs[0]).toMatchObject({
+      type: 'MOCK_FILE',
+      id: 'examples/figma-input.button.json',
+    });
   });
 
   it('returns JSON-safe CLI output for a fixture path', () => {
