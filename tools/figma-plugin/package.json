@@ -1,0 +1,16 @@
+{
+  "name": "@designrail/figma-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "vitest run --passWithNoTests",
+    "build": "tsc -b && esbuild src/code.ts --bundle --outfile=dist/code.js --target=es2017 --format=iife --log-level=warning"
+  },
+  "devDependencies": {
+    "@designrail/shared": "workspace:*",
+    "@figma/plugin-typings": "^1.130.0",
+    "esbuild": "^0.28.1"
+  }
+}

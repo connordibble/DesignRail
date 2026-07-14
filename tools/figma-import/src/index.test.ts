@@ -39,9 +39,10 @@ describe('@designrail/figma-import', () => {
   });
 
   it('marks fixtures carrying figma provenance as FIGMA-sourced', () => {
-    const raw = JSON.parse(
-      readFileSync('examples/figma-input.button.json', 'utf8'),
-    ) as Record<string, unknown>;
+    const raw = JSON.parse(readFileSync('examples/figma-input.button.json', 'utf8')) as Record<
+      string,
+      unknown
+    >;
     const withProvenance = {
       ...raw,
       figma: { nodeId: '12:34', nodeName: 'Button/Primary', fileKey: 'demo-file' },

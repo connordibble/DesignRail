@@ -1,0 +1,275 @@
+<style>
+  :root {
+    color-scheme: light dark;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--figma-color-bg);
+    color: var(--figma-color-text);
+    font:
+      400 11px/1.5 Inter,
+      ui-sans-serif,
+      system-ui,
+      sans-serif;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--figma-color-border);
+  }
+  .mark {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #32d3c4;
+    flex: none;
+  }
+  header h1 {
+    font-size: 12px;
+    font-weight: 600;
+  }
+  header .file {
+    margin-left: auto;
+    color: var(--figma-color-text-secondary);
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+  }
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 16px;
+    overflow: hidden;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 12px;
+  }
+  .meta dt {
+    color: var(--figma-color-text-secondary);
+  }
+  .meta dd {
+    font-family: ui-monospace, monospace;
+  }
+  .warnings {
+    display: none;
+    padding: 8px 10px;
+    border: 1px solid var(--figma-color-border);
+    border-left: 3px solid #e2ad3f;
+    border-radius: 4px;
+    color: var(--figma-color-text-secondary);
+  }
+  .warnings ul {
+    padding-left: 14px;
+  }
+  pre {
+    flex: 1;
+    overflow: auto;
+    padding: 10px;
+    border: 1px solid var(--figma-color-border);
+    border-radius: 4px;
+    background: var(--figma-color-bg-secondary);
+    font:
+      10px/1.5 ui-monospace,
+      monospace;
+    user-select: text;
+  }
+  .empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    color: var(--figma-color-text-secondary);
+  }
+  footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--figma-color-border);
+  }
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+  button {
+    flex: 1;
+    padding: 7px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--figma-color-border);
+    background: var(--figma-color-bg-secondary);
+    color: var(--figma-color-text);
+    font:
+      500 11px Inter,
+      ui-sans-serif,
+      system-ui,
+      sans-serif;
+    cursor: pointer;
+  }
+  button.primary {
+    background: #32d3c4;
+    border-color: #32d3c4;
+    color: #051716;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .hint {
+    color: var(--figma-color-text-secondary);
+  }
+  .hint code {
+    font-family: ui-monospace, monospace;
+  }
+</style>
+
+<header>
+  <span class="mark"></span>
+  <h1>DesignRail Exporter</h1>
+  <span class="file" id="file-name"></span>
+</header>
+
+<main>
+  <div class="empty" id="empty">Select a component, component set, or instance to export.</div>
+  <dl class="meta" id="meta" style="display: none">
+    <dt>Component</dt>
+    <dd id="meta-name"></dd>
+    <dt>Type</dt>
+    <dd id="meta-type"></dd>
+    <dt>Example id</dt>
+    <dd id="meta-example"></dd>
+    <dt>Extracted</dt>
+    <dd id="meta-counts"></dd>
+  </dl>
+  <div class="warnings" id="warnings"><ul id="warnings-list"></ul></div>
+  <pre id="json" style="display: none"></pre>
+</main>
+
+<footer>
+  <div class="actions">
+    <button class="primary" id="copy" disabled>Copy JSON</button>
+    <button id="download" disabled>Download</button>
+  </div>
+  <p class="hint">
+    Save under <code>examples/</code> in the DesignRail repo, then run
+    <code>pnpm design:verify</code> to push it through import, mapping, and compliance review.
+  </p>
+</footer>
+
+<script>
+  const emptyEl = document.getElementById('empty');
+  const metaEl = document.getElementById('meta');
+  const jsonEl = document.getElementById('json');
+  const warningsEl = document.getElementById('warnings');
+  const warningsList = document.getElementById('warnings-list');
+  const fileNameEl = document.getElementById('file-name');
+  const copyButton = document.getElementById('copy');
+  const downloadButton = document.getElementById('download');
+
+  let currentJson = '';
+  let currentFileName = 'figma-input.json';
+
+  window.onmessage = (event) => {
+    const message = event.data.pluginMessage;
+    if (!message) return;
+
+    if (message.type === 'empty') {
+      emptyEl.textContent = message.reason;
+      emptyEl.style.display = 'flex';
+      metaEl.style.display = 'none';
+      jsonEl.style.display = 'none';
+      warningsEl.style.display = 'none';
+      fileNameEl.textContent = '';
+      copyButton.disabled = true;
+      downloadButton.disabled = true;
+      return;
+    }
+
+    if (message.type === 'fixture') {
+      currentJson = message.json;
+      currentFileName = message.fileName;
+
+      emptyEl.style.display = 'none';
+      metaEl.style.display = 'grid';
+      jsonEl.style.display = 'block';
+      jsonEl.textContent = message.json;
+      fileNameEl.textContent = message.fileName;
+
+      document.getElementById('meta-name').textContent = message.meta.name;
+      document.getElementById('meta-type').textContent = message.meta.componentType;
+      document.getElementById('meta-example').textContent = message.meta.exampleId;
+      document.getElementById('meta-counts').textContent =
+        message.meta.variantCount +
+        ' variants · ' +
+        message.meta.stateCount +
+        ' states · ' +
+        message.meta.propCount +
+        ' props · ' +
+        message.meta.tokenCount +
+        ' tokens';
+
+      warningsList.innerHTML = '';
+      if (message.warnings.length > 0) {
+        for (const warning of message.warnings) {
+          const item = document.createElement('li');
+          item.textContent = warning;
+          warningsList.appendChild(item);
+        }
+        warningsEl.style.display = 'block';
+      } else {
+        warningsEl.style.display = 'none';
+      }
+
+      copyButton.disabled = false;
+      downloadButton.disabled = false;
+    }
+  };
+
+  copyButton.onclick = async () => {
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(currentJson);
+      copied = true;
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = currentJson;
+      document.body.appendChild(textarea);
+      textarea.select();
+      copied = document.execCommand('copy');
+      textarea.remove();
+    }
+    parent.postMessage(
+      {
+        pluginMessage: {
+          type: 'notify',
+          text: copied
+            ? 'Fixture JSON copied. Save it under examples/.'
+            : 'Copy failed. Select the JSON and copy manually.',
+        },
+      },
+      '*',
+    );
+  };
+
+  downloadButton.onclick = () => {
+    const blob = new Blob([currentJson], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = currentFileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+</script>
