@@ -26,6 +26,7 @@ The first adapter that produces these files is a Figma plugin (`tools/figma-plug
 ## Consequences
 
 - The credential-free default survives untouched. The plugin needs no token, the gate needs no secrets, and `pnpm check` exercises the adapter contract through the serializer tests alone.
+- Provenance-carrying fixtures in `examples/` are ingested at API startup: the server runs the same deterministic pipeline (normalize, map, compliance) and persists the result as a reviewable FIGMA-sourced example. Hand-authored mocks stay owned by the seed registry, ingestion refuses an example id already owned by a mock, and re-ingestion never touches review decisions or exports.
 - Adapters are interchangeable by construction. A future REST/MCP adapter emits the same fixture shape with the same provenance block, and the pipeline cannot tell the difference. The open questions for that adapter shrink to fetching and normalization, because the contract is already proven.
 - The human stays in the transfer loop. A file the user copies is a file the user can read, which fits the product's review-first posture better than a background sync.
 - The costs are real: exports are manual and single-node, there is no live re-sync when the design changes, and extraction happens with the plugin's conservative heuristics (fallbacks surface as warnings for the reviewer rather than silent guesses). Those limits are acceptable for a review tool whose unit of work is one component decision at a time.
