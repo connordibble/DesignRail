@@ -15,6 +15,7 @@ DesignRail is currently optimized for a credential-free mock demo of the review 
 
 ## Near Term
 
+- [RFC 001: Design System Agent Bench](docs/rfcs/001-design-system-agent-bench.md): a proposed benchmark for whether coding agents use an existing design system correctly, graded by the compliance pipeline this repo already runs.
 - Live Figma adapter (Plugin or REST API/MCP) behind explicit configuration, normalizing into the same `ComponentIntent` shape as mock fixtures.
 - More component mappings beyond Button, Input, and Card, starting with Badge, Dialog, and Spinner.
 - Stronger accessibility checks for names, roles, keyboard expectations, and missing details.
