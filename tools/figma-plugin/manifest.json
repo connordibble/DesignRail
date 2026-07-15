@@ -1,0 +1,12 @@
+{
+  "name": "DesignRail Exporter",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "src/ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "The exporter is credential-free by design; fixture JSON leaves Figma only through the user's copy or download."
+  }
+}

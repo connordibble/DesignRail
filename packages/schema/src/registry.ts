@@ -2,12 +2,15 @@ import type { ShoelaceComponentSchema } from './core.js';
 import { buttonSchema } from './shoelace/button.js';
 import { cardSchema } from './shoelace/card.js';
 import { inputSchema } from './shoelace/input.js';
+import type { SupportedComponentType } from './supported-component-types.js';
 
-const REGISTRY: ReadonlyMap<string, ShoelaceComponentSchema> = new Map([
-  [buttonSchema.componentType, buttonSchema],
-  [inputSchema.componentType, inputSchema],
-  [cardSchema.componentType, cardSchema],
-]);
+const SCHEMAS = {
+  Button: buttonSchema,
+  Input: inputSchema,
+  Card: cardSchema,
+} satisfies Record<SupportedComponentType, ShoelaceComponentSchema>;
+
+const REGISTRY: ReadonlyMap<string, ShoelaceComponentSchema> = new Map(Object.entries(SCHEMAS));
 
 /** Resolve the Shoelace schema for an intent `componentType`, or `null` when unsupported. */
 export function getComponentSchema(componentType: string): ShoelaceComponentSchema | null {

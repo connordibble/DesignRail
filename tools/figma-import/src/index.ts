@@ -25,17 +25,27 @@ export function normalizeComponentIntent(
   context: NormalizeComponentIntentContext,
 ): ComponentIntent {
   const fixture: MockFigmaFixture = mockFigmaFixtureSchema.parse(rawFixture);
+  // A figma provenance block marks a fixture exported by the DesignRail Figma plugin.
+  // The rest of the pipeline treats both sources identically; only the intent's source
+  // and its source reference change.
+  const provenance = fixture.figma;
 
   return componentIntentSchema.parse({
     id: fixture.intentId,
     exampleId: fixture.exampleId,
-    source: 'MOCK',
+    source: provenance === undefined ? 'MOCK' : 'FIGMA',
     sourceRefs: [
-      {
-        type: 'MOCK_FILE',
-        id: context.sourcePath,
-        name: fixture.name,
-      },
+      provenance === undefined
+        ? {
+            type: 'MOCK_FILE',
+            id: context.sourcePath,
+            name: fixture.name,
+          }
+        : {
+            type: 'FIGMA_NODE',
+            id: provenance.nodeId,
+            name: provenance.nodeName ?? fixture.name,
+          },
     ],
     componentName: fixture.componentName ?? fixture.componentType,
     componentType: fixture.componentType,
