@@ -17,7 +17,7 @@ import {
   componentMappings,
   createDatabaseClient,
   migrateDatabase,
-  type DatabaseClient,
+  type ServerDatabaseClient,
 } from '../db/index.js';
 
 import {
@@ -39,7 +39,7 @@ import {
 } from './index.js';
 
 describe('DesignRail repositories', () => {
-  let client: DatabaseClient;
+  let client: ServerDatabaseClient;
   let tempDir: string;
 
   beforeEach(() => {

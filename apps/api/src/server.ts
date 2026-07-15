@@ -15,7 +15,7 @@ import {
   closeDatabaseClient,
   createDatabaseClient,
   migrateDatabase,
-  type DatabaseClient,
+  type ServerDatabaseClient,
 } from './db/index.js';
 import { ingestFigmaFixtures, seedDesignRailData } from './repositories/index.js';
 import { createResolvers, typeDefs } from './schema.js';
@@ -36,7 +36,7 @@ export interface QueryGuardOptions {
 }
 
 export interface BuildServerOptions extends FastifyServerOptions {
-  databaseClient?: DatabaseClient;
+  databaseClient?: ServerDatabaseClient;
   figmaFixtureDirectory?: string | false;
   queryGuards?: QueryGuardOptions | false;
   runMigrations?: boolean;

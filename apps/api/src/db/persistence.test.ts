@@ -11,11 +11,11 @@ import {
   createDatabaseClient,
   examples,
   migrateDatabase,
-  type DatabaseClient,
+  type ServerDatabaseClient,
 } from './index.js';
 
 describe('DesignRail SQLite persistence', () => {
-  let client: DatabaseClient | undefined;
+  let client: ServerDatabaseClient | undefined;
   let tempDir: string | undefined;
 
   afterEach(() => {

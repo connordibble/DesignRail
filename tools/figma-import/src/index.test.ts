@@ -10,8 +10,9 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { createFigmaImportCliResponse } from './cli.js';
+import { importFigmaFixture } from './node.js';
 
-import { importFigmaFixture, normalizeComponentIntent } from './index.js';
+import { normalizeComponentIntent } from './index.js';
 
 describe('@designrail/figma-import', () => {
   it('normalizes the Button fixture into the canonical component intent', () => {

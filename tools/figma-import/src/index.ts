@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-
 import {
   componentIntentSchema,
   FIXTURE_TIMESTAMP,
@@ -57,14 +55,4 @@ export function normalizeComponentIntent(
     accessibility: fixture.accessibility,
     createdAt: FIXTURE_TIMESTAMP,
   });
-}
-
-export interface ImportFigmaFixtureInput {
-  inputPath: string;
-}
-
-export function importFigmaFixture({ inputPath }: ImportFigmaFixtureInput): ComponentIntent {
-  const rawFixture = JSON.parse(readFileSync(inputPath, 'utf8')) as unknown;
-
-  return normalizeComponentIntent(rawFixture, { sourcePath: inputPath });
 }

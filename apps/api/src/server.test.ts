@@ -14,7 +14,7 @@ import {
   closeDatabaseClient,
   complianceFindings,
   createDatabaseClient,
-  type DatabaseClient,
+  type ServerDatabaseClient,
 } from './db/index.js';
 import { buildServer, isLocalOrigin, resolveServerHost } from './server.js';
 
@@ -25,7 +25,7 @@ interface GraphQlResponse<TData> {
 
 describe('DesignRail GraphQL API', () => {
   let app: Awaited<ReturnType<typeof buildServer>>;
-  let client: DatabaseClient;
+  let client: ServerDatabaseClient;
   let tempDir: string;
 
   beforeEach(async () => {

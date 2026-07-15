@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
-import type { DatabaseClient } from './client.js';
+import type { ServerDatabaseClient } from './client.js';
 
 const apiRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const defaultMigrationsFolder = resolve(apiRoot, 'drizzle');
@@ -13,7 +13,7 @@ export interface MigrateDatabaseOptions {
 }
 
 export function migrateDatabase(
-  client: DatabaseClient,
+  client: ServerDatabaseClient,
   options: MigrateDatabaseOptions = {},
 ): void {
   migrate(client.db, {

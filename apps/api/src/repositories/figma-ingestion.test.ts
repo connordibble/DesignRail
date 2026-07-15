@@ -9,7 +9,7 @@ import {
   closeDatabaseClient,
   createDatabaseClient,
   migrateDatabase,
-  type DatabaseClient,
+  type ServerDatabaseClient,
 } from '../db/index.js';
 
 import {
@@ -38,7 +38,7 @@ function createFixture(overrides: Record<string, unknown> = {}): Record<string, 
 }
 
 describe('Figma fixture ingestion', () => {
-  let client: DatabaseClient;
+  let client: ServerDatabaseClient;
   let tempDir: string;
   let fixtureDir: string;
 

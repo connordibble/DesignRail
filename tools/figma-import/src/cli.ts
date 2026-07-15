@@ -9,7 +9,9 @@ import {
   writeJsonCliResponse,
 } from '@designrail/shared';
 
-import { importFigmaFixture, TOOL_NAME, TOOL_VERSION } from './index.js';
+import { importFigmaFixture } from './node.js';
+
+import { TOOL_NAME, TOOL_VERSION } from './index.js';
 
 export function createFigmaImportCliResponse(
   argv: string[],

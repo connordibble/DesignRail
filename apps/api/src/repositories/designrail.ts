@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import {
   coerceEnumValue,
   getComponentSchemaByTag,
@@ -37,6 +35,9 @@ import {
 } from '@designrail/shared';
 import { count, desc, eq, inArray, sql } from 'drizzle-orm';
 
+import type { DatabaseClient } from '../db/client.js';
+// Import tables from the schema module directly (not the db barrel) so this module never pulls in
+// the better-sqlite3 client and stays loadable from the in-browser demo engine.
 import {
   componentIntents,
   componentMappings,
@@ -45,8 +46,7 @@ import {
   exports,
   instrumentationEvents,
   reviewDecisions,
-  type DatabaseClient,
-} from '../db/index.js';
+} from '../db/schema.js';
 
 import { renderExportContent, type AgentBriefContext } from './export-renderer.js';
 
@@ -120,7 +120,8 @@ function nowIso(): string {
 }
 
 function createId(prefix: string): string {
-  return `${prefix}.${randomUUID()}`;
+  // globalThis.crypto is available in Node 20+ and every browser the demo build targets.
+  return `${prefix}.${globalThis.crypto.randomUUID()}`;
 }
 
 function normalizeLimit(limit: number | undefined, fallback = DEFAULT_LIST_LIMIT): number {

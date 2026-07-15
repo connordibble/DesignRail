@@ -1,19 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { posix, resolve } from 'node:path';
 
-import { reviewCompliance } from '@designrail/compliance-agent';
-import { mapComponent } from '@designrail/component-mapper';
-import { normalizeComponentIntent } from '@designrail/figma-import';
-import {
-  exampleSchema,
-  mockFigmaFixtureSchema,
-  type Example,
-  type SeedExample,
-} from '@designrail/shared';
+import type { DatabaseClient } from '../db/client.js';
 
-import type { DatabaseClient } from '../db/index.js';
-
-import { getExampleById, persistPipelineExample } from './designrail.js';
+import { ingestFigmaFixtureDocument } from './figma-pipeline.js';
 
 export interface FigmaFixtureIngestionFailure {
   fixturePath: string;
@@ -36,8 +26,9 @@ function messageFromError(error: unknown): string {
 }
 
 /**
- * Discover provenance-carrying fixtures and persist their deterministic pipeline output.
- * Hand-authored mock fixtures remain owned by the canonical seed registry.
+ * Discover provenance-carrying fixtures on disk and persist their deterministic pipeline output
+ * via {@link ingestFigmaFixtureDocument}. Hand-authored mock fixtures remain owned by the
+ * canonical seed registry.
  */
 export function ingestFigmaFixtures(
   client: DatabaseClient,
@@ -60,37 +51,14 @@ export function ingestFigmaFixtures(
 
     try {
       const absolutePath = resolve(options.directory, fileName);
-      const fixture = mockFigmaFixtureSchema.parse(
-        JSON.parse(readFileSync(absolutePath, 'utf8')) as unknown,
-      );
+      const document = JSON.parse(readFileSync(absolutePath, 'utf8')) as unknown;
+      const outcome = ingestFigmaFixtureDocument(client, { document, fixturePath });
 
-      if (fixture.figma === undefined) {
+      if (outcome === 'IMPORTED') {
+        result.imported.push(fixturePath);
+      } else {
         result.skipped.push(fixturePath);
-        continue;
       }
-
-      const intent = normalizeComponentIntent(fixture, { sourcePath: fixturePath });
-      const existing = getExampleById(client, intent.exampleId);
-      if (existing !== null && existing.source !== 'FIGMA') {
-        throw new Error(
-          `Example id ${intent.exampleId} already belongs to the ${existing.source} fixture ${existing.fixturePath}.`,
-        );
-      }
-
-      const mapping = mapComponent({ intent });
-      const findings = reviewCompliance({ intent, mapping });
-      const example: Example = exampleSchema.parse({
-        id: intent.exampleId,
-        name: fixture.name,
-        componentType: intent.componentType,
-        fixturePath,
-        source: 'FIGMA',
-        status: 'READY',
-      });
-      const entry: SeedExample = { example, intent, mapping, findings };
-
-      persistPipelineExample(client, entry);
-      result.imported.push(fixturePath);
     } catch (error) {
       result.failures.push({ fixturePath, message: messageFromError(error) });
     }

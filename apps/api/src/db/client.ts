@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import Database from 'better-sqlite3';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
 import * as schema from './schema.js';
 
@@ -17,17 +18,31 @@ export interface SqliteConnection {
   close(): unknown;
 }
 
+/**
+ * The synchronous SQLite query surface repositories and resolvers depend on. Both the server's
+ * better-sqlite3 driver and the in-browser demo's sql.js driver satisfy it, so everything behind
+ * the GraphQL contract runs unchanged in either runtime.
+ */
+export type DesignRailDatabase = BaseSQLiteDatabase<'sync', unknown, typeof schema>;
+
 export interface DatabaseClient {
-  db: BetterSQLite3Database<typeof schema>;
+  db: DesignRailDatabase;
   sqlite: SqliteConnection;
   sqlitePath: string;
+}
+
+/** A client backed by better-sqlite3, as created by the server; supports the file-based migrator. */
+export interface ServerDatabaseClient extends DatabaseClient {
+  db: BetterSQLite3Database<typeof schema>;
 }
 
 export function getDefaultDatabasePath(): string {
   return process.env['DESIGNRAIL_DB_PATH'] ?? resolve(apiRoot, '.data/designrail.sqlite');
 }
 
-export function createDatabaseClient(options: CreateDatabaseClientOptions = {}): DatabaseClient {
+export function createDatabaseClient(
+  options: CreateDatabaseClientOptions = {},
+): ServerDatabaseClient {
   const sqlitePath = options.sqlitePath ?? getDefaultDatabasePath();
 
   if (sqlitePath !== ':memory:') {

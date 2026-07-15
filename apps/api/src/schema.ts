@@ -15,7 +15,9 @@ import {
 } from 'graphql';
 import { gql } from 'graphql-tag';
 
-import type { DatabaseClient } from './db/index.js';
+import type { DatabaseClient } from './db/client.js';
+// Import from the designrail module directly (not the repositories barrel) so resolvers never pull
+// in the Node-only fixture-directory ingestion and stay loadable from the in-browser demo engine.
 import {
   countComplianceFindingsBySeverity,
   createExport,
@@ -30,7 +32,7 @@ import {
   listReviewDecisions,
   recordInstrumentationEvent,
   saveReviewDecision,
-} from './repositories/index.js';
+} from './repositories/designrail.js';
 
 export const typeDefs = gql(DESIGNRAIL_GRAPHQL_SCHEMA);
 
