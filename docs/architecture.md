@@ -78,6 +78,12 @@ Mock mode is the default and does not require credentials. The current adapter r
 
 A future Figma MCP or API adapter belongs at the same boundary. It may fetch live design nodes only under explicit configuration, and it must normalize them into the existing contract before mapping, compliance, persistence, or export. A hosted system would additionally require identity, authorization, tenancy, durable storage, rate limits, and operational telemetry; those concerns are intentionally outside the local demo.
 
+## In-browser demo engine
+
+The hosted demo on GitHub Pages runs without any server. `@designrail/api/engine` constructs the same typeDefs, resolvers, repositories, drizzle migrations, seed registry, and fixture pipeline over a sql.js (WASM SQLite) database, and the web client swaps Apollo's HTTP link for a local `SchemaLink` when the build sets `VITE_DESIGNRAIL_DEMO_MODE=true`.
+
+Browser-reachable modules stay free of Node built-ins and native drivers; filesystem fixture discovery remains a Node-only wrapper around the same per-document pipeline. An engine parity test replays the server's migrate-seed-ingest startup on both drivers and asserts the resulting review workspaces are identical, so demo behavior cannot silently drift from the served API. Each visitor gets an isolated workspace that resets on reload; durable multi-user review remains outside the boundary above.
+
 ## Keeping humans in control
 
 DesignRail treats AI-assisted implementation as a proposal workflow. Confidence, rationale, deterministic findings, editable fields, saved decisions, and the export gate stay visible in the same review surface. Generated output is never the authority; the recorded human decision is.

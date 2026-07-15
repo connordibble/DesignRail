@@ -8,9 +8,13 @@ DesignRail is a human review gate for design-to-code workflows. It surfaces sche
 
 https://github.com/user-attachments/assets/c2dc1517-06e2-4830-b815-389d3bbdec30
 
-[Run locally](#run-it-locally) · [Architecture](#architecture)
+[Live demo](https://connordibble.github.io/DesignRail/) · [Run locally](#run-it-locally) · [Architecture](#architecture)
 
-The demo is local, credential-free, and backed by public mock fixtures. Generation never bypasses review, so the handoff decision stays visible and auditable.
+The demo is credential-free and backed by public mock fixtures. Generation never bypasses review, so the handoff decision stays visible and auditable.
+
+## Hosted demo
+
+[Open the hosted demo](https://connordibble.github.io/DesignRail/) — the same review console with the GraphQL API, SQLite database, and fixture pipeline compiled to run entirely in your browser tab. No server, no credentials, and every visitor gets an isolated workspace that resets on reload. An engine parity test keeps the in-browser engine identical to the served API; the [in-browser demo engine ADR](docs/src/content/docs/decisions/0003-in-browser-demo-engine.md) records the tradeoffs.
 
 ## Run it locally
 
@@ -92,7 +96,7 @@ tools/component-mapper/  Intent to component proposal
 tools/compliance-agent/  Proposal to structured findings
 ```
 
-Read [the architecture overview](docs/architecture.md) for the URL contract, decision model, instrumentation mutation, and production adapter boundary. The two ADRs cover [Tailwind and Shoelace](docs/src/content/docs/decisions/0001-tailwind-and-shoelace.md) and [GraphQL with SQLite](docs/src/content/docs/decisions/0002-graphql-and-sqlite-review-contract.md).
+Read [the architecture overview](docs/architecture.md) for the URL contract, decision model, instrumentation mutation, and production adapter boundary. The ADRs cover [Tailwind and Shoelace](docs/src/content/docs/decisions/0001-tailwind-and-shoelace.md), [GraphQL with SQLite](docs/src/content/docs/decisions/0002-graphql-and-sqlite-review-contract.md), and [the in-browser demo engine](docs/src/content/docs/decisions/0003-in-browser-demo-engine.md).
 
 ## Deliberate tradeoffs
 
@@ -107,6 +111,8 @@ Read [the architecture overview](docs/architecture.md) for the URL contract, dec
 The production-shaped seam is the `ComponentIntent` contract. A live Figma MCP or API adapter can replace the fixture reader only when explicitly configured, while mapping, compliance, review, persistence, and export continue to use the same types.
 
 A hosted deployment would also need authentication, authorization, multi-user review ownership, durable storage, observability, rate limits, and CI integration. None of those are implied by the local demo. The API binds to localhost by default; set `HOST` and `DESIGNRAIL_ALLOW_NETWORK=true` only when intentionally exposing it.
+
+The hosted demo does not cross this boundary: no DesignRail server runs on the internet. The demo build executes the same GraphQL contract in the visitor's browser tab against WASM SQLite, so review state stays per-visitor and disposable.
 
 ## Commands
 
@@ -124,6 +130,7 @@ pnpm mock-mode:check    # Credential-free defaults
 pnpm secrets:check      # Public-safety scan
 pnpm check              # Full local gate
 pnpm build              # Production builds
+pnpm demo:build         # Static in-browser demo build (GitHub Pages)
 ```
 
 Pipeline entry points:
