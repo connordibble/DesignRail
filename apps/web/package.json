@@ -8,16 +8,19 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "build:demo": "tsc -b && VITE_DESIGNRAIL_DEMO_MODE=true vite build --base=/DesignRail/"
   },
   "dependencies": {
     "@apollo/client": "^4.2.0",
+    "@designrail/api": "workspace:*",
     "@designrail/design-tokens": "workspace:*",
     "@designrail/schema": "workspace:*",
     "@designrail/shared": "workspace:*",
     "graphql": "^16.14.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "sql.js": "1.13.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
@@ -25,6 +28,7 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@types/sql.js": "1.4.9",
     "@vitejs/plugin-react": "^6.0.3",
     "autoprefixer": "^10.4.20",
     "jsdom": "^25.0.1",

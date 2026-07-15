@@ -27,6 +27,7 @@
     "commit:check": "bash -c 'msg=${1:-}; if [ -z \"$msg\" ]; then echo \"Usage: pnpm commit:check .git/COMMIT_EDITMSG\" >&2; exit 1; fi; bash hooks/commit-msg.sh \"$msg\"' --",
     "release:plan": "bash scripts/release-plan.sh",
     "dev": "concurrently -n web,api -c blue,magenta \"pnpm web:dev\" \"pnpm api:dev\"",
+    "demo:build": "pnpm --filter @designrail/web build:demo",
     "web:dev": "pnpm --filter @designrail/web dev",
     "api:dev": "pnpm --filter @designrail/api dev",
     "docs:dev": "pnpm --filter @designrail/docs dev",

@@ -12,6 +12,7 @@
   "references": [
     { "path": "../../packages/shared" },
     { "path": "../../packages/schema" },
-    { "path": "../../packages/design-tokens" }
+    { "path": "../../packages/design-tokens" },
+    { "path": "../api" }
   ]
 }

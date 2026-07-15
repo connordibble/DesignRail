@@ -6,6 +6,18 @@ interface GraphqlEnv {
   readonly VITE_DESIGNRAIL_GRAPHQL_URL?: string;
 }
 
+interface DemoEnv {
+  readonly VITE_DESIGNRAIL_DEMO_MODE?: string;
+}
+
+/**
+ * Demo mode swaps the HTTP transport for an in-browser engine (see `demo/demo-client.ts`); it is
+ * a build-time switch used by the hosted, serverless demo.
+ */
+export function isDemoMode(env: DemoEnv = import.meta.env): boolean {
+  return env.VITE_DESIGNRAIL_DEMO_MODE === 'true';
+}
+
 export interface CreateDesignRailApolloClientOptions {
   uri?: string;
 }
