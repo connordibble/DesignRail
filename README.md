@@ -8,13 +8,13 @@ DesignRail is a human review gate for design-to-code workflows. It surfaces sche
 
 https://github.com/user-attachments/assets/c2dc1517-06e2-4830-b815-389d3bbdec30
 
-[Live demo](https://connordibble.github.io/DesignRail/) · [Run locally](#run-it-locally) · [Architecture](#architecture)
+[Live demo](https://designrail.connordibble.dev/) · [Run locally](#run-it-locally) · [Architecture](#architecture)
 
 The demo is credential-free and backed by public mock fixtures. Generation never bypasses review, so the handoff decision stays visible and auditable.
 
 ## Hosted demo
 
-[Open the hosted demo](https://connordibble.github.io/DesignRail/) — the same review console with the GraphQL API, SQLite database, and fixture pipeline compiled to run entirely in your browser tab. No server, no credentials, and every visitor gets an isolated workspace that resets on reload. An engine parity test keeps the in-browser engine identical to the served API; the [in-browser demo engine ADR](docs/src/content/docs/decisions/0003-in-browser-demo-engine.md) records the tradeoffs.
+[Open the hosted demo](https://designrail.connordibble.dev/) — the same review console with the GraphQL API, SQLite database, and fixture pipeline compiled to run entirely in your browser tab. No server, no credentials, and every visitor gets an isolated workspace that resets on reload. An engine parity test keeps the in-browser engine identical to the served API; the [in-browser demo engine ADR](docs/src/content/docs/decisions/0003-in-browser-demo-engine.md) records the tradeoffs.
 
 ## Run it locally
 

@@ -29,7 +29,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - uses: actions/configure-pages@v5
-      - name: Build the in-browser demo (base /DesignRail/)
+      # Served at https://designrail.connordibble.dev/ (custom domain set in repo Pages settings),
+      # so the bundle builds at the root base path.
+      - name: Build the in-browser demo
         run: pnpm demo:build
       - uses: actions/upload-pages-artifact@v4
         with:

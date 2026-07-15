@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run --passWithNoTests",
-    "build:demo": "tsc -b && VITE_DESIGNRAIL_DEMO_MODE=true vite build --base=/DesignRail/"
+    "build:demo": "tsc -b && VITE_DESIGNRAIL_DEMO_MODE=true vite build"
   },
   "dependencies": {
     "@apollo/client": "^4.2.0",
